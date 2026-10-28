@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --ink: #14161a;
+  --ink-soft: #5b616b;
+  --line: #e4e0d6;
+  --navy: #0f1b2d;
+  --gold: #c9a24a;
+  --gold-soft: #f3e7c6;
+  --danger: #b42318;
+  --ok: #1f7a4d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --surface: #151b24;
+    --ink: #eef0f3;
+    --ink-soft: #9aa3ae;
+    --line: #273040;
+    --navy: #0a1220;
+    --gold: #d8b45e;
+    --gold-soft: #3a3120;
+    --danger: #f97066;
+    --ok: #4ac287;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-navy: var(--navy);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-navy text-white hover:brightness-125;
+}
+@utility btn-gold {
+  @apply btn bg-gold text-navy hover:brightness-110;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-surface text-ink hover:border-gold;
+}
+@utility input {
+  @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-gold;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-soft;
+}
+@utility card {
+  @apply rounded-2xl border border-line bg-surface;
+}
