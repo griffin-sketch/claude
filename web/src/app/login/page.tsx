@@ -46,12 +46,12 @@ function LoginForm() {
   return (
     <div className="card w-full max-w-sm p-8">
       <h1 className="text-xl font-bold">Sign in to {APP_NAME}</h1>
-      <p className="mt-1 text-sm text-ink-soft">We&apos;ll email you a sign-in code. No password needed.</p>
+      <p className="mt-1 text-sm text-ink-soft">We&apos;ll email you a sign-in link. No password needed.</p>
       {state === "sent" ? (
         <form onSubmit={verify} className="mt-6 space-y-4">
           <p className="rounded-lg bg-gold-soft p-4 text-sm">
-            We sent an email to <strong>{email}</strong>. Type the code from it below, or click the link in the
-            email on this device.
+            We sent an email to <strong>{email}</strong>. Open it <strong>in this same browser</strong> and click
+            the sign-in link. If your email shows a code instead, type it below.
           </p>
           <div>
             <label htmlFor="code" className="label">
@@ -104,7 +104,7 @@ function LoginForm() {
             />
           </div>
           <button type="submit" className="btn-primary w-full" disabled={state === "sending"}>
-            {state === "sending" ? "Sending…" : "Email me a code"}
+            {state === "sending" ? "Sending…" : "Email me a link"}
           </button>
           {state === "error" && <p className="text-sm text-danger">{message}</p>}
         </form>
