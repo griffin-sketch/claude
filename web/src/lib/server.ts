@@ -9,7 +9,7 @@ export const PRICES = {
 } as const;
 
 function env(name: string) {
-  const v = process.env[name];
+  const v = process.env[name]?.trim();
   if (!v) throw new Error(`Missing ${name}. Add it in Vercel → Settings → Environment Variables.`);
   return v;
 }

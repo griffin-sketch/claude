@@ -8,7 +8,7 @@ import { admin, PRICES, stripe } from "@/lib/server";
  *         customer.subscription.updated, customer.subscription.deleted
  */
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim(); // tolerate stray spaces from pasting
   if (!secret) return new Response("Missing STRIPE_WEBHOOK_SECRET", { status: 500 });
   const body = await request.text();
   const sig = request.headers.get("stripe-signature") ?? "";
