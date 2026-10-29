@@ -31,6 +31,7 @@ export type Listing = {
   acres: number | null;
   price: string | null;
   template: number;
+  transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   formats: string[];
   outro: "branded" | "simple" | "none";
   paid: boolean;

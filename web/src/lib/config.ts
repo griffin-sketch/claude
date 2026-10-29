@@ -18,6 +18,13 @@ export const TEMPLATES = [
   { id: 10, name: "Cinema", blurb: "Letterbox bars and wide-tracked caps." },
 ] as const;
 
+export const TRANSITIONS = [
+  { id: "crossfade", name: "Smooth fade", blurb: "Soft dissolve between rooms. Calm and classic." },
+  { id: "speed_ramp", name: "Speed ramp", blurb: "Camera rushes into each cut, then settles. High energy." },
+  { id: "flash", name: "Light flash", blurb: "Quick dissolve through a soft white glow." },
+  { id: "cut", name: "Straight cut", blurb: "Clean, instant cuts. Fast paced." },
+] as const;
+
 export const ROOM_SUGGESTIONS = [
   "Front Exterior",
   "Open Living Room",

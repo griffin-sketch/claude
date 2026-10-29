@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES } from "@/lib/config";
+import { MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Listing, type Render, type Shot } from "@/lib/types";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
@@ -427,6 +427,25 @@ function Editor({ id, user }: { id: string; user: User }) {
               <span className="block px-2 pb-2 text-xs text-ink-soft">{t.blurb}</span>
             </button>
           ))}
+        </div>
+        <div className="mt-6">
+          <span className="label">Transitions between rooms</span>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {TRANSITIONS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={!labelsEditable}
+                onClick={() => saveListing({ transition: t.id })}
+                className={`rounded-xl border-2 px-3 py-2.5 text-left transition ${
+                  (listing.transition ?? "crossfade") === t.id ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"
+                }`}
+              >
+                <span className="block text-sm font-semibold">{t.name}</span>
+                <span className="block text-xs text-ink-soft">{t.blurb}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <fieldset disabled={!labelsEditable}>

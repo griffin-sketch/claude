@@ -230,7 +230,7 @@ def render_listing(l):
         if outro == "branded" and not (agent["name"] or agent["phone"]):
             outro = "simple"   # no branding saved yet
         job = {
-            "template": l["template"], "kicker": l["kicker"] or "NOW AVAILABLE", "headline": l["headline"] or "",
+            "template": l["template"], "transition": l.get("transition") or "crossfade", "kicker": l["kicker"] or "NOW AVAILABLE", "headline": l["headline"] or "",
             "address": l["address"], "city_line": l["city_line"],
             "stats": {"beds": l.get("beds"), "baths": l.get("baths"), "sqft": l.get("sqft"),
                       "acres": l.get("acres"), "price": l.get("price")},

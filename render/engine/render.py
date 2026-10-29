@@ -22,6 +22,7 @@ Usage: python3 render.py job.json out.mp4 [--stills DIR]
 Paths in the job are relative to the job file's folder.
 """
 import json, math, os, subprocess, sys, argparse, random
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageChops, ImageEnhance
 
 try:
@@ -46,7 +47,65 @@ def MW(px):
 def BOT(px):
     """Bottom margin. On vertical, lift labels above the Reels/TikTok caption + button zone."""
     return px + 380 if VERTICAL else px
-XF = 0.6            # crossfade seconds
+XF = 0.6            # overlap between shots, seconds (set per job by set_transition)
+TRANSITION = "crossfade"
+
+# Transition styles. overlap = seconds two shots share; ramp = speed-ramp length at each cut.
+TRANSITIONS = {
+    "crossfade":  dict(overlap=0.6,  ramp=0.0,  peak=1.0),   # soft dissolve (original look)
+    "speed_ramp": dict(overlap=0.14, ramp=0.5,  peak=5.0),   # shot speeds up into the cut, next one lands fast then settles
+    "flash":      dict(overlap=0.3,  ramp=0.0,  peak=1.0),   # quick dissolve through a soft white bloom
+    "cut":        dict(overlap=0.0,  ramp=0.0,  peak=1.0),   # straight cut
+}
+
+def set_transition(name):
+    global XF, TRANSITION
+    TRANSITION = name if name in TRANSITIONS else "crossfade"
+    XF = TRANSITIONS[TRANSITION]["overlap"]
+
+def speed_curve(n, ramp_in, ramp_out):
+    """Source position (in source frames) for each output frame 0..n, for a shot that
+    starts fast and/or ends fast. Middle plays at normal speed."""
+    cfg = TRANSITIONS[TRANSITION]
+    R = max(1, int(cfg["ramp"] * FPS)); P = cfg["peak"]
+    pos = [0.0]
+    for k in range(n):
+        v = 1.0
+        if ramp_in and k < R:
+            v = 1 + (P - 1) * (1 - k / R) ** 2
+        if ramp_out and k >= n - R:
+            v = max(v, 1 + (P - 1) * ((k - (n - R) + 1) / R) ** 2)
+        pos.append(pos[-1] + v)
+    return pos
+
+def ramp_intensity(k, n, ramp_in, ramp_out):
+    """0 in the calm middle of a shot, rising to 1 right at a speed-ramped cut."""
+    R = max(1, int(TRANSITIONS[TRANSITION]["ramp"] * FPS))
+    i = 0.0
+    if ramp_in and k < R: i = max(i, 1 - k / R)
+    if ramp_out and k >= n - R: i = max(i, (k - (n - R) + 1) / R)
+    return i
+
+def ramp_fx(img, inten):
+    """Camera rushing forward: a push-in plus zoom blur, scaled by intensity."""
+    if inten <= 0.02: return img
+    e = inten ** 2
+    z = 1 + 0.16 * e
+    acc = None
+    for j in range(4):
+        zz = z * (1 + 0.025 * e * j)
+        cw, ch = W / zz, H / zz
+        x0, y0 = (W - cw) / 2, (H - ch) / 2
+        a = np.asarray(img.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch)), dtype=np.float32)
+        acc = a if acc is None else acc + a
+    return Image.fromarray((acc / 4).astype(np.uint8))
+
+def ramp_extra(ramp_in, ramp_out):
+    """Extra source frames a ramped shot uses compared to playing at normal speed."""
+    cfg = TRANSITIONS[TRANSITION]
+    if cfg["ramp"] <= 0: return 0.0
+    R = int(cfg["ramp"] * FPS)
+    return (int(ramp_in) + int(ramp_out)) * (cfg["peak"] - 1) * R / 3
 ANIM = 0.55         # in/out animation seconds
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONT_DIR = os.path.join(HERE, "fonts")
@@ -913,10 +972,20 @@ def prep_photo(path):
 MOVES = ["push", "pan_r", "pull", "pan_l", "push_up"]
 
 class PhotoSource:
-    def __init__(self, path, nframes, move):
+    def __init__(self, path, nframes, move, curve=None):
         self.img = prep_photo(path); self.n = nframes; self.move = move
+        self.curve = curve  # optional: source position per output frame (speed ramp)
     def frame(self, k):
-        p = ease_io(k / max(1, self.n - 1)) * 0.85 + (k / max(1, self.n - 1)) * 0.15
+        if self.curve:
+            span = self.curve[-1] or 1
+            a, b = self.curve[k] / span, self.curve[min(k + 1, len(self.curve) - 1)] / span
+            if (b - a) * span > 1.6:   # moving fast: motion blur from 3 sub-positions
+                ims = [np.asarray(self.at(a + (b - a) * j / 3), dtype=np.float32) for j in range(3)]
+                return Image.fromarray((sum(ims) / 3).astype(np.uint8))
+            return self.at(a)
+        return self.at(k / max(1, self.n - 1))
+    def at(self, q):
+        p = ease_io(q) * 0.85 + q * 0.15
         bw, bh = self.img.size
         if self.move == "push":     s = 1.0 - 0.12 * p; cx, cy = 0.5, 0.5
         elif self.move == "pull":   s = 0.88 + 0.12 * p; cx, cy = 0.5, 0.5
@@ -929,14 +998,36 @@ class PhotoSource:
     def close(self): pass
 
 class ClipSource:
-    def __init__(self, path, start, nframes):
-        self.n = nframes
+    def __init__(self, path, start, nframes, curve=None):
+        self.n = nframes; self.curve = curve
+        need = int(curve[-1]) + 2 if curve else nframes
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}")
         self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{start:.3f}", "-i", path, "-an",
-                                   "-vf", vf, "-frames:v", str(nframes), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
+                                   "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
                                   stdout=subprocess.PIPE)
-        self.last = None
+        self.last = None; self.read_n = 0
+    def _read(self):
+        buf = self.p.stdout.read(W * H * 3)
+        if len(buf) == W * H * 3:
+            self.last = Image.frombytes("RGB", (W, H), buf)
+        if self.last is None:
+            self.last = Image.new("RGB", (W, H), (0, 0, 0))
+        self.read_n += 1
+        return self.last
     def frame(self, k):
+        if self.curve:
+            # read forward to this output frame's source position; average what we pass (motion blur)
+            target = int(self.curve[min(k + 1, len(self.curve) - 1)])
+            got = []
+            while self.read_n <= target:
+                got.append(self._read())
+            if not got:
+                return self.last if self.last is not None else self._read()
+            if len(got) == 1:
+                return got[0]
+            got = got[-5:]
+            acc = sum(np.asarray(g, dtype=np.float32) for g in got) / len(got)
+            return Image.fromarray(acc.astype(np.uint8))
         buf = self.p.stdout.read(W * H * 3)
         if len(buf) == W * H * 3:
             self.last = Image.frombytes("RGB", (W, H), buf)
@@ -960,8 +1051,12 @@ def grade(img, vign):
 # ---------------------------------------------------------------- render
 def build_timeline(job, base):
     shots = job["shots"]
+    set_transition(job.get("transition", "crossfade"))
+    ramped = TRANSITIONS[TRANSITION]["ramp"] > 0
+    last = len(shots) - 1
     segs = []
     for i, s in enumerate(shots):
+        r_in, r_out = ramped and i > 0, ramped and i < last
         path = os.path.join(base, s["path"])
         ext = os.path.splitext(path)[1].lower()
         if ext in VIDEO_EXT:
@@ -969,10 +1064,14 @@ def build_timeline(job, base):
             start = float(s.get("trim_start", 0))
             d = float(s.get("duration") or min(max(dur_src - start, 1.0), 6.0))
             d = max(2.4, min(d, max(dur_src - start, 1.0)))
-            segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s))
+            if ramped:  # the ramp eats source footage; shorten the shot so it never runs out
+                avail = max(dur_src - start, 1.0) * FPS - 2
+                n = int(min(d * FPS, avail - ramp_extra(r_in, r_out)))
+                d = max(1.6, n / FPS)
+            segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s, r_in=r_in, r_out=r_out))
         else:
             d = float(s.get("duration") or (5.2 if i == 0 else 3.8))
-            segs.append(dict(kind="photo", path=path, dur=d, shot=s))
+            segs.append(dict(kind="photo", path=path, dur=d, shot=s, r_in=r_in, r_out=r_out))
     xf = int(XF * FPS)
     f = 0
     for sg in segs:
@@ -1015,8 +1114,9 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
     def get_src(i):
         if i not in sources:
             sg = segs[i]
-            if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)])
-            else: sources[i] = ClipSource(sg["path"], sg["start"], sg["n"])
+            curve = speed_curve(sg["n"], sg.get("r_in"), sg.get("r_out")) if (sg.get("r_in") or sg.get("r_out")) else None
+            if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)], curve)
+            else: sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve)
         return sources[i]
 
     frames_to_do = range(total_f) if preview is None else preview
@@ -1047,10 +1147,14 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             bg = None
             for i in active:
                 fr = get_src(i).frame(fi - segs[i]["f0"])
+                if segs[i].get("r_in") or segs[i].get("r_out"):
+                    fr = ramp_fx(fr, ramp_intensity(fi - segs[i]["f0"], segs[i]["n"], segs[i].get("r_in"), segs[i].get("r_out")))
                 if bg is None: bg = fr
                 else:
                     a = (fi - segs[i]["f0"] + 1) / (xf + 1)
                     bg = Image.blend(bg, fr, ease_io(a))
+                    if TRANSITION == "flash":  # soft white bloom peaking mid-dissolve
+                        bg = Image.blend(bg, Image.new("RGB", (W, H), (255, 252, 246)), 0.6 * math.sin(math.pi * a))
             for i in list(sources):
                 if fi >= segs[i]["f0"] + segs[i]["n"] - 1 and i not in active[-1:]:
                     sources[i].close(); del sources[i]
