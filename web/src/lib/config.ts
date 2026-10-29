@@ -1,6 +1,6 @@
 // App-wide settings. Change the product name here once it's picked.
 export const APP_NAME = "KGB Listing Videos";
-export const APP_TAGLINE = "Cinematic listing videos from your photos, in minutes.";
+export const APP_TAGLINE = "Turn listing photos into a cinematic walkthrough video, branded for you, in about 15 minutes.";
 
 export const MAX_PHOTOS = 20;
 export const MIN_PHOTOS = 3;

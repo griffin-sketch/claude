@@ -59,7 +59,7 @@ function Branding({ user }: { user: User }) {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold">Your branding</h1>
+      <h1 className="font-display text-4xl font-medium">Your branding</h1>
       <p className="mb-6 text-sm text-ink-soft">This goes on the closing card of every video.</p>
       <form onSubmit={save} className="card space-y-5 p-6">
         <div className="grid gap-4 sm:grid-cols-2">

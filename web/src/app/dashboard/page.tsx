@@ -43,10 +43,11 @@ function Listings({ user }: { user: User }) {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Your listings</h1>
-          <p className="text-sm text-ink-soft">Upload photos, pick a look, and we make the video.</p>
+          <p className="eyebrow">{greeting(user)}</p>
+          <h1 className="mt-2 font-display text-5xl font-medium leading-none">Your listings</h1>
+          <p className="mt-2 text-sm text-ink-soft">Upload photos, pick a look, and we make the video.</p>
         </div>
         <button onClick={create} disabled={creating} className="btn-gold">
           {creating ? "Creating…" : "+ New listing video"}
@@ -56,9 +57,24 @@ function Listings({ user }: { user: User }) {
       {rows === null ? (
         <p className="text-sm text-ink-soft">Loading…</p>
       ) : rows.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-semibold">No listings yet</p>
-          <p className="mt-1 text-sm text-ink-soft">Start one with the button above. You&apos;ll need 3 to 20 listing photos.</p>
+        <div className="card grid overflow-hidden md:grid-cols-2">
+          <img src="/home/house.jpg" alt="" className="h-full min-h-56 w-full object-cover" />
+          <div className="flex flex-col justify-center gap-5 p-8 sm:p-10">
+            <h2 className="font-display text-4xl font-medium leading-tight">
+              Let&apos;s make your <span className="italic">first video.</span>
+            </h2>
+            <ol className="space-y-3 text-sm text-ink-soft">
+              {["Add 3 to 20 listing photos, front of the home first", "Pick one of ten looks", "Review each clip, then download"].map((t, i) => (
+                <li key={t} className="flex items-baseline gap-3">
+                  <span className="font-display text-2xl text-gold">{i + 1}</span>
+                  {t}
+                </li>
+              ))}
+            </ol>
+            <button onClick={create} disabled={creating} className="btn-gold self-start px-6">
+              {creating ? "Creating…" : "Start a listing video"}
+            </button>
+          </div>
         </div>
       ) : (
         <ul className="grid gap-3">
@@ -66,10 +82,10 @@ function Listings({ user }: { user: User }) {
             <li key={l.id}>
               <Link
                 href={`/listings/${l.id}`}
-                className="card flex flex-wrap items-center justify-between gap-3 p-4 hover:border-gold"
+                className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition hover:-translate-y-px hover:border-gold hover:shadow-[0_8px_24px_rgba(23,25,28,.06)]"
               >
                 <div>
-                  <p className="font-semibold">{l.address || "Untitled listing"}</p>
+                  <p className="font-display text-2xl font-medium leading-tight">{l.address || "Untitled listing"}</p>
                   <p className="text-sm text-ink-soft">
                     {[l.city_line, TEMPLATES.find((t) => t.id === l.template)?.name].filter(Boolean).join(" · ")}
                   </p>
@@ -94,6 +110,13 @@ function Listings({ user }: { user: User }) {
       )}
     </>
   );
+}
+
+function greeting(user: User) {
+  const h = new Date().getHours();
+  const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const name = (user.user_metadata?.full_name as string | undefined)?.split(" ")[0];
+  return name ? `${part}, ${name}` : part;
 }
 
 export default function DashboardPage() {

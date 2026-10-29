@@ -57,7 +57,7 @@ export function PayPanel({
 
   return (
     <section className="card p-6">
-      <h2 className="text-lg font-bold">4. Make the camera moves</h2>
+      <h2 className="font-display text-2xl font-medium">4. Make the camera moves</h2>
       <p className="text-sm text-ink-soft">
         {missing.length
           ? `Still needed: ${missing.join(", ")}.`

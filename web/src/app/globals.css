@@ -1,31 +1,20 @@
 @import "tailwindcss";
 
+/* Luxury real estate look: warm ivory ground, ink text, champagne accent. */
 :root {
-  --bg: #f7f5f0;
+  --bg: #f6f5f2;
   --surface: #ffffff;
-  --ink: #14161a;
-  --ink-soft: #5b616b;
-  --line: #e4e0d6;
-  --navy: #0f1b2d;
-  --gold: #c9a24a;
-  --gold-soft: #f3e7c6;
+  --ink: #17191c;
+  --ink-soft: #4e535c;
+  --muted: #6b707a;
+  --line: #e4e2dc;
+  --night: #121417;
+  --champagne: #a07e4f;
+  --champagne-deep: #8a6a3e;
+  --champagne-light: #c9a877;
+  --champagne-soft: #f1ebe1;
   --danger: #b42318;
   --ok: #1f7a4d;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --surface: #151b24;
-    --ink: #eef0f3;
-    --ink-soft: #9aa3ae;
-    --line: #273040;
-    --navy: #0a1220;
-    --gold: #d8b45e;
-    --gold-soft: #3a3120;
-    --danger: #f97066;
-    --ok: #4ac287;
-  }
 }
 
 @theme inline {
@@ -33,13 +22,18 @@
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
   --color-line: var(--line);
-  --color-navy: var(--navy);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
+  --color-night: var(--night);
+  --color-navy: var(--night);
+  --color-gold: var(--champagne);
+  --color-gold-deep: var(--champagne-deep);
+  --color-gold-light: var(--champagne-light);
+  --color-gold-soft: var(--champagne-soft);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
-  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-cormorant), Georgia, serif;
 }
 
 body {
@@ -47,23 +41,30 @@ body {
   color: var(--ink);
 }
 
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.005em;
+}
+@utility eyebrow {
+  @apply text-xs font-semibold uppercase tracking-[0.28em] text-gold-deep;
+}
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-navy text-white hover:brightness-125;
+  @apply btn bg-ink text-white hover:bg-black;
 }
 @utility btn-gold {
-  @apply btn bg-gold text-navy hover:brightness-110;
+  @apply btn bg-gold text-white hover:bg-gold-deep;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-surface text-ink hover:border-gold;
+  @apply btn border border-line bg-surface text-ink hover:border-ink;
 }
 @utility input {
-  @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-soft focus:border-gold;
+  @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-gold;
 }
 @utility label {
-  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-soft;
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-muted;
 }
 @utility card {
   @apply rounded-2xl border border-line bg-surface;

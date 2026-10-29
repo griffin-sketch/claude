@@ -213,7 +213,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <Link href="/dashboard" className="text-sm text-ink-soft hover:text-ink">
             ← All listings
           </Link>
-          <h1 className="text-2xl font-bold">{listing.address || "New listing video"}</h1>
+          <h1 className="font-display text-4xl font-medium">{listing.address || "New listing video"}</h1>
         </div>
         <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[listing.status]}</span>
       </div>
@@ -228,7 +228,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- finished videos */}
       {listing.status === "done" && (
         <section className="card p-6">
-          <h2 className="mb-4 text-lg font-bold">Your videos</h2>
+          <h2 className="mb-4 font-display text-2xl font-medium">Your videos</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {renders.map((r) => (
               <div key={r.id}>
@@ -262,7 +262,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- progress */}
       {(listing.status === "queued" || listing.status === "generating") && (
         <section className="card p-6">
-          <h2 className="text-lg font-bold">Making your camera moves</h2>
+          <h2 className="font-display text-2xl font-medium">Making your camera moves</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page.
           </p>
@@ -273,7 +273,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
       {listing.status === "rendering" && (
         <section className="card p-6">
-          <h2 className="text-lg font-bold">Building your video</h2>
+          <h2 className="font-display text-2xl font-medium">Building your video</h2>
           <p className="mt-1 text-sm text-ink-soft">Adding your template, labels and branding. About 3 to 6 minutes.</p>
         </section>
       )}
@@ -283,7 +283,7 @@ function Editor({ id, user }: { id: string; user: User }) {
         <section className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold">Review your clips</h2>
+              <h2 className="font-display text-2xl font-medium">Review your clips</h2>
               <p className="text-sm text-ink-soft">
                 Watch each one. If a room looks off, hit Redo and we&apos;ll make a new take.
               </p>
@@ -301,7 +301,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- details */}
       <section className="card p-6">
-        <h2 className="mb-4 text-lg font-bold">1. Listing details</h2>
+        <h2 className="mb-4 font-display text-2xl font-medium">1. Listing details</h2>
         <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
           <Field label="City, state, ZIP" value={listing.city_line} onSave={(v) => saveListing({ city_line: v })} placeholder="Austin, TX 78704" />
@@ -319,7 +319,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       <section className="card p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold">2. Photos, in video order</h2>
+            <h2 className="font-display text-2xl font-medium">2. Photos, in video order</h2>
             <p className="text-sm text-ink-soft">
               {MIN_PHOTOS} to {MAX_PHOTOS} photos. Lead with the front of the home. Label each room; the label appears on screen.
             </p>
@@ -410,7 +410,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- look */}
       <section className="card p-6">
-        <h2 className="mb-4 text-lg font-bold">3. Pick a look</h2>
+        <h2 className="mb-4 font-display text-2xl font-medium">3. Pick a look</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {TEMPLATES.map((t) => (
             <button

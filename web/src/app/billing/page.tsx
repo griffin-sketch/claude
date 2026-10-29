@@ -52,7 +52,7 @@ function BillingView({ user }: { user: User }) {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Billing</h1>
+        <h1 className="font-display text-4xl font-medium">Billing</h1>
         <p className="text-sm text-ink-soft">$49 per listing video, or $80/month for 3 videos.</p>
       </div>
 

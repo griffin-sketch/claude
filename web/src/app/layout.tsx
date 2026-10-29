@@ -3,12 +3,24 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 
-const poppins = localFont({
-  variable: "--font-poppins",
+const manrope = localFont({
+  variable: "--font-manrope",
+  display: "swap",
   src: [
-    { path: "../fonts/poppins-500.woff", weight: "500" },
-    { path: "../fonts/poppins-600.woff", weight: "600" },
-    { path: "../fonts/poppins-700.woff", weight: "700" },
+    { path: "../fonts/manrope-400.woff2", weight: "400" },
+    { path: "../fonts/manrope-500.woff2", weight: "500" },
+    { path: "../fonts/manrope-600.woff2", weight: "600" },
+    { path: "../fonts/manrope-700.woff2", weight: "700" },
+  ],
+});
+
+const cormorant = localFont({
+  variable: "--font-cormorant",
+  display: "swap",
+  src: [
+    { path: "../fonts/cormorant-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/cormorant-500-italic.woff2", weight: "500", style: "italic" },
+    { path: "../fonts/cormorant-600.woff2", weight: "600", style: "normal" },
   ],
 });
 
@@ -19,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${poppins.variable} h-full antialiased`}>
+    <html lang="en" className={`${manrope.variable} ${cormorant.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

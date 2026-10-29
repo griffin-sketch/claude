@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { APP_NAME } from "@/lib/config";
+import Link from "next/link";
 
 // Turn on once Google sign-in is set up in Supabase: Vercel variable NEXT_PUBLIC_GOOGLE_AUTH=1
 const GOOGLE_ON = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1";
@@ -62,12 +62,13 @@ function LoginForm() {
   }
 
   return (
-    <div className="card w-full max-w-sm p-8">
-      <h1 className="text-xl font-bold">Sign in to {APP_NAME}</h1>
-      <p className="mt-1 text-sm text-ink-soft">No password needed.</p>
+    <div className="w-full max-w-sm">
+      <p className="eyebrow">Welcome</p>
+      <h1 className="mt-3 font-display text-5xl font-medium leading-none">Sign in</h1>
+      <p className="mt-3 text-sm text-ink-soft">No password needed. New here? This creates your free account.</p>
       {state !== "sent" && GOOGLE_ON && (
         <>
-          <button type="button" onClick={google} disabled={googleBusy} className="btn-ghost mt-6 w-full py-3">
+          <button type="button" onClick={google} disabled={googleBusy} className="btn-ghost mt-8 min-h-12 w-full">
             <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
               <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
               <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
@@ -85,7 +86,7 @@ function LoginForm() {
       )}
       {state === "sent" ? (
         <form onSubmit={verify} className="mt-6 space-y-4">
-          <p className="rounded-lg bg-gold-soft p-4 text-sm">
+          <p className="rounded-2xl bg-gold-soft p-4 text-sm leading-relaxed">
             We sent an email to <strong>{email}</strong>. Open it <strong>in this same browser</strong> and click
             the sign-in link. If your email shows a code instead, type it below.
           </p>
@@ -123,7 +124,7 @@ function LoginForm() {
           </button>
         </form>
       ) : (
-        <form onSubmit={send} className="space-y-4">
+        <form onSubmit={send} className={`space-y-4 ${GOOGLE_ON ? "" : "mt-8"}`}>
           <div>
             <label htmlFor="email" className="label">
               Email
@@ -151,10 +152,39 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Suspense>
-        <LoginForm />
-      </Suspense>
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      <aside
+        className="relative hidden flex-col justify-between bg-night bg-cover bg-center p-12 text-white lg:flex"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg,rgba(10,12,15,.55) 0%,rgba(10,12,15,.1) 40%,rgba(10,12,15,.8) 100%),url(/home/living.jpg)",
+        }}
+      >
+        <Link href="/" className="flex items-baseline gap-2.5">
+          <span className="font-display text-[30px] font-semibold">KGB</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E9DCC4]">Listing Videos</span>
+        </Link>
+        <div>
+          <p className="font-display text-6xl font-medium leading-[0.95]">
+            Your listing,
+            <br />
+            <span className="italic">in motion.</span>
+          </p>
+          <p className="mt-5 max-w-sm text-[#E7E7E4]">Cinematic walkthrough videos from your listing photos, branded for you.</p>
+        </div>
+      </aside>
+      <main className="flex flex-col px-5 py-8 sm:px-10">
+        <Link href="/" className="flex items-baseline gap-2.5 lg:hidden">
+          <span className="font-display text-[26px] font-semibold">KGB</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-deep">Listing Videos</span>
+        </Link>
+        <div className="flex flex-1 items-center justify-center py-10">
+          <Suspense>
+            <LoginForm />
+          </Suspense>
+        </div>
+        <p className="text-center text-xs text-muted">Sign up free. You only pay when you make a video.</p>
+      </main>
     </div>
   );
 }
