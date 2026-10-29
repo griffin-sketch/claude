@@ -10,6 +10,11 @@ export type Profile = {
   email: string | null;
   headshot_path: string | null;
   logo_path: string | null;
+  stripe_customer_id: string | null;
+  plan: "none" | "monthly";
+  plan_status: string | null;
+  credits: number;
+  credits_period_end: string | null;
 };
 
 export type Listing = {
@@ -28,6 +33,8 @@ export type Listing = {
   template: number;
   formats: string[];
   outro: "branded" | "simple" | "none";
+  paid: boolean;
+  paid_via: "single" | "credit" | "comp" | null;
   error: string | null;
   created_at: string;
   updated_at: string;

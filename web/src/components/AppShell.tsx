@@ -28,6 +28,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
   const nav = [
     { href: "/dashboard", label: "Listings" },
     { href: "/settings", label: "Branding" },
+    { href: "/billing", label: "Billing" },
   ];
 
   return (

@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
+import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
 import { MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES } from "@/lib/config";
 import { STATUS_LABEL, type Listing, type Render, type Shot } from "@/lib/types";
@@ -41,6 +42,26 @@ function Editor({ id, user }: { id: string; user: User }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     load();
   }, [load]);
+
+  // Just back from Stripe Checkout: Stripe tells us about the payment a few seconds later.
+  const [awaitingPayment, setAwaitingPayment] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("paid") === "1",
+  );
+  useEffect(() => {
+    if (!awaitingPayment) return;
+    if (listing && listing.status !== "draft" && listing.status !== "failed") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- payment landed
+      setAwaitingPayment(false);
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
+    const t = setInterval(load, 3000);
+    const stop = setTimeout(() => setAwaitingPayment(false), 60000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
+  }, [awaitingPayment, listing, load]);
 
   // Poll while the worker is busy.
   useEffect(() => {
@@ -197,6 +218,9 @@ function Editor({ id, user }: { id: string; user: User }) {
         <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[listing.status]}</span>
       </div>
       {error && <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{error}</p>}
+      {awaitingPayment && (listing.status === "draft" || listing.status === "failed") && (
+        <p className="rounded-lg bg-gold-soft p-3 text-sm">Payment received. Starting your clips…</p>
+      )}
       {listing.status === "failed" && listing.error && (
         <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">Something went wrong: {listing.error}</p>
       )}
@@ -451,19 +475,14 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- go */}
       {editable && (
-        <section className="card flex flex-wrap items-center justify-between gap-4 p-6">
-          <div>
-            <h2 className="text-lg font-bold">4. Make the camera moves</h2>
-            <p className="text-sm text-ink-soft">
-              {missing.length
-                ? `Still needed: ${missing.join(", ")}.`
-                : `We’ll make ${shots.length} clips. You'll review them before the final video.`}
-            </p>
-          </div>
-          <button className="btn-gold px-6 py-3" disabled={busy || missing.length > 0} onClick={() => setStatus("queued")}>
-            Generate clips
-          </button>
-        </section>
+        <PayPanel
+          user={user}
+          listingId={id}
+          missing={missing}
+          clipCount={shots.length}
+          paid={listing.paid}
+          onStarted={load}
+        />
       )}
     </div>
   );

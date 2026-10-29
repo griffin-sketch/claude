@@ -19,7 +19,7 @@ walkthrough videos in 16:9 and 9:16.
 
 ## Setup
 
-1. Supabase: SQL Editor → paste `supabase/migrations/0001_init.sql` → Run.
+1. Supabase: SQL Editor → run each file in `supabase/migrations/` in order (0001, 0002, …).
    Authentication → URL Configuration: set Site URL to the app's domain and add
    `https://YOUR-DOMAIN/auth/callback` to Redirect URLs.
 2. Vercel: import this repo, root directory `web`, add the variables in `web/.env.example`.
@@ -27,6 +27,18 @@ walkthrough videos in 16:9 and 9:16.
    `render/.env.example`.
 
 Secrets go only in the Vercel / Railway dashboards, never in the code.
+
+## Payments
+
+$49 per listing video, or $80/month for 3 videos (no rollover). Each video = one listing, both
+formats, and clip redos.
+
+- `web/src/app/api/start` starts a listing: uses a monthly video, or opens Stripe Checkout.
+- `web/src/app/api/stripe/webhook` marks listings paid and grants/refills monthly videos.
+  In Stripe → Developers → Webhooks, point an endpoint at `/api/stripe/webhook` with events
+  `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`,
+  `customer.subscription.deleted`.
+- Emails in `ADMIN_EMAILS` skip payment (testing and comps).
 
 ## Local engine use
 
