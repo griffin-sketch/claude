@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { BeforeAfter, LoopVideo } from "@/components/Showcase";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -8,6 +9,17 @@ const LOOKS = [
   { id: 5, name: "Terracotta", note: "Bold boutique" },
   { id: 9, name: "Golden Hour", note: "Script and gold" },
   { id: 10, name: "Cinema", note: "Letterboxed" },
+];
+
+const FX = [
+  { id: "build", name: "Construction build-up", note: "Framing to finished, in seconds. Made for new builds." },
+  { id: "staging", name: "Virtual staging", note: "Empty rooms furnish themselves." },
+  { id: "dusk", name: "Day to dusk", note: "Twilight sky, every light glowing on." },
+  { id: "water", name: "Moving water", note: "Pools and spas ripple and shimmer." },
+  { id: "fire", name: "Fireplace glow", note: "A warm fire flickers to life." },
+  { id: "reveal", name: "Drone reveal", note: "Pull back and up over the whole property." },
+  { id: "kitchen", name: "Rooms that assemble", note: "Cabinets, counters and lights snap into place." },
+  { id: "move", name: "Cinematic camera moves", note: "Every photo becomes a smooth walkthrough shot." },
 ];
 
 const STEPS = [
@@ -64,7 +76,8 @@ export default function Home() {
           </Link>
           <nav aria-label="Main" className="flex items-center gap-5 whitespace-nowrap text-sm font-medium text-white sm:gap-7">
             <a href="#how" className="hidden hover:text-[#CFE0FF] sm:inline">How it works</a>
-            <a href="#looks" className="hidden hover:text-[#CFE0FF] sm:inline">The looks</a>
+            <a href="#effects" className="hidden hover:text-[#CFE0FF] sm:inline">Effects</a>
+            <a href="#photographers" className="hidden hover:text-[#CFE0FF] lg:inline">Photographers</a>
             <a href="#pricing" className="hidden hover:text-[#CFE0FF] sm:inline">Pricing</a>
             <Link href="/login" className="hover:text-[#CFE0FF]">Sign in</Link>
             <Link href="/login" className="inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-ink hover:bg-[#E8F0FD]">
@@ -75,15 +88,10 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section
-        className="relative flex min-h-[680px] items-end bg-night bg-cover pt-36 sm:min-h-[760px]"
-        style={{
-          backgroundImage:
-            "linear-gradient(180deg,rgba(6,16,30,.55) 0%,rgba(6,16,30,.05) 30%,rgba(6,16,30,.10) 55%,rgba(6,16,30,.82) 100%),url(/home/house.jpg)",
-          backgroundPosition: "center 40%",
-        }}
-      >
-        <div className={`${wrap} flex flex-wrap items-end justify-between gap-10 pb-[72px] ${pad}`}>
+      <section className="relative flex min-h-[680px] items-end overflow-hidden bg-night pt-36 sm:min-h-[760px]">
+        <LoopVideo src="/fx/build_hero.mp4" poster="/fx/build.jpg" label="A house building itself, from framing to finished" className="absolute inset-0 h-full w-full object-cover object-[center_40%]" />
+        <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,16,30,.55)_0%,rgba(6,16,30,.05)_30%,rgba(6,16,30,.10)_55%,rgba(6,16,30,.82)_100%)]" />
+        <div className={`${wrap} relative flex flex-wrap items-end justify-between gap-10 pb-[72px] ${pad}`}>
           <div className="min-w-0 flex-[1_1_560px] text-white">
             <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-[#CFE0FF]">For agents and real estate photographers</p>
             <h1 className="font-display text-[clamp(52px,7vw,104px)] font-medium leading-[0.95] tracking-[-0.01em]">
@@ -109,8 +117,8 @@ export default function Home() {
           </div>
           <div className="hidden min-w-0 flex-[0_1_300px] flex-col gap-2.5 rounded-[18px] md:flex border border-white/20 bg-[rgba(11,27,46,.55)] px-6 py-5 text-white backdrop-blur-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#CFE0FF]">Now playing</p>
-            <p className="font-display text-[26px] font-medium leading-tight">Sample listing · Front exterior</p>
-            <p className="text-[13px] text-[#CFCFCB]">Slow drone-style rise, 5 seconds</p>
+            <p className="font-display text-[26px] font-medium leading-tight">Construction build-up</p>
+            <p className="text-[13px] text-[#CFCFCB]">One listing photo, one click</p>
             <div className="h-[3px] rounded bg-white/20">
               <div className="h-[3px] w-[38%] rounded bg-[#CFE0FF]" />
             </div>
@@ -142,6 +150,55 @@ export default function Home() {
               </figure>
             ))}
             <p className="col-span-3 mt-1.5 text-[13px] text-muted">One listing photo, three moments from its camera move.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Effects */}
+      <section id="effects" className={`scroll-mt-6 bg-night py-24 text-[#F3F6FA] ${pad}`}>
+        <div className={`${wrap} flex flex-col gap-12`}>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="min-w-0">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-gold-light">AI effects</p>
+              <h2 className={h2}>Pick an effect for any photo.</h2>
+            </div>
+            <p className="max-w-[400px] leading-relaxed text-[#B9C3D0]">
+              Every effect starts from your real listing photo and lands back on it, so the finished room is exactly what buyers will see.
+            </p>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-x-5 gap-y-8">
+            {FX.map((f) => (
+              <figure key={f.id} className="flex flex-col gap-3">
+                <LoopVideo src={`/fx/${f.id}.mp4`} poster={`/fx/${f.id}.jpg`} label={f.name} className="aspect-video w-full rounded-xl bg-black object-cover" />
+                <figcaption>
+                  <span className="block font-semibold">{f.name}</span>
+                  <span className="block text-sm text-[#B9C3D0]">{f.note}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Before / after */}
+      <section className={`py-24 ${pad}`}>
+        <div className={`${wrap} flex flex-col gap-12`}>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="min-w-0">
+              <p className="eyebrow mb-4">Drag to compare</p>
+              <h2 className={h2}>Same photo. A whole new first impression.</h2>
+            </div>
+            <p className="max-w-[380px] leading-relaxed text-ink-soft">Stage a vacant room or turn a daytime shot into twilight, right inside your video.</p>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(420px,100%),1fr))] gap-6">
+            <figure className="flex flex-col gap-3">
+              <BeforeAfter before="/fx/staging_before.jpg" after="/fx/staging_after.jpg" beforeLabel="Vacant" afterLabel="Staged" alt="Sample living room" />
+              <figcaption className="text-[15px] font-semibold">Virtual staging</figcaption>
+            </figure>
+            <figure className="flex flex-col gap-3">
+              <BeforeAfter before="/fx/dusk_before.jpg" after="/fx/dusk_after.jpg" beforeLabel="Day" afterLabel="Dusk" alt="Sample home exterior" />
+              <figcaption className="text-[15px] font-semibold">Day to dusk</figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -225,6 +282,32 @@ export default function Home() {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* Photographers */}
+      <section id="photographers" className={`scroll-mt-6 border-y border-line bg-white py-24 ${pad}`}>
+        <div className={`${wrap} flex flex-wrap items-center gap-16`}>
+          <div className="min-w-0 flex-[1_1_420px]">
+            <p className="eyebrow mb-4">For real estate photographers</p>
+            <h2 className={h2}>Sell video on every shoot.</h2>
+            <p className="mt-6 max-w-[520px] text-[17px] leading-[1.7] text-ink-soft">
+              Turn the photos you already deliver into a video add-on. No extra time on site, no editing.
+            </p>
+          </div>
+          <ul className="grid min-w-0 flex-[1_1_480px] grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-6">
+            {[
+              ["Your client's branding", "Put the agent's name, brokerage, phone, headshot and logo on the closing card."],
+              ["Or fully unbranded", "No Tourvo watermark, ever. Deliver it as your own work."],
+              ["One link to deliver", "Send the agent a private page to watch and download every video."],
+              ["A whole Reel pack", "Walkthrough, teaser, Just Listed, price reveal and more from one upload."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex flex-col gap-2 border-t border-line pt-5">
+                <span className="font-semibold">{t}</span>
+                <span className="text-[15px] leading-relaxed text-ink-soft">{d}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
