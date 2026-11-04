@@ -10,6 +10,8 @@ export type Profile = {
   email: string | null;
   headshot_path: string | null;
   logo_path: string | null;
+  account_type: "agent" | "photographer";
+  company: string | null;
   stripe_customer_id: string | null;
   plan: "none" | "monthly";
   plan_status: string | null;
@@ -31,10 +33,17 @@ export type Listing = {
   acres: number | null;
   price: string | null;
   template: number;
+  hook: string | null;
+  client_name: string | null;
+  client_brokerage: string | null;
+  client_phone: string | null;
+  client_logo_path: string | null;
+  client_headshot_path: string | null;
+  share_token: string | null;
   open_house: string | null;
   transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   formats: string[];
-  outro: "branded" | "simple" | "none";
+  outro: "branded" | "client" | "simple" | "none";
   paid: boolean;
   paid_via: "single" | "credit" | "comp" | null;
   error: string | null;

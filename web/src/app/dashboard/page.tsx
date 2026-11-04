@@ -28,9 +28,11 @@ function Listings({ user }: { user: User }) {
 
   async function create() {
     setCreating(true);
+    // photographers usually deliver with the client agent's branding
+    const { data: prof } = await supabase().from("profiles").select("account_type").eq("id", user.id).single();
     const { data, error } = await supabase()
       .from("listings")
-      .insert({ user_id: user.id })
+      .insert({ user_id: user.id, ...(prof?.account_type === "photographer" ? { outro: "client" } : {}) })
       .select("id")
       .single();
     if (error || !data) {

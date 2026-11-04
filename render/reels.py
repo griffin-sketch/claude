@@ -18,6 +18,28 @@ REEL_KINDS = {
 }
 
 
+# Opening lines for the teaser Reel (the realtor picks one). {beds} {city} {price} fill in from the listing.
+HOOKS = {
+    "inside":   "Wait till you see inside",
+    "pov":      "POV: you just found your dream home",
+    "would":    "Would you live here?",
+    "hit":      "This just hit the market",
+    "tour":     "Tour this {beds}-bed home in {city}",
+    "rate":     "Rate this home 1 to 10",
+    "under":    "What {price} gets you in {city}",
+    "backyard": "Wait for the backyard",
+}
+
+def hook_text(hid, job):
+    t = HOOKS.get(hid or "", HOOKS["inside"])
+    st = job.get("stats") or {}
+    city = (job.get("city_line") or "").split(",")[0].strip()
+    vals = {"beds": st.get("beds"), "city": city, "price": fmt_price(st.get("price"))}
+    if any(f"{{{k}}}" in t and not v for k, v in vals.items()):
+        return HOOKS["inside"]                      # missing detail: fall back to a hook that always works
+    return t.format(**{k: (int(v) if isinstance(v, float) and v == int(v) else v) for k, v in vals.items()})
+
+
 def fmt_price(p):
     if p in (None, ""):
         return ""
@@ -82,7 +104,7 @@ def build_pack(job, listing):
     # 2. Teaser: fast and punchy, no labels, ends on "see the full tour".
     pack.append({"kind": "teaser", "fmt": "9:16", "job": variant(
         shots=cut(pick(shots, 5), 2.6, labels=False, trim=0.6),
-        transition="speed_ramp", kicker="Wait till you see inside", headline=head,
+        transition="speed_ramp", kicker=hook_text(listing.get("hook"), job), headline=head,
         outro="simple", outro_kicker="See the full tour", outro_headline=where,
     )})
 

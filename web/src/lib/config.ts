@@ -36,6 +36,18 @@ export const EFFECTS = [
   { id: "reveal", name: "Drone reveal", blurb: "Flies back and up to reveal the whole property. Use on aerials." },
 ] as const;
 
+// Opening line of the teaser Reel. Keep in sync with render/reels.py HOOKS
+export const HOOKS = [
+  { id: "inside", text: "Wait till you see inside" },
+  { id: "pov", text: "POV: you just found your dream home" },
+  { id: "would", text: "Would you live here?" },
+  { id: "hit", text: "This just hit the market" },
+  { id: "tour", text: "Tour this {beds}-bed home in {city}" },
+  { id: "rate", text: "Rate this home 1 to 10" },
+  { id: "under", text: "What {price} gets you in {city}" },
+  { id: "backyard", text: "Wait for the backyard" },
+] as const;
+
 export const ROOM_SUGGESTIONS = [
   "Front Exterior",
   "Open Living Room",

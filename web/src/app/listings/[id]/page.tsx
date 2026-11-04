@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
@@ -277,9 +277,12 @@ function Editor({ id, user }: { id: string; user: User }) {
               </div>
             ))}
           </div>
-          <button onClick={() => setStatus("review")} className="btn-ghost mt-6" disabled={busy}>
-            Change clips or labels
-          </button>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <ShareLink listing={listing} onSave={saveListing} />
+            <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
+              Change clips or labels
+            </button>
+          </div>
         </section>
       )}
 
@@ -527,8 +530,9 @@ function Editor({ id, user }: { id: string; user: User }) {
               onChange={(e) => saveListing({ outro: e.target.value as Listing["outro"] })}
             >
               <option value="branded">Your branding (name, brokerage, phone, headshot, logo)</option>
+              <option value="client">Your client&apos;s branding (for photographers)</option>
               <option value="simple">Address only</option>
-              <option value="none">No closing card</option>
+              <option value="none">No closing card (unbranded)</option>
             </select>
             {listing.outro === "branded" && (
               <p className="mt-1 text-xs text-ink-soft">
@@ -536,6 +540,24 @@ function Editor({ id, user }: { id: string; user: User }) {
               </p>
             )}
           </div>
+          <div>
+            <label htmlFor="hook" className="label">Teaser opening line</label>
+            <select
+              id="hook"
+              className="input"
+              disabled={!labelsEditable}
+              value={listing.hook ?? "inside"}
+              onChange={(e) => saveListing({ hook: e.target.value })}
+            >
+              {HOOKS.map((h) => (
+                <option key={h.id} value={h.id}>{h.text}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-ink-soft">Shown at the start of the 15-second teaser Reel.</p>
+          </div>
+          {listing.outro === "client" && (
+            <ClientBranding listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+          )}
         </div>
       </section>
 
@@ -583,6 +605,61 @@ function IconBtn(props: { label: string; onClick: () => void; disabled?: boolean
 }
 
 /** Text input that saves on blur (and on Enter). */
+/** A private link the realtor or photographer sends to a client: they watch and download, no account needed. */
+function ShareLink({ listing, onSave }: { listing: Listing; onSave: (p: Partial<Listing>) => Promise<void> | void }) {
+  const [copied, setCopied] = useState(false);
+  const url = listing.share_token && typeof window !== "undefined" ? `${window.location.origin}/share/${listing.share_token}` : "";
+  async function make() {
+    const token = listing.share_token ?? crypto.randomUUID();
+    if (!listing.share_token) await onSave({ share_token: token });
+    const link = `${window.location.origin}/share/${token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* clipboard blocked: the link is still shown */
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button onClick={make} className="btn-gold">
+        {copied ? "Link copied" : listing.share_token ? "Copy client link" : "Share with client"}
+      </button>
+      {url && <span className="max-w-full truncate text-xs text-muted">{url}</span>}
+    </div>
+  );
+}
+
+/** Client agent's details for a photographer's deliverable. */
+function ClientBranding({ listing, user, disabled, onSave }: {
+  listing: Listing; user: User; disabled: boolean; onSave: (p: Partial<Listing>) => Promise<void> | void;
+}) {
+  const [note, setNote] = useState("");
+  async function upload(kind: "logo" | "headshot", file: File) {
+    const path = `${user.id}/client-${listing.id}-${kind}-${crypto.randomUUID()}.${fileExt(file.name)}`;
+    const { error } = await supabase().storage.from("branding").upload(path, file, { upsert: true });
+    if (error) return setNote(error.message);
+    await onSave(kind === "logo" ? { client_logo_path: path } : { client_headshot_path: path });
+    setNote(`${kind === "logo" ? "Logo" : "Headshot"} uploaded.`);
+  }
+  return (
+    <fieldset disabled={disabled} className="grid gap-3 rounded-xl border border-line p-4 sm:col-span-2 sm:grid-cols-3">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted">Client branding</legend>
+      <Field label="Agent name" value={listing.client_name ?? ""} onSave={(v) => onSave({ client_name: v || null })} placeholder="Julio Ayala" />
+      <Field label="Brokerage" value={listing.client_brokerage ?? ""} onSave={(v) => onSave({ client_brokerage: v || null })} placeholder="MRG Realty" />
+      <Field label="Phone" value={listing.client_phone ?? ""} onSave={(v) => onSave({ client_phone: v || null })} placeholder="(915) 555-0123" />
+      {(["logo", "headshot"] as const).map((k) => (
+        <label key={k} className="btn-ghost cursor-pointer">
+          {(k === "logo" ? listing.client_logo_path : listing.client_headshot_path) ? `Replace ${k}` : `Upload ${k}`}
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(k, e.target.files[0])} />
+        </label>
+      ))}
+      {note && <p className="self-center text-xs text-ink-soft">{note}</p>}
+    </fieldset>
+  );
+}
+
 function Field(props: { label: string; value: string; onSave: (v: string) => void; placeholder?: string; type?: string; hint?: string }) {
   const id = useId();
   return (

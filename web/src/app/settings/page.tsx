@@ -51,7 +51,7 @@ function Branding({ user }: { user: User }) {
     setSaving(true);
     const { error } = await supabase()
       .from("profiles")
-      .update({ full_name: p.full_name, title: p.title, brokerage: p.brokerage, phone: p.phone, email: p.email })
+      .update({ full_name: p.full_name, title: p.title, brokerage: p.brokerage, phone: p.phone, email: p.email, account_type: p.account_type ?? "agent", company: p.company })
       .eq("id", user.id);
     setSaving(false);
     setNote(error ? error.message : "Saved. Your next videos will use this.");
@@ -62,6 +62,37 @@ function Branding({ user }: { user: User }) {
       <h1 className="font-display text-4xl font-medium">Your branding</h1>
       <p className="mb-6 text-sm text-ink-soft">This goes on the closing card of every video.</p>
       <form onSubmit={save} className="card space-y-5 p-6">
+        <fieldset>
+          <legend className="label">I am a…</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {([
+              ["agent", "Real estate agent", "Videos for my own listings, with my branding."],
+              ["photographer", "Photographer or media company", "Videos I deliver to agent clients, with their branding or none."],
+            ] as const).map(([v, t, d]) => (
+              <label
+                key={v}
+                className={`cursor-pointer rounded-xl border-2 p-3 ${(p.account_type ?? "agent") === v ? "border-gold bg-gold-soft" : "border-line"}`}
+              >
+                <input
+                  type="radio"
+                  name="account_type"
+                  className="sr-only"
+                  checked={(p.account_type ?? "agent") === v}
+                  onChange={() => setP({ ...p, account_type: v })}
+                />
+                <span className="block text-sm font-semibold">{t}</span>
+                <span className="block text-xs text-ink-soft">{d}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {p.account_type === "photographer" && (
+          <div>
+            <label className="label" htmlFor="company">Business name</label>
+            <input id="company" className="input" value={p.company ?? ""} onChange={set("company")} placeholder="Lone Star Listing Media" />
+            <p className="mt-1 text-xs text-ink-soft">Shown on the delivery page you send clients.</p>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="name">Name</label>

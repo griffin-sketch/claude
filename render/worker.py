@@ -279,6 +279,18 @@ def render_listing(l):
                 except Exception as e:
                     log(f"  {k} download failed: {e}")
         outro = l["outro"]
+        if outro == "client":   # a photographer delivering the client agent's branding
+            agent = {"name": l.get("client_name") or "", "title": "", "brokerage": l.get("client_brokerage") or "",
+                     "phone": l.get("client_phone") or ""}
+            for k in ("headshot", "logo"):
+                path = l.get(f"client_{k}_path")
+                if path:
+                    try:
+                        dest = storage_get("branding", path, os.path.join(media, "client-" + k + (os.path.splitext(path)[1] or ".png")))
+                        agent[k] = os.path.relpath(dest, tmp)
+                    except Exception as e:
+                        log(f"  client {k} download failed: {e}")
+            outro = "branded"
         if outro == "branded" and not (agent["name"] or agent["phone"]):
             outro = "simple"   # no branding saved yet
         job = {
