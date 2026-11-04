@@ -25,6 +25,17 @@ export const TRANSITIONS = [
   { id: "cut", name: "Straight cut", blurb: "Clean, instant cuts. Fast paced." },
 ] as const;
 
+// Keep in sync with render/effects.py EFFECTS
+export const EFFECTS = [
+  { id: "none", name: "Camera move", blurb: "A smooth cinematic move through the space." },
+  { id: "build", name: "Construction build-up", blurb: "Starts as framing or bare studs and builds itself. Great for new builds." },
+  { id: "staging", name: "Virtual staging", blurb: "An empty room furnishes itself. For vacant listings." },
+  { id: "dusk", name: "Day to dusk", blurb: "The sky turns to twilight and the lights glow on. Best on exteriors." },
+  { id: "water", name: "Moving water", blurb: "Pool, spa or water view ripples and shimmers." },
+  { id: "fire", name: "Fireplace glow", blurb: "A warm fire flickers in the fireplace or fire pit." },
+  { id: "reveal", name: "Drone reveal", blurb: "Flies back and up to reveal the whole property. Use on aerials." },
+] as const;
+
 export const ROOM_SUGGESTIONS = [
   "Front Exterior",
   "Open Living Room",

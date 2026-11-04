@@ -42,6 +42,8 @@ export type Listing = {
   updated_at: string;
 };
 
+export type Effect = "none" | "build" | "staging" | "dusk" | "water" | "fire" | "reveal";
+
 export type Shot = {
   id: string;
   listing_id: string;
@@ -50,7 +52,10 @@ export type Shot = {
   label: string;
   sub: string;
   move: string;
+  effect: Effect;
   clip_status: ClipStatus;
+  vclip_status?: string;
+  vclip_path?: string | null;
   clip_path: string | null;
   clip_attempts: number;
   approved: boolean;

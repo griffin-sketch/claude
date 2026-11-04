@@ -1105,6 +1105,8 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
     for i, sg in enumerate(segs[1:], start=1):
         if not (sg["shot"].get("label") or sg["shot"].get("sub")): continue
         t0 = sg["f0"] / FPS + XF * 0.6
+        if sg["shot"].get("label_delay"):   # transforming shots: wait until the room has changed
+            t0 = sg["f0"] / FPS + sg["n"] / FPS * float(sg["shot"]["label_delay"])
         t1 = (sg["f0"] + sg["n"] - (xf if i < len(segs) - 1 else 0)) / FPS - ANIM - 0.15
         if i == len(segs) - 1 and outro_f: t1 = (sg["f0"] + sg["n"]) / FPS - ANIM - 0.1
         els += tpl.feature(i, nfeat, sg["shot"], t0, t1)

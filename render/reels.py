@@ -13,6 +13,8 @@ REEL_KINDS = {
     "price_reveal": "Guess the price",
     "top_features": "Top features",
     "open_house":   "Open house",
+    "build_up":     "Built from the ground up",
+    "staged":       "Virtually staged",
 }
 
 
@@ -43,6 +45,9 @@ def cut(shots, dur, labels=True, trim=0.0):
         s["duration"] = dur
         if trim and str(s.get("path", "")).lower().endswith(".mp4"):
             s["trim_start"] = trim
+        if s.get("effect") in ("build", "staging", "dusk") and dur < 4.8:
+            # a short cut can't fit the whole transformation: show its finished end instead
+            s["trim_start"] = max(0.0, 5.0 - dur - 0.15); s.pop("label_delay", None)
         if not labels:
             s["label"] = ""; s["sub"] = ""
         out.append(s)
@@ -105,7 +110,21 @@ def build_pack(job, listing):
             transition="cut", kicker=f"{len(feats)} things we love", headline=head,
         )})
 
-    # 6. Open house: only when the realtor entered a date and time.
+    # 6. Built from the ground up: every photo with the construction effect, in order.
+    built = [s for s in shots if s.get("effect") == "build"]
+    if len(built) >= 2:
+        pack.append({"kind": "build_up", "fmt": "9:16", "job": variant(
+            shots=cut(built, 5.0), transition="speed_ramp", kicker="From the ground up", headline=head,
+        )})
+
+    # 7. Virtually staged: the empty rooms furnishing themselves.
+    staged = [s for s in shots if s.get("effect") == "staging"]
+    if len(staged) >= 2:
+        pack.append({"kind": "staged", "fmt": "9:16", "job": variant(
+            shots=cut(staged, 5.0), transition="crossfade", kicker="Imagine living here", headline=head,
+        )})
+
+    # 8. Open house: only when the realtor entered a date and time.
     oh = (listing.get("open_house") or "").strip()
     if oh:
         pack.append({"kind": "open_house", "fmt": "9:16", "job": variant(

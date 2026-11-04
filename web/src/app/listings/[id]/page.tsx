@@ -6,8 +6,8 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
-import { STATUS_LABEL, type Listing, type Render, type Shot } from "@/lib/types";
+import { EFFECTS, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "open_house"];
@@ -391,6 +391,28 @@ function Editor({ id, user }: { id: string; user: User }) {
                   {listing.status !== "draft" && <ClipBadge status={s.clip_status} />}
                 </div>
                 <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                  <label className="sm:col-span-2">
+                    <span className="sr-only">Effect for photo {i + 1}</span>
+                    <select
+                      className="input py-2"
+                      disabled={!(editable || listing.status === "review")}
+                      value={s.effect ?? "none"}
+                      onChange={(e) => {
+                        const effect = e.target.value as Effect;
+                        saveShot(s, listing.status === "review" ? { effect, clip_status: "redo" } : { effect });
+                      }}
+                    >
+                      {EFFECTS.map((fx) => (
+                        <option key={fx.id} value={fx.id}>
+                          {fx.id === "none" ? "Effect: none (camera move)" : `Effect: ${fx.name}`}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-xs text-muted">
+                      {EFFECTS.find((fx) => fx.id === (s.effect ?? "none"))?.blurb}
+                      {listing.status === "review" && " Changing it remakes this clip."}
+                    </span>
+                  </label>
                   {i === 0 ? (
                     <p className="text-sm text-ink-soft sm:col-span-2">
                       Opening shot. Your title card shows over this one, so it has no label.

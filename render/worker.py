@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(HERE, "engine"))
 import ai_motion as am   # prompts, move picker, photo encoder
 import render as engine  # template renderer
 import reels             # the Reel pack: several cuts per listing
+import effects           # per-photo effects + centered vertical framing
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -31,6 +32,8 @@ POLL = int(os.environ.get("POLL_SECONDS", "10"))
 MODEL = os.environ.get("FAL_MODEL", am.DEFAULT_MODEL)
 MAX_ATTEMPTS = 3
 CLIP_SECONDS = 5
+VERTICAL_SHOTS = 8      # photos that also get a true 9:16 clip (the Reels use these)
+TRANSFORMS = {"build", "staging", "dusk"}   # effects whose room changes on screen: labels wait for the change
 
 S = requests.Session()
 S.headers.update({"apikey": KEY, "Authorization": f"Bearer {KEY}"})
@@ -91,21 +94,33 @@ def fal_call(url, body=None):
     return r.json()
 
 
-def submit_clip(shot, index, user_id):
-    """Download the photo, send it to fal.ai, and mark the shot as generating."""
+def submit_clip(shot, index, user_id, orient="h"):
+    """Download the photo, apply its effect, send it to fal.ai, and mark that orientation as generating.
+    orient "h" = the 16:9 clip (review + MLS tour); "v" = a centered 9:16 clip for the vertical videos."""
     with tempfile.TemporaryDirectory() as tmp:
         src = storage_get("photos", shot["photo_path"], os.path.join(tmp, "photo" + os.path.splitext(shot["photo_path"])[1]))
+        kind = effects.kind_of(shot, index)
+        if orient == "v":
+            src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
-        prompt = f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}"
-        body = {"prompt": prompt, "image_url": am.data_uri(src), "duration": str(CLIP_SECONDS),
-                "negative_prompt": am.NEGATIVE, "cfg_scale": 0.75}
+        body, _ = effects.kling_body(shot.get("effect") or "none", kind, src, tmp, f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}")
+        body.setdefault("negative_prompt", am.NEGATIVE)
+        body["duration"] = str(CLIP_SECONDS)
         r = fal_call(f"https://queue.fal.run/{MODEL}", body)
-    db_patch("shots", {"id": shot["id"]}, {
-        "clip_status": "generating", "move": mv, "fal_status_url": r["status_url"],
-        "fal_response_url": r["response_url"], "clip_attempts": (shot.get("clip_attempts") or 0) + 1,
-        "approved": False, "error": None,
-    })
-    log(f"  shot {index + 1}: submitted [{mv}]")
+    if orient == "v":
+        db_patch("shots", {"id": shot["id"]}, {"vclip_status": "generating", "vfal_status_url": r["status_url"],
+                                                "vfal_response_url": r["response_url"]})
+    else:
+        db_patch("shots", {"id": shot["id"]}, {
+            "clip_status": "generating", "move": mv, "fal_status_url": r["status_url"],
+            "fal_response_url": r["response_url"], "clip_attempts": (shot.get("clip_attempts") or 0) + 1,
+            "approved": False, "error": None,
+        })
+    log(f"  shot {index + 1} [{orient}]: submitted [{shot.get('effect') or mv}]")
+
+
+def wants_vertical(l, index):
+    return index < VERTICAL_SHOTS   # every listing gets the vertical Reel pack
 
 
 # ------------------------------------------------------------------ steps
@@ -117,6 +132,12 @@ def step_queued():
             for i, s in enumerate(shots):
                 if s["clip_status"] in ("none", "failed", "queued"):
                     submit_clip(s, i, l["user_id"])
+                if wants_vertical(l, i) and (s.get("vclip_status") or "none") in ("none", "failed"):
+                    try:
+                        submit_clip(s, i, l["user_id"], "v")
+                    except Exception as e:   # vertical is a bonus: the 9:16 videos fall back to cropping
+                        log(f"  shot {i + 1} vertical failed: {e}")
+                        db_patch("shots", {"id": s["id"]}, {"vclip_status": "failed"})
             db_patch("listings", {"id": l["id"]}, {"status": "generating", "error": None})
         except Exception as e:
             log("  submit failed:", e)
@@ -135,45 +156,61 @@ def step_redo():
         log(f"listing {s['listing_id'][:8]} redo shot {idx + 1}")
         try:
             submit_clip(s, idx, l[0]["user_id"])
+            if wants_vertical(l[0], idx):
+                try:
+                    submit_clip(s, idx, l[0]["user_id"], "v")
+                except Exception as e:
+                    db_patch("shots", {"id": s["id"]}, {"vclip_status": "failed"})
         except Exception as e:
             db_patch("shots", {"id": s["id"]}, {"clip_status": "failed", "error": str(e)[:400]})
 
 
+def _download(url, dest):
+    with requests.get(url, stream=True, timeout=300) as r:
+        r.raise_for_status()
+        with open(dest, "wb") as f:
+            for chunk in r.iter_content(1 << 20):
+                f.write(chunk)
+
+
 def step_poll():
-    for s in db_get("shots", clip_status="eq.generating"):
-        try:
-            st = fal_call(s["fal_status_url"]).get("status")
-        except Exception as e:
-            log("  status check error:", e)
-            continue
-        if st != "COMPLETED":
-            continue
-        listing = db_get("listings", id=f"eq.{s['listing_id']}")
-        if not listing:
-            continue
-        user_id = listing[0]["user_id"]
-        try:
-            res = fal_call(s["fal_response_url"])
-            url = (res.get("video") or {}).get("url")
-            if not url:
-                raise RuntimeError(res.get("detail") or "fal.ai returned no video")
-            with tempfile.TemporaryDirectory() as tmp:
-                dest = os.path.join(tmp, "clip.mp4")
-                with requests.get(url, stream=True, timeout=300) as r:
-                    r.raise_for_status()
-                    with open(dest, "wb") as f:
-                        for chunk in r.iter_content(1 << 20):
-                            f.write(chunk)
-                path = f"{user_id}/{s['listing_id']}/{s['id']}-{s.get('clip_attempts') or 1}.mp4"
-                storage_put("clips", path, dest)
-            db_patch("shots", {"id": s["id"]}, {"clip_status": "ready", "clip_path": path, "error": None})
-            log(f"  shot {s['position'] + 1} of {s['listing_id'][:8]}: ready")
-        except Exception as e:
-            log(f"  shot {s['position'] + 1}: result failed: {e}")
-            if (s.get("clip_attempts") or 0) < MAX_ATTEMPTS:
-                db_patch("shots", {"id": s["id"]}, {"clip_status": "redo", "error": str(e)[:400]})
-            else:
-                db_patch("shots", {"id": s["id"]}, {"clip_status": "failed", "error": str(e)[:400]})
+    for orient, status_f, st_url, res_url, path_f in (("h", "clip_status", "fal_status_url", "fal_response_url", "clip_path"),
+                                                      ("v", "vclip_status", "vfal_status_url", "vfal_response_url", "vclip_path")):
+        for s in db_get("shots", **{status_f: "eq.generating"}):
+            try:
+                st = fal_call(s[st_url]).get("status")
+            except Exception as e:
+                log("  status check error:", e)
+                continue
+            if st != "COMPLETED":
+                continue
+            listing = db_get("listings", id=f"eq.{s['listing_id']}")
+            if not listing:
+                continue
+            user_id = listing[0]["user_id"]
+            try:
+                res = fal_call(s[res_url])
+                url = (res.get("video") or {}).get("url")
+                if not url:
+                    raise RuntimeError(res.get("detail") or "fal.ai returned no video")
+                with tempfile.TemporaryDirectory() as tmp:
+                    dest = os.path.join(tmp, "clip.mp4")
+                    _download(url, dest)
+                    suffix = "-v" if orient == "v" else ""
+                    path = f"{user_id}/{s['listing_id']}/{s['id']}-{s.get('clip_attempts') or 1}{suffix}.mp4"
+                    storage_put("clips", path, dest)
+                upd = {status_f: "ready", path_f: path}
+                if orient == "h": upd["error"] = None
+                db_patch("shots", {"id": s["id"]}, upd)
+                log(f"  shot {s['position'] + 1} [{orient}] of {s['listing_id'][:8]}: ready")
+            except Exception as e:
+                log(f"  shot {s['position'] + 1} [{orient}]: result failed: {e}")
+                if orient == "v":
+                    db_patch("shots", {"id": s["id"]}, {"vclip_status": "failed"})
+                elif (s.get("clip_attempts") or 0) < MAX_ATTEMPTS:
+                    db_patch("shots", {"id": s["id"]}, {"clip_status": "redo", "error": str(e)[:400]})
+                else:
+                    db_patch("shots", {"id": s["id"]}, {"clip_status": "failed", "error": str(e)[:400]})
 
 
 def step_to_review():
@@ -182,6 +219,8 @@ def step_to_review():
         states = {s["clip_status"] for s in shots}
         if states & {"queued", "generating", "redo", "none"}:
             continue
+        if any((s.get("vclip_status") or "none") == "generating" for s in shots):
+            continue   # vertical clips still coming
         if states == {"failed"}:
             db_patch("listings", {"id": l["id"]}, {"status": "failed", "error": "No clips could be made. Try different photos."})
         else:
@@ -207,14 +246,26 @@ def render_listing(l):
     with tempfile.TemporaryDirectory() as tmp:
         media = os.path.join(tmp, "media"); os.makedirs(media)
         job_shots = []
+        vpath = {}   # horizontal clip path -> centered vertical clip path, for the 9:16 videos
         for s in shots:
+            fx = s.get("effect") or "none"
             if s["clip_status"] == "ready" and s.get("clip_path"):
                 p = storage_get("clips", s["clip_path"], os.path.join(media, f"{s['id']}.mp4"))
-                job_shots.append({"path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "duration": 4.6})
+                rel = os.path.relpath(p, tmp)
+                shot = {"path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
+                        "duration": 5.0 if fx in TRANSFORMS else 4.6}
+                if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
+                job_shots.append(shot)
+                if s.get("vclip_status") == "ready" and s.get("vclip_path"):
+                    try:
+                        vp = storage_get("clips", s["vclip_path"], os.path.join(media, f"{s['id']}-v.mp4"))
+                        vpath[rel] = os.path.relpath(vp, tmp)
+                    except Exception as e:
+                        log(f"  vertical clip download failed: {e}")
             else:  # clip failed: fall back to classic pan/zoom on the photo
                 ext = os.path.splitext(s["photo_path"])[1] or ".jpg"
                 p = storage_get("photos", s["photo_path"], os.path.join(media, f"{s['id']}{ext}"))
-                job_shots.append({"path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"]})
+                job_shots.append({"path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "effect": "none"})
         if job_shots:
             job_shots[0]["label"] = ""; job_shots[0]["sub"] = ""   # title card sits over the first shot
         agent = {"name": prof.get("full_name") or "", "title": prof.get("title") or "",
@@ -241,8 +292,11 @@ def render_listing(l):
         pack = reels.build_pack(job, l)
         for n, item in enumerate(pack, 1):
             kind, fmt = item["kind"], item["fmt"]
+            j = item["job"]
+            if fmt == "9:16" and vpath:   # use the true vertical clips where we have them
+                j = dict(j, shots=[dict(sh, path=vpath.get(sh["path"], sh["path"])) for sh in j["shots"]])
             job_path = os.path.join(tmp, f"job-{kind}.json")
-            json.dump(item["job"], open(job_path, "w"))
+            json.dump(j, open(job_path, "w"))
             name = f"{kind}-{fmt.replace(':', 'x')}"
             out = os.path.join(tmp, f"{name}.mp4")
             log(f"  rendering {n}/{len(pack)}: {name}")
