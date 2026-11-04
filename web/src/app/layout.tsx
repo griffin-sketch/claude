@@ -11,6 +11,7 @@ const manrope = localFont({
     { path: "../fonts/manrope-500.woff2", weight: "500" },
     { path: "../fonts/manrope-600.woff2", weight: "600" },
     { path: "../fonts/manrope-700.woff2", weight: "700" },
+    { path: "../fonts/manrope-800.woff2", weight: "800" },
   ],
 });
 

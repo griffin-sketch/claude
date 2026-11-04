@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 // Turn on once Google sign-in is set up in Supabase: Vercel variable NEXT_PUBLIC_GOOGLE_AUTH=1
 const GOOGLE_ON = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1";
@@ -157,12 +158,11 @@ export default function LoginPage() {
         className="relative hidden flex-col justify-between bg-night bg-cover bg-center p-12 text-white lg:flex"
         style={{
           backgroundImage:
-            "linear-gradient(180deg,rgba(10,12,15,.55) 0%,rgba(10,12,15,.1) 40%,rgba(10,12,15,.8) 100%),url(/home/living.jpg)",
+            "linear-gradient(180deg,rgba(6,16,30,.55) 0%,rgba(6,16,30,.1) 40%,rgba(6,16,30,.8) 100%),url(/home/living.jpg)",
         }}
       >
-        <Link href="/" className="flex items-baseline gap-2.5">
-          <span className="font-display text-[30px] font-semibold">KGB</span>
-          <span className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E9DCC4]">Listing Videos</span>
+        <Link href="/" aria-label="Tourvo home">
+          <Logo size={34} light />
         </Link>
         <div>
           <p className="font-display text-6xl font-medium leading-[0.95]">
@@ -174,9 +174,8 @@ export default function LoginPage() {
         </div>
       </aside>
       <main className="flex flex-col px-5 py-8 sm:px-10">
-        <Link href="/" className="flex items-baseline gap-2.5 lg:hidden">
-          <span className="font-display text-[26px] font-semibold">KGB</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-deep">Listing Videos</span>
+        <Link href="/" className="lg:hidden" aria-label="Tourvo home">
+          <Logo size={30} />
         </Link>
         <div className="flex flex-1 items-center justify-center py-10">
           <Suspense>

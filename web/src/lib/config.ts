@@ -1,5 +1,5 @@
 // App-wide settings. Change the product name here once it's picked.
-export const APP_NAME = "KGB Listing Videos";
+export const APP_NAME = "Tourvo";
 export const APP_TAGLINE = "Turn listing photos into a cinematic walkthrough video, branded for you, in about 15 minutes.";
 
 export const MAX_PHOTOS = 20;

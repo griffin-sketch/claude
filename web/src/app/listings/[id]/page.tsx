@@ -10,6 +10,15 @@ import { MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from
 import { STATUS_LABEL, type Listing, type Render, type Shot } from "@/lib/types";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
+const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "open_house"];
+const REEL_LABEL: Record<string, string> = {
+  tour: "Full walkthrough",
+  teaser: "15-second teaser",
+  just_listed: "Just Listed",
+  price_reveal: "Guess the price",
+  top_features: "Top features",
+  open_house: "Open house",
+};
 
 function Editor({ id, user }: { id: string; user: User }) {
   const [listing, setListing] = useState<Listing | null>(null);
@@ -18,6 +27,15 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [clips, setClips] = useState<Record<string, string>>({});
   const [videos, setVideos] = useState<Record<string, { play: string; download: string }>>({});
+  const sortedRenders = useMemo(
+    () =>
+      [...renders].sort(
+        (a, b) =>
+          REEL_ORDER.indexOf(a.kind ?? "tour") - REEL_ORDER.indexOf(b.kind ?? "tour") ||
+          (a.format === "16:9" ? -1 : 1) - (b.format === "16:9" ? -1 : 1),
+      ),
+    [renders],
+  );
   const [uploading, setUploading] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -228,22 +246,28 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- finished videos */}
       {listing.status === "done" && (
         <section className="card p-6">
-          <h2 className="mb-4 font-display text-2xl font-medium">Your videos</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            {renders.map((r) => (
+          <h2 className="font-display text-2xl font-medium">Your Reel pack</h2>
+          <p className="mb-5 mt-1 text-sm text-ink-soft">
+            {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
+          </p>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {sortedRenders.map((r) => (
               <div key={r.id}>
                 {videos[r.video_path] ? (
                   <video
                     src={videos[r.video_path].play}
                     controls
                     playsInline
-                    className={`w-full rounded-lg bg-black ${r.format === "9:16" ? "mx-auto aspect-[9/16] max-h-[560px] w-auto" : "aspect-video"}`}
+                    className={`w-full rounded-xl bg-black ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
                   />
                 ) : (
-                  <div className="aspect-video rounded-lg bg-line" />
+                  <div className={`rounded-xl bg-line ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`} />
                 )}
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="font-semibold">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
+                <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{REEL_LABEL[r.kind ?? "tour"] ?? "Video"}</span>
+                    <span className="block text-xs text-muted">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
+                  </span>
                   {videos[r.video_path] && (
                     <a href={videos[r.video_path].download} className="btn-ghost py-1.5">
                       Download
@@ -274,7 +298,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {listing.status === "rendering" && (
         <section className="card p-6">
           <h2 className="font-display text-2xl font-medium">Building your video</h2>
-          <p className="mt-1 text-sm text-ink-soft">Adding your template, labels and branding. About 3 to 6 minutes.</p>
+          <p className="mt-1 text-sm text-ink-soft">Cutting your Reel pack: the full walkthrough plus short versions for social. About 10 to 15 minutes.</p>
         </section>
       )}
 
@@ -293,7 +317,7 @@ function Editor({ id, user }: { id: string; user: User }) {
               disabled={busy || stillWorking || readyCount === 0}
               onClick={() => setStatus("rendering")}
             >
-              {stillWorking ? "Waiting on redos…" : "Make my video"}
+              {stillWorking ? "Waiting on redos…" : "Make my Reel pack"}
             </button>
           </div>
         </section>
@@ -312,6 +336,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <Field label="Top line" value={listing.kicker} onSave={(v) => saveListing({ kicker: v || "NOW AVAILABLE" })} placeholder="NOW AVAILABLE" hint="e.g. JUST LISTED, OPEN HOUSE SAT, or the community name" />
           <Field label="Headline (optional)" value={listing.headline} onSave={(v) => saveListing({ headline: v })} placeholder="Defaults to the address" />
           <Field label="Acres (optional)" type="number" value={listing.acres?.toString() ?? ""} onSave={(v) => saveListing({ acres: v ? Number(v) : null })} />
+          <Field label="Open house (optional)" value={listing.open_house ?? ""} onSave={(v) => saveListing({ open_house: v || null })} placeholder="Sat, Nov 8 · 1–4 PM" hint="Adds an Open House reel to your pack" />
         </fieldset>
       </section>
 

@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { APP_NAME } from "@/lib/config";
+import { Logo } from "@/components/Logo";
 
 /** Signed-in frame: header + nav. Sends signed-out visitors to /login. */
 export function AppShell({ children }: { children: (user: User) => ReactNode }) {
@@ -35,9 +36,8 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link href="/dashboard" className="flex items-baseline gap-2.5" aria-label={APP_NAME}>
-            <span className="font-display text-[26px] font-semibold leading-none">KGB</span>
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-deep sm:inline">Listing Videos</span>
+          <Link href="/dashboard" aria-label={`${APP_NAME} dashboard`}>
+            <Logo size={30} />
           </Link>
           <nav className="flex items-center gap-1 text-sm">
             {nav.map((n) => (

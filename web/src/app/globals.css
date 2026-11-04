@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* Luxury real estate look: warm ivory ground, ink text, champagne accent. */
+/* Tourvo: clean light ground, navy ink, brand blue accent. */
 :root {
-  --bg: #f6f5f2;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --ink: #17191c;
-  --ink-soft: #4e535c;
-  --muted: #6b707a;
-  --line: #e4e2dc;
-  --night: #121417;
-  --champagne: #a07e4f;
-  --champagne-deep: #8a6a3e;
-  --champagne-light: #c9a877;
-  --champagne-soft: #f1ebe1;
+  --ink: #0b1b2e;
+  --ink-soft: #44546a;
+  --muted: #5d6b7e;
+  --line: #dce4ee;
+  --night: #0b1b2e;
+  --champagne: #1f5fd1;
+  --champagne-deep: #174baa;
+  --champagne-light: #9cc3ff;
+  --champagne-soft: #e8f0fd;
   --danger: #b42318;
   --ok: #1f7a4d;
 }

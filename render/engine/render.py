@@ -332,8 +332,10 @@ class Template:
     """Base: subclasses build sprites for title card, feature labels and outro."""
     name = "base"
     letterbox = 0
-    def __init__(self, job): self.job = job
+    def __init__(self, job): self.job = job; self.in_outro = False
     def headline(self):
+        if self.in_outro and self.job.get("outro_headline"):   # reels can end on a different line (price reveal)
+            return self.job["outro_headline"]
         return self.job.get("headline") or self.job.get("address") or ""
     def addr_line(self):
         j = self.job
@@ -1107,7 +1109,9 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
         if i == len(segs) - 1 and outro_f: t1 = (sg["f0"] + sg["n"]) / FPS - ANIM - 0.1
         els += tpl.feature(i, nfeat, sg["shot"], t0, t1)
     if outro_f:
+        tpl.in_outro = True
         els += tpl.outro(body_f / FPS + 0.55)
+        tpl.in_outro = False
 
     vign = make_vignette()
     sources = {}

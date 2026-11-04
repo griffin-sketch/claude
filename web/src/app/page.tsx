@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -26,7 +27,7 @@ const STEPS = [
     img: "/home/kitchen.jpg",
     alt: "Kitchen listing photo",
     title: "Review, then download",
-    body: "Watch every clip. Redo any shot you don't love at no charge. Then download a 16:9 video for MLS and YouTube and a 9:16 one for Reels and TikTok.",
+    body: "Watch every clip. Redo any shot you don't love at no charge. Then download your Reel pack: the full walkthrough plus short cuts for Reels, TikTok and Shorts.",
   },
 ];
 
@@ -58,16 +59,15 @@ export default function Home() {
       {/* Nav */}
       <header className={`absolute inset-x-0 top-0 z-10 pt-7 ${pad}`}>
         <div className={`${wrap} flex items-center justify-between gap-4`}>
-          <Link href="/" className="flex items-baseline gap-2.5 text-white">
-            <span className="font-display text-[30px] font-semibold tracking-[0.02em]">KGB</span>
-            <span className="hidden text-xs font-semibold uppercase tracking-[0.28em] text-[#E9DCC4] sm:inline">Listing Videos</span>
+          <Link href="/" aria-label="Tourvo home">
+            <Logo size={34} light />
           </Link>
           <nav aria-label="Main" className="flex items-center gap-5 whitespace-nowrap text-sm font-medium text-white sm:gap-7">
-            <a href="#how" className="hidden hover:text-[#E9DCC4] sm:inline">How it works</a>
-            <a href="#looks" className="hidden hover:text-[#E9DCC4] sm:inline">The looks</a>
-            <a href="#pricing" className="hidden hover:text-[#E9DCC4] sm:inline">Pricing</a>
-            <Link href="/login" className="hover:text-[#E9DCC4]">Sign in</Link>
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-ink hover:bg-[#F1EBE1]">
+            <a href="#how" className="hidden hover:text-[#CFE0FF] sm:inline">How it works</a>
+            <a href="#looks" className="hidden hover:text-[#CFE0FF] sm:inline">The looks</a>
+            <a href="#pricing" className="hidden hover:text-[#CFE0FF] sm:inline">Pricing</a>
+            <Link href="/login" className="hover:text-[#CFE0FF]">Sign in</Link>
+            <Link href="/login" className="inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-ink hover:bg-[#E8F0FD]">
               Make a video
             </Link>
           </nav>
@@ -79,13 +79,13 @@ export default function Home() {
         className="relative flex min-h-[680px] items-end bg-night bg-cover pt-36 sm:min-h-[760px]"
         style={{
           backgroundImage:
-            "linear-gradient(180deg,rgba(10,12,15,.55) 0%,rgba(10,12,15,.05) 30%,rgba(10,12,15,.10) 55%,rgba(10,12,15,.82) 100%),url(/home/house.jpg)",
+            "linear-gradient(180deg,rgba(6,16,30,.55) 0%,rgba(6,16,30,.05) 30%,rgba(6,16,30,.10) 55%,rgba(6,16,30,.82) 100%),url(/home/house.jpg)",
           backgroundPosition: "center 40%",
         }}
       >
         <div className={`${wrap} flex flex-wrap items-end justify-between gap-10 pb-[72px] ${pad}`}>
           <div className="min-w-0 flex-[1_1_560px] text-white">
-            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E9DCC4]">For listing agents</p>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-[#CFE0FF]">For agents and real estate photographers</p>
             <h1 className="font-display text-[clamp(52px,7vw,104px)] font-medium leading-[0.95] tracking-[-0.01em]">
               Your listing,
               <br />
@@ -93,7 +93,7 @@ export default function Home() {
             </h1>
             <p className="mt-7 max-w-[520px] text-lg leading-relaxed text-[#E7E7E4]">
               Upload your listing photos. We turn each room into a smooth, cinematic camera move and finish it with your
-              branding. A walkthrough video ready for MLS and Reels in about 15 minutes.
+              branding. One upload gives you a full walkthrough plus a pack of ready-to-post Reels.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3.5">
               <Link href="/login" className="inline-flex min-h-[52px] items-center rounded-full bg-gold px-7 text-base font-semibold text-white hover:bg-gold-deep">
@@ -107,12 +107,12 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <div className="hidden min-w-0 flex-[0_1_300px] flex-col gap-2.5 rounded-[18px] md:flex border border-white/20 bg-[rgba(18,20,23,.55)] px-6 py-5 text-white backdrop-blur-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#E9DCC4]">Now playing</p>
+          <div className="hidden min-w-0 flex-[0_1_300px] flex-col gap-2.5 rounded-[18px] md:flex border border-white/20 bg-[rgba(11,27,46,.55)] px-6 py-5 text-white backdrop-blur-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#CFE0FF]">Now playing</p>
             <p className="font-display text-[26px] font-medium leading-tight">Sample listing · Front exterior</p>
             <p className="text-[13px] text-[#CFCFCB]">Slow drone-style rise, 5 seconds</p>
             <div className="h-[3px] rounded bg-white/20">
-              <div className="h-[3px] w-[38%] rounded bg-[#E9DCC4]" />
+              <div className="h-[3px] w-[38%] rounded bg-[#CFE0FF]" />
             </div>
           </div>
         </div>
@@ -197,7 +197,7 @@ export default function Home() {
       </section>
 
       {/* What you get */}
-      <section className={`bg-night py-[104px] text-[#F2F1EE] ${pad}`}>
+      <section className={`bg-night py-[104px] text-[#F3F6FA] ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-16`}>
           <div className="relative min-w-0 flex-[1.2_1_520px]">
             <img src="/home/pool.jpg" alt="Backyard pool at dusk, shown as a 16:9 video" className="aspect-video w-full rounded-[14px] object-cover" />
@@ -208,12 +208,12 @@ export default function Home() {
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
-            <h2 className="font-display text-[clamp(38px,4.4vw,58px)] font-medium leading-[1.05]">One upload. Every place you post.</h2>
+            <h2 className="font-display text-[clamp(38px,4.4vw,58px)] font-medium leading-[1.05]">One listing. A whole pack of Reels.</h2>
             <ul className="flex flex-col gap-[22px]">
               {[
-                ["16:9 video", "for MLS, YouTube and your website"],
-                ["9:16 video", "for Instagram Reels, TikTok and Shorts, made from the same clips"],
-                ["Your branding", "on the closing card: name, brokerage, phone, headshot, logo"],
+                ["Full walkthrough", "in 16:9 for MLS, YouTube and your website, plus vertical"],
+                ["Short Reels", "a 15-second teaser, Just Listed, Guess the price, Top features and Open house"],
+                ["Your branding", "on the closing card: name, brokerage, phone, headshot, logo. Photographers can deliver them under their own brand"],
                 ["Free redos", "on any clip before your video is built"],
               ].map(([b, rest]) => (
                 <li key={b} className="flex items-start gap-4">
@@ -242,15 +242,15 @@ export default function Home() {
                 <span className="font-display text-[72px] font-medium leading-none">$49</span>
                 <span className="text-[15px] text-muted">per video</span>
               </p>
-              <p className="text-[15px] leading-relaxed text-ink-soft">Pay for the listing in front of you. Both formats and clip redos included.</p>
+              <p className="text-[15px] leading-relaxed text-ink-soft">Pay for the listing in front of you. The full Reel pack and clip redos included.</p>
               <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full border border-ink text-base font-semibold hover:bg-ink hover:text-white">
                 Make one video
               </Link>
             </div>
-            <div className="flex flex-col gap-5 rounded-[20px] bg-ink p-8 text-[#F2F1EE] sm:p-10">
+            <div className="flex flex-col gap-5 rounded-[20px] bg-ink p-8 text-[#F3F6FA] sm:p-10">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-gold-light">Monthly</p>
-                <span className="rounded-full bg-[rgba(201,168,119,.16)] px-3 py-1.5 text-xs font-semibold text-[#E9DCC4]">About $27 a video</span>
+                <span className="rounded-full bg-[rgba(156,195,255,.16)] px-3 py-1.5 text-xs font-semibold text-[#CFE0FF]">About $27 a video</span>
               </div>
               <p className="flex items-baseline gap-2">
                 <span className="font-display text-[72px] font-medium leading-none">$80</span>
@@ -282,7 +282,7 @@ export default function Home() {
         className={`bg-night bg-cover bg-center py-[140px] text-white ${pad}`}
         style={{
           backgroundImage:
-            "linear-gradient(90deg,rgba(10,12,15,.86) 0%,rgba(10,12,15,.55) 60%,rgba(10,12,15,.35) 100%),url(/home/kitchen.jpg)",
+            "linear-gradient(90deg,rgba(6,16,30,.86) 0%,rgba(6,16,30,.55) 60%,rgba(6,16,30,.35) 100%),url(/home/kitchen.jpg)",
         }}
       >
         <div className={`${wrap} flex flex-col items-start gap-7`}>
@@ -290,7 +290,7 @@ export default function Home() {
             Your next listing deserves a <span className="italic">walkthrough.</span>
           </h2>
           <div className="flex flex-wrap gap-3.5">
-            <Link href="/login" className="inline-flex min-h-[54px] items-center gap-3 rounded-full bg-white px-7 text-base font-semibold text-ink hover:bg-[#F1EBE1]">
+            <Link href="/login" className="inline-flex min-h-[54px] items-center gap-3 rounded-full bg-white px-7 text-base font-semibold text-ink hover:bg-[#E8F0FD]">
               <GoogleIcon />
               Start with Google
             </Link>
@@ -302,9 +302,9 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className={`bg-[#0D0F11] py-10 text-[#9A9DA3] ${pad}`}>
+      <footer className={`bg-[#07111F] py-10 text-[#9A9DA3] ${pad}`}>
         <div className={`${wrap} flex flex-wrap justify-between gap-5 text-[13px]`}>
-          <span>© {new Date().getFullYear()} KGB Marketing LLC · Texas</span>
+          <span>© {new Date().getFullYear()} Tourvo · KGB Marketing LLC · Texas</span>
           <Link href="/login" className="hover:text-white">Sign in</Link>
         </div>
       </footer>

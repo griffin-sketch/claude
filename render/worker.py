@@ -22,6 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "engine"))
 import ai_motion as am   # prompts, move picker, photo encoder
 import render as engine  # template renderer
+import reels             # the Reel pack: several cuts per listing
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -236,15 +237,19 @@ def render_listing(l):
                       "acres": l.get("acres"), "price": l.get("price")},
             "shots": job_shots, "agent": agent, "outro": outro, "music": None,
         }
-        job_path = os.path.join(tmp, "job.json")
-        json.dump(job, open(job_path, "w"))
         made = []
-        for fmt in l["formats"] or ["16:9"]:
-            out = os.path.join(tmp, f"out-{fmt.replace(':', 'x')}.mp4")
+        pack = reels.build_pack(job, l)
+        for n, item in enumerate(pack, 1):
+            kind, fmt = item["kind"], item["fmt"]
+            job_path = os.path.join(tmp, f"job-{kind}.json")
+            json.dump(item["job"], open(job_path, "w"))
+            name = f"{kind}-{fmt.replace(':', 'x')}"
+            out = os.path.join(tmp, f"{name}.mp4")
+            log(f"  rendering {n}/{len(pack)}: {name}")
             engine.render(job_path, out, fmt=fmt)
-            path = f"{l['user_id']}/{l['id']}/{fmt.replace(':', 'x')}.mp4"
+            path = f"{l['user_id']}/{l['id']}/{name}.mp4"
             storage_put("videos", path, out)
-            made.append({"listing_id": l["id"], "format": fmt, "video_path": path})
+            made.append({"listing_id": l["id"], "format": fmt, "kind": kind, "video_path": path})
         db_delete("renders", {"listing_id": l["id"]})
         db_insert("renders", made)
 

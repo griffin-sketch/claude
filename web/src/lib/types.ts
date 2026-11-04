@@ -31,6 +31,7 @@ export type Listing = {
   acres: number | null;
   price: string | null;
   template: number;
+  open_house: string | null;
   transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   formats: string[];
   outro: "branded" | "simple" | "none";
@@ -60,6 +61,7 @@ export type Render = {
   id: string;
   listing_id: string;
   format: "16:9" | "9:16";
+  kind?: string;
   video_path: string;
   created_at: string;
 };
