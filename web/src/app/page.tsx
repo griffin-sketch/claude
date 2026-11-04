@@ -52,7 +52,8 @@ const FAQ = [
 
 const pad = "px-[max(20px,4vw)]";
 const wrap = "mx-auto w-full max-w-[1320px]";
-const h2 = "font-display text-[clamp(38px,4.4vw,60px)] font-medium leading-[1.05] text-balance";
+const h2 = "font-display text-[clamp(32px,4.4vw,60px)] font-medium leading-[1.05] text-balance";
+const swipe = "text-xs font-semibold uppercase tracking-[0.2em] sm:hidden";
 
 function GoogleIcon() {
   return (
@@ -88,7 +89,7 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative flex min-h-[680px] items-end overflow-hidden bg-night pt-36 sm:min-h-[760px]">
+      <section className="relative flex min-h-[600px] items-end overflow-hidden bg-night pt-32 sm:min-h-[760px]">
         <LoopVideo src="/fx/build_hero.mp4" poster="/fx/build.jpg" label="A house building itself, from framing to finished" className="absolute inset-0 h-full w-full object-cover object-[center_40%]" />
         <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,16,30,.55)_0%,rgba(6,16,30,.05)_30%,rgba(6,16,30,.10)_55%,rgba(6,16,30,.82)_100%)]" />
         <div className={`${wrap} relative flex flex-wrap items-end justify-between gap-10 pb-[72px] ${pad}`}>
@@ -99,11 +100,11 @@ export default function Home() {
               <br />
               <span className="italic">in motion.</span>
             </h1>
-            <p className="mt-7 max-w-[520px] text-lg leading-relaxed text-[#E7E7E4]">
+            <p className="mt-6 max-w-[520px] text-base leading-relaxed text-[#E7E7E4] sm:mt-7 sm:text-lg">
               Upload your listing photos. We turn each room into a smooth, cinematic camera move and finish it with your
               branding. One upload gives you a full walkthrough plus a pack of ready-to-post Reels.
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-3.5">
+            <div className="mt-7 flex flex-wrap items-center gap-3 sm:mt-9">
               <Link href="/login" className="inline-flex min-h-[52px] items-center rounded-full bg-gold px-7 text-base font-semibold text-white hover:bg-gold-deep">
                 Make your first video
               </Link>
@@ -127,7 +128,7 @@ export default function Home() {
       </section>
 
       {/* Still to walkthrough */}
-      <section className={`pb-24 pt-28 ${pad}`}>
+      <section className={`pb-14 pt-16 sm:pb-24 sm:pt-28 ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-16`}>
           <div className="min-w-0 flex-[1_1_380px]">
             <p className="eyebrow mb-4">From still to walkthrough</p>
@@ -155,7 +156,7 @@ export default function Home() {
       </section>
 
       {/* Effects */}
-      <section id="effects" className={`scroll-mt-6 bg-night py-24 text-[#F3F6FA] ${pad}`}>
+      <section id="effects" className={`scroll-mt-6 bg-night py-14 text-[#F3F6FA] sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-12`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
@@ -166,9 +167,10 @@ export default function Home() {
               Every effect starts from your real listing photo and lands back on it, so the finished room is exactly what buyers will see.
             </p>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-x-5 gap-y-8">
+          <p className={`${swipe} -mb-8 text-[#B9C3D0]`}>Swipe to see all 8 →</p>
+          <div className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] sm:gap-x-5 sm:gap-y-8">
             {FX.map((f) => (
-              <figure key={f.id} className="flex flex-col gap-3">
+              <figure key={f.id} className="w-[80%] shrink-0 snap-start sm:w-auto flex flex-col gap-3">
                 <LoopVideo src={`/fx/${f.id}.mp4`} poster={`/fx/${f.id}.jpg`} label={f.name} className="aspect-video w-full rounded-xl bg-black object-cover" />
                 <figcaption>
                   <span className="block font-semibold">{f.name}</span>
@@ -181,7 +183,7 @@ export default function Home() {
       </section>
 
       {/* Before / after */}
-      <section className={`py-24 ${pad}`}>
+      <section className={`py-14 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-12`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
@@ -204,7 +206,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how" className={`scroll-mt-6 border-y border-line bg-white py-24 ${pad}`}>
+      <section id="how" className={`scroll-mt-6 border-y border-line bg-white py-14 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-14`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <h2 className={h2}>Three steps. About fifteen minutes.</h2>
@@ -212,10 +214,10 @@ export default function Home() {
               No filming, no editing software, no waiting on a videographer&apos;s schedule.
             </p>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-10">
+          <div className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] sm:gap-10">
             {STEPS.map((s, i) => (
-              <div key={s.title} className="flex flex-col gap-[18px]">
-                <img src={s.img} alt={s.alt} className="aspect-[4/3] w-full rounded-[14px] object-cover" />
+              <div key={s.title} className="w-[80%] shrink-0 snap-start sm:w-auto flex flex-col gap-[18px]">
+                <img src={s.img} alt={s.alt} className="aspect-video w-full rounded-[14px] object-cover sm:aspect-[4/3]" />
                 <div className="flex items-baseline gap-3.5">
                   <span className="font-display text-[40px] font-medium text-gold">{i + 1}</span>
                   <h3 className="text-xl font-semibold">{s.title}</h3>
@@ -228,7 +230,7 @@ export default function Home() {
       </section>
 
       {/* Looks */}
-      <section id="looks" className={`scroll-mt-6 pb-24 pt-28 ${pad}`}>
+      <section id="looks" className={`scroll-mt-6 py-14 sm:pb-24 sm:pt-28 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-12`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
@@ -239,9 +241,10 @@ export default function Home() {
               From quiet magazine serif to bold boutique type. Six of the ten, shown on the same title card.
             </p>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-x-6 gap-y-7">
+          <p className={`${swipe} -mb-8 text-muted`}>Swipe to see more →</p>
+          <div className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] sm:gap-x-6 sm:gap-y-7">
             {LOOKS.map((l) => (
-              <figure key={l.id} className="flex flex-col gap-3">
+              <figure key={l.id} className="w-[80%] shrink-0 snap-start sm:w-auto flex flex-col gap-3">
                 <img src={`/templates/t${l.id}.jpg`} alt={`${l.name} title card`} className="aspect-video w-full rounded-xl object-cover" />
                 <figcaption className="flex justify-between gap-3 text-[15px]">
                   <span className="font-semibold">{l.name}</span>
@@ -254,7 +257,7 @@ export default function Home() {
       </section>
 
       {/* What you get */}
-      <section className={`bg-night py-[104px] text-[#F3F6FA] ${pad}`}>
+      <section className={`bg-night py-14 text-[#F3F6FA] sm:py-[104px] ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-16`}>
           <div className="relative min-w-0 flex-[1.2_1_520px]">
             <img src="/home/pool.jpg" alt="Backyard pool at dusk, shown as a 16:9 video" className="aspect-video w-full rounded-[14px] object-cover" />
@@ -286,7 +289,7 @@ export default function Home() {
       </section>
 
       {/* Photographers */}
-      <section id="photographers" className={`scroll-mt-6 border-y border-line bg-white py-24 ${pad}`}>
+      <section id="photographers" className={`scroll-mt-6 border-y border-line bg-white py-14 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-16`}>
           <div className="min-w-0 flex-[1_1_420px]">
             <p className="eyebrow mb-4">For real estate photographers</p>
@@ -312,7 +315,7 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className={`scroll-mt-6 pb-[104px] pt-[120px] ${pad}`}>
+      <section id="pricing" className={`scroll-mt-6 py-14 sm:pb-[104px] sm:pt-[120px] ${pad}`}>
         <div className="mx-auto flex max-w-[1100px] flex-col gap-12">
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="eyebrow">Pricing</p>
@@ -349,20 +352,23 @@ export default function Home() {
       </section>
 
       {/* FAQ */}
-      <section className={`pb-28 ${pad}`}>
-        <div className="mx-auto grid max-w-[1100px] grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-x-14 gap-y-10 border-t border-line pt-16">
+      <section className={`pb-14 sm:pb-28 ${pad}`}>
+        <div className="mx-auto grid max-w-[1100px] grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-x-14 border-t border-line pt-2 sm:pt-8">
           {FAQ.map(([q, a]) => (
-            <div key={q} className="flex flex-col gap-2.5">
-              <h3 className="text-[17px] font-semibold">{q}</h3>
-              <p className="text-[15px] leading-[1.65] text-ink-soft">{a}</p>
-            </div>
+            <details key={q} className="group border-b border-line py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold">
+                {q}
+                <span aria-hidden="true" className="text-xl text-muted transition group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-2.5 text-[15px] leading-[1.65] text-ink-soft">{a}</p>
+            </details>
           ))}
         </div>
       </section>
 
       {/* Closing */}
       <section
-        className={`bg-night bg-cover bg-center py-[140px] text-white ${pad}`}
+        className={`bg-night bg-cover bg-center py-20 text-white sm:py-[140px] ${pad}`}
         style={{
           backgroundImage:
             "linear-gradient(90deg,rgba(6,16,30,.86) 0%,rgba(6,16,30,.55) 60%,rgba(6,16,30,.35) 100%),url(/home/kitchen.jpg)",
