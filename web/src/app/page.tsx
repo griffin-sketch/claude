@@ -259,9 +259,9 @@ export default function Home() {
           <div className="relative min-w-0 flex-[1.2_1_520px]">
             <img src="/home/pool.jpg" alt="Backyard pool at dusk, shown as a 16:9 video" className="aspect-video w-full rounded-[14px] object-cover" />
             <img
-              src="/home/pool.jpg"
+              src="/home/pool_v.jpg"
               alt="The same shot as a vertical 9:16 video"
-              className="absolute -bottom-9 right-0 aspect-[9/16] w-[26%] rounded-[14px] border-4 border-night object-cover object-[60%_center] sm:-right-3"
+              className="absolute -bottom-9 right-0 aspect-[9/16] w-[26%] rounded-[14px] border-4 border-night object-cover sm:-right-3"
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
