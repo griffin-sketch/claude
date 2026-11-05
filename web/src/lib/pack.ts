@@ -38,6 +38,14 @@ function byRoles(shots: Shot[], wanted: string[], n: number): Shot[] {
   return [hero, ...out.slice(0, n - 1)];
 }
 
+function lead(seq: Shot[], roles: string[]): Shot[] {
+  for (const r of roles) {
+    const k = seq.findIndex((s, i) => i > 0 && role(s, i) === r);
+    if (k > 0) return [seq[k], ...seq.slice(0, k), ...seq.slice(k + 1)];
+  }
+  return seq;
+}
+
 export type PackItem = {
   kind: string;
   name: string;
@@ -76,7 +84,7 @@ export function packPlan(listing: Listing, shots: Shot[]): PackItem[] {
     name: "15-second teaser",
     style: "Fast speed ramps, bold type, punchy color, no room labels.",
     format: "9:16",
-    shots: pick(shots, 6),
+    shots: lead(pick(shots, 6), ["kitchen", "living", "outdoor"]),
     seconds: length(Array(Math.min(6, shots.length)).fill(2), 0.14, true),
   });
   const jl = byRoles(shots, ["living", "kitchen", "bed", "outdoor"], 5);
@@ -103,7 +111,9 @@ export function packPlan(listing: Listing, shots: Shot[]): PackItem[] {
   }
   const labeled = shots.slice(1).filter((s) => (s.label ?? "").trim());
   if (labeled.length >= 3) {
-    const f = [shots[0], ...labeled.slice(0, 5)];
+    const feats = labeled.slice(0, 5);
+    const last = shots[shots.length - 1];
+    const f = [feats.includes(last) ? shots[0] : last, ...feats];
     out.push({
       kind: "top_features",
       name: "Top features",
@@ -122,7 +132,7 @@ export function packPlan(listing: Listing, shots: Shot[]): PackItem[] {
     out.push({ kind: "staged", name: "Virtually staged", style: "Empty rooms furnishing themselves, soft dissolves.",
       format: "9:16", shots: staged, seconds: length(Array(staged.length).fill(5), 0.6, outro) });
   if ((listing.open_house ?? "").trim()) {
-    const oh = byRoles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6);
+    const oh = lead(byRoles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), ["outdoor", "kitchen"]);
     out.push({
       kind: "open_house",
       name: "Open house",

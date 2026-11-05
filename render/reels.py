@@ -92,6 +92,15 @@ def by_roles(shots, wanted, n):
     return [hero] + out
 
 
+def lead(seq, roles, avoid=()):
+    """Open on a different room: move the first shot of one of these room types to the front."""
+    for r in roles:
+        for k, s in enumerate(seq):
+            if k and role(s, k) == r and s not in avoid:
+                return [s] + seq[:k] + seq[k + 1:]
+    return seq
+
+
 TRANSFORM = ("build", "staging", "dusk")
 
 def cut(shots, dur, labels=True, trim=0.0, speed=1.0):
@@ -166,7 +175,7 @@ def build_pack(job, listing):
 
     # 2. Teaser: fast, punchy, speed ramps, no room labels. Hook line up top, ends on "see the full tour".
     pack.append({"kind": "teaser", "fmt": "9:16", "job": variant("teaser", 1,
-        shots=cut(pick(shots, 6), 2.0, labels=False, trim=0.5, speed=1.3),
+        shots=cut(lead(pick(shots, 6), ["kitchen", "living", "outdoor"]), 2.0, labels=False, trim=0.5, speed=1.3),
         kicker=hook_text(listing.get("hook"), job), headline=head,
         outro="simple", outro_kicker="See the full tour", outro_headline=where,
     )})
@@ -193,8 +202,9 @@ def build_pack(job, listing):
     labeled = [s for s in shots[1:] if (s.get("label") or "").strip()]
     if len(labeled) >= 3:
         feats = labeled[:5]
+        opener = shots[-1] if shots[-1] not in feats else shots[0]   # open on the last photo (often the backyard or aerial)
         pack.append({"kind": "top_features", "fmt": "9:16", "job": variant("top_features", 4,
-            shots=cut([shots[0]] + feats, 3.6, speed=0.85),
+            shots=cut([opener] + feats, 3.6, speed=0.85),
             kicker=f"{len(feats)} things we love", headline=head,
         )})
 
@@ -216,7 +226,7 @@ def build_pack(job, listing):
     oh = (listing.get("open_house") or "").strip()
     if oh:
         pack.append({"kind": "open_house", "fmt": "9:16", "job": variant("open_house", 2,
-            shots=cut(by_roles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), 2.8),
+            shots=cut(lead(by_roles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), ["outdoor", "kitchen"]), 2.8),
             kicker="Open house", headline=oh,
             outro="simple", outro_kicker="Open house", outro_headline=oh,
         )})
