@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { APP_NAME } from "@/lib/config";
 import { Logo } from "@/components/Logo";
+import { api } from "@/lib/api";
 
 /** Signed-in frame: header + nav. Sends signed-out visitors to /login. */
 export function AppShell({ children }: { children: (user: User) => ReactNode }) {
@@ -26,10 +27,17 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
     return () => sub.subscription.unsubscribe();
   }, [router, path]);
 
+  // the owner sees an Admin tab (the server decides who that is)
+  const [isOwner, setIsOwner] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    api("/api/admin", { ping: true }).then(() => setIsOwner(true)).catch(() => {});
+  }, [user]);
   const nav = [
     { href: "/dashboard", label: "Listings" },
     { href: "/settings", label: "Branding" },
     { href: "/billing", label: "Billing" },
+    ...(isOwner ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   return (

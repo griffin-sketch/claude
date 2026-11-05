@@ -24,6 +24,7 @@ import ai_motion as am   # prompts, move picker, photo encoder
 import render as engine  # template renderer
 import reels             # the Reel pack: several cuts per listing
 import effects           # per-photo effects + centered vertical framing
+import notify            # customer emails (Resend)
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -37,6 +38,18 @@ TRANSFORMS = {"build", "staging", "dusk"}   # effects whose room changes on scre
 
 S = requests.Session()
 S.headers.update({"apikey": KEY, "Authorization": f"Bearer {KEY}"})
+
+
+_emails = {}
+def user_email(user_id):
+    """The customer's sign-in email, from Supabase Auth (cached)."""
+    if user_id not in _emails:
+        try:
+            r = S.get(f"{SB}/auth/v1/admin/users/{user_id}", timeout=20)
+            _emails[user_id] = (r.json() or {}).get("email") if r.ok else None
+        except Exception:
+            _emails[user_id] = None
+    return _emails[user_id]
 
 
 def log(*a):
@@ -142,6 +155,7 @@ def step_queued():
         except Exception as e:
             log("  submit failed:", e)
             db_patch("listings", {"id": l["id"]}, {"status": "failed", "error": f"Could not start clips: {e}"[:400]})
+            notify.failed(user_email(l["user_id"]), l, "the clips could not be started")
 
 
 def step_redo():
@@ -223,9 +237,11 @@ def step_to_review():
             continue   # vertical clips still coming
         if states == {"failed"}:
             db_patch("listings", {"id": l["id"]}, {"status": "failed", "error": "No clips could be made. Try different photos."})
+            notify.failed(user_email(l["user_id"]), l, "none of the photos could be turned into clips. Try different photos")
         else:
             db_patch("listings", {"id": l["id"]}, {"status": "review"})
             log(f"listing {l['id'][:8]} -> review")
+            notify.clips_ready(user_email(l["user_id"]), l)
 
 
 def step_render():
@@ -234,10 +250,13 @@ def step_render():
         try:
             render_listing(l)
             db_patch("listings", {"id": l["id"]}, {"status": "done", "error": None})
+            n = len(db_get("renders", listing_id=f"eq.{l['id']}"))
+            notify.pack_ready(user_email(l["user_id"]), l, n)
             log(f"listing {l['id'][:8]} -> done")
         except Exception as e:
             traceback.print_exc()
             db_patch("listings", {"id": l["id"]}, {"status": "failed", "error": f"Video build failed: {e}"[:400]})
+            notify.failed(user_email(l["user_id"]), l, "the final video could not be built")
 
 
 def render_listing(l):
