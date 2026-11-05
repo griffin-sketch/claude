@@ -1004,7 +1004,7 @@ class ClipSource:
         self.n = nframes; self.curve = curve
         need = int(curve[-1]) + 2 if curve else nframes
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}")
-        self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{start:.3f}", "-i", path, "-an",
+        self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1", "-ss", f"{start:.3f}", "-i", path, "-an",
                                    "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
                                   stdout=subprocess.PIPE)
         self.last = None; self.read_n = 0
@@ -1142,7 +1142,7 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
             af = f"atrim=0:{total_s:.3f}"
         cmd += ["-filter_complex", f"[0:v]noise=alls=3:allf=t,format=yuv420p[v];[1:a]{af}[a]",
-                "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-threads", "2", "-x264-params", "rc-lookahead=15:sliced-threads=0",
                 "-profile:v", "high", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
                 "-t", f"{total_s:.3f}", "-movflags", "+faststart", out_path]
         enc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
