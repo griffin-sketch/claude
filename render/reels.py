@@ -60,22 +60,76 @@ def pick(shots, n):
     return [shots[0]] + [rest[int(i * step)] for i in range(n - 1)]
 
 
-def cut(shots, dur, labels=True, trim=0.0):
+# ---------------------------------------------------------------- room roles (keep in sync with web/src/lib/pack.ts)
+ROLES = [
+    ("exterior", ("front", "exterior", "curb", "street", "facade", "elevation", "aerial", "drone")),
+    ("outdoor", ("pool", "yard", "patio", "backyard", "deck", "garden", "view", "outdoor", "porch")),
+    ("kitchen", ("kitchen", "island", "pantry")),
+    ("living", ("living", "family", "great room", "den", "dining", "entry", "foyer")),
+    ("bed", ("bed", "suite", "primary", "master")),
+    ("bath", ("bath", "shower", "tub")),
+]
+
+def role(shot, i=1):
+    t = f"{shot.get('label') or ''} {shot.get('sub') or ''}".lower()
+    for r, words in ROLES:
+        if any(w in t for w in words):
+            return r
+    return "exterior" if i == 0 else "other"
+
+def by_roles(shots, wanted, n):
+    """Hero first, then the first shot of each wanted room type, then fill with the rest in order."""
+    hero, rest = shots[0], list(shots[1:])
     out = []
-    for s in shots:
+    for r in wanted:
+        for s in rest:
+            if s not in out and role(s) == r:
+                out.append(s); break
+    for s in rest:
+        if len(out) >= n - 1: break
+        if s not in out: out.append(s)
+    out = out[:n - 1]
+    return [hero] + out
+
+
+TRANSFORM = ("build", "staging", "dusk")
+
+def cut(shots, dur, labels=True, trim=0.0, speed=1.0):
+    """dur: seconds per shot, or a list (one per shot). speed: 0.8 = slow motion, 1.3 = punchy."""
+    out = []
+    for k, s in enumerate(shots):
         s = dict(s)
-        s["duration"] = dur
+        d = dur[min(k, len(dur) - 1)] if isinstance(dur, (list, tuple)) else dur
+        s["duration"] = d
+        s["speed"] = speed
         if trim and str(s.get("path", "")).lower().endswith(".mp4"):
             s["trim_start"] = trim
-        if s.get("effect") in ("build", "staging", "dusk") and dur < 4.8:
-            # a short cut can't fit the whole transformation: show its finished end instead
-            s["trim_start"] = max(0.0, 5.0 - dur - 0.15); s.pop("label_delay", None)
+        if s.get("effect") in TRANSFORM:
+            s.pop("trim_start", None)
+            if d < 4.8:   # a short cut plays the whole transformation fast, so it always moves
+                s["speed"] = min(2.2, 4.85 / d)
+                s.pop("label_delay", None)
         if not labels:
             s["label"] = ""; s["sub"] = ""
         out.append(s)
     if out:
         out[0]["label"] = ""; out[0]["sub"] = ""   # title card sits over the first shot
     return out
+
+
+# ---------------------------------------------------------------- the styles
+# Each video in the pack has its own look: text style (template), pacing, transitions, color and order.
+# template: the realtor's own pick is kept for the full walkthrough; the others rotate through ALT_TEMPLATES.
+STYLES = {
+    "teaser":       dict(template=3,  transition="speed_ramp", grade="punchy",  drift=0.10, speed=1.3),
+    "just_listed":  dict(template=10, transition="crossfade",  grade="film",    drift=0.05, speed=0.8),
+    "price_reveal": dict(template=4,  transition="cut",        grade="cool",    drift=0.08, speed=1.0),
+    "top_features": dict(template=6,  transition="crossfade",  grade="bright",  drift=0.06, speed=0.85),
+    "open_house":   dict(template=8,  transition="flash",      grade="warm",    drift=0.07, speed=1.0),
+    "build_up":     dict(template=5,  transition="speed_ramp", grade="natural", drift=0.06, speed=1.0),
+    "staged":       dict(template=7,  transition="crossfade",  grade="bright",  drift=0.05, speed=0.9),
+}
+ALT_TEMPLATES = [1, 2, 9, 3, 4, 6, 8, 10, 5, 7]
 
 
 def build_pack(job, listing):
@@ -85,73 +139,85 @@ def build_pack(job, listing):
     price = fmt_price((job.get("stats") or {}).get("price"))
     if price:  # show "$485,000", not "485000", on every video
         job = copy.deepcopy(job); job["stats"] = dict(job.get("stats") or {}, price=price)
-    # Title line: the address is the headline by default; set it empty so it isn't printed twice.
-    head = "" if where == address else where
+    head = "" if where == address else where   # the address is the headline by default; don't print it twice
+    mine = int(job.get("template") or 1)
+    used = {mine}
     pack = []
 
-    # 1. The full walkthrough, in every format the realtor picked.
+    # 1. The full walkthrough: the realtor's own look, every photo in their order.
     for fmt in listing.get("formats") or ["16:9"]:
-        pack.append({"kind": "tour", "fmt": fmt, "job": job})
-
+        pack.append({"kind": "tour", "fmt": fmt, "job": dict(job, grade="natural", drift=0.05)})
     if len(shots) < 3:
         return pack
 
-    def variant(**kw):
+    def variant(kind, n_off, **kw):
+        st = dict(STYLES[kind])
+        tpl = st.pop("template")
+        if tpl in used:   # never repeat a text style inside one pack
+            tpl = next((t for t in ALT_TEMPLATES if t not in used), tpl)
+        used.add(tpl)
+        speed = st.pop("speed")
         j = copy.deepcopy(job)
+        j.update(st, template=tpl, drift_offset=n_off)
         j.update(kw)
+        if "shots" in kw:
+            j["shots"] = [dict(sh, speed=sh.get("speed", speed)) for sh in kw["shots"]]
         return j
 
-    # 2. Teaser: fast and punchy, no labels, ends on "see the full tour".
-    pack.append({"kind": "teaser", "fmt": "9:16", "job": variant(
-        shots=cut(pick(shots, 5), 2.6, labels=False, trim=0.6),
-        transition="speed_ramp", kicker=hook_text(listing.get("hook"), job), headline=head,
+    # 2. Teaser: fast, punchy, speed ramps, no room labels. Hook line up top, ends on "see the full tour".
+    pack.append({"kind": "teaser", "fmt": "9:16", "job": variant("teaser", 1,
+        shots=cut(pick(shots, 6), 2.0, labels=False, trim=0.5, speed=1.3),
+        kicker=hook_text(listing.get("hook"), job), headline=head,
         outro="simple", outro_kicker="See the full tour", outro_headline=where,
     )})
 
-    # 3. Just Listed: the classic announcement with room labels and branding.
-    pack.append({"kind": "just_listed", "fmt": "9:16", "job": variant(
-        shots=cut(pick(shots, 7), 3.2),
-        transition="flash", kicker="Just listed", headline=job.get("headline", ""),
+    # 3. Just Listed: cinematic slow motion with letterbox bars. Front, living, kitchen, suite, outdoors.
+    pack.append({"kind": "just_listed", "fmt": "9:16", "job": variant("just_listed", 2,
+        shots=cut(by_roles(shots, ["living", "kitchen", "bed", "outdoor"], 5), 3.8, speed=0.8),
+        kicker="Just listed", headline=job.get("headline", ""),
     )})
 
-    # 4. Guess the price: hide it on the title card, reveal it at the end.
+    # 4. Guess the price: quick cuts that speed up, interiors first, the front of the home last, then the price.
     if price:
         stats = dict(job.get("stats") or {}); stats["price"] = None
-        pack.append({"kind": "price_reveal", "fmt": "9:16", "job": variant(
-            shots=cut(pick(shots, 6), 3.0), stats=stats,
-            transition="crossfade", kicker="Guess the price", headline=head,
+        inside = [s for s in shots[1:] if role(s) != "exterior"]
+        seq = pick([shots[0]] + inside, 6)
+        seq = seq[1:] + seq[:1] if len(seq) > 2 else seq     # save the front of the home for the reveal
+        pack.append({"kind": "price_reveal", "fmt": "9:16", "job": variant("price_reveal", 3,
+            shots=cut(seq, [3.0, 2.5, 2.1, 1.8, 1.6, 2.6]), stats=stats,
+            kicker="Guess the price", headline=head,
             outro="simple", outro_kicker="Listed at", outro_headline=price,
         )})
 
-    # 5. Top features: only the rooms the realtor labeled.
+    # 5. Top features: a numbered list of the rooms the realtor labeled, slow and bright.
     labeled = [s for s in shots[1:] if (s.get("label") or "").strip()]
     if len(labeled) >= 3:
         feats = labeled[:5]
-        pack.append({"kind": "top_features", "fmt": "9:16", "job": variant(
-            shots=cut([shots[0]] + feats, 3.4),
-            transition="cut", kicker=f"{len(feats)} things we love", headline=head,
+        pack.append({"kind": "top_features", "fmt": "9:16", "job": variant("top_features", 4,
+            shots=cut([shots[0]] + feats, 3.6, speed=0.85),
+            kicker=f"{len(feats)} things we love", headline=head,
         )})
 
-    # 6. Built from the ground up: every photo with the construction effect, in order.
+    # 6. Built from the ground up: every construction shot, each played through in full.
     built = [s for s in shots if s.get("effect") == "build"]
     if len(built) >= 2:
-        pack.append({"kind": "build_up", "fmt": "9:16", "job": variant(
-            shots=cut(built, 5.0), transition="speed_ramp", kicker="From the ground up", headline=head,
+        pack.append({"kind": "build_up", "fmt": "9:16", "job": variant("build_up", 0,
+            shots=cut(built, 5.0), kicker="From the ground up", headline=head,
         )})
 
     # 7. Virtually staged: the empty rooms furnishing themselves.
     staged = [s for s in shots if s.get("effect") == "staging"]
     if len(staged) >= 2:
-        pack.append({"kind": "staged", "fmt": "9:16", "job": variant(
-            shots=cut(staged, 5.0), transition="crossfade", kicker="Imagine living here", headline=head,
+        pack.append({"kind": "staged", "fmt": "9:16", "job": variant("staged", 1,
+            shots=cut(staged, 5.0), kicker="Imagine living here", headline=head,
         )})
 
-    # 8. Open house: only when the realtor entered a date and time.
+    # 8. Open house: warm, light-flash cuts, the outdoor spaces first. Only when a date is entered.
     oh = (listing.get("open_house") or "").strip()
     if oh:
-        pack.append({"kind": "open_house", "fmt": "9:16", "job": variant(
-            shots=cut(pick(shots, 6), 3.0),
-            transition="crossfade", kicker="Open house", headline=oh,
+        pack.append({"kind": "open_house", "fmt": "9:16", "job": variant("open_house", 2,
+            shots=cut(by_roles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), 2.8),
+            kicker="Open house", headline=oh,
             outro="simple", outro_kicker="Open house", outro_headline=oh,
         )})
 

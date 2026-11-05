@@ -8,15 +8,18 @@ import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
 import { EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
+import { packPlan, walkthroughOrder } from "@/lib/pack";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
-const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "open_house"];
+const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
 const REEL_LABEL: Record<string, string> = {
   tour: "Full walkthrough",
   teaser: "15-second teaser",
   just_listed: "Just Listed",
   price_reveal: "Guess the price",
   top_features: "Top features",
+  build_up: "Built from the ground up",
+  staged: "Virtually staged",
   open_house: "Open house",
 };
 
@@ -133,6 +136,8 @@ function Editor({ id, user }: { id: string; user: User }) {
   }, [renders, videos, listing?.address]);
 
   const editable = listing?.status === "draft" || listing?.status === "failed";
+  const reorderable = editable || listing?.status === "review";
+  const [dragOver, setDragOver] = useState<number | null>(null);
   const labelsEditable = editable || listing?.status === "review" || listing?.status === "done";
 
   async function saveListing(patch: Partial<Listing>) {
@@ -178,16 +183,23 @@ function Editor({ id, user }: { id: string; user: User }) {
     setShots((prev) => [...prev, ...added]);
   }
 
-  async function move(index: number, dir: -1 | 1) {
-    const j = index + dir;
-    if (j < 0 || j >= shots.length) return;
-    const next = [...shots];
-    [next[index], next[j]] = [next[j], next[index]];
+  // Save a new play order. Clips stay attached to their photo, so reordering never remakes anything.
+  async function saveOrder(next: Shot[]) {
+    const before = new Map(shots.map((s) => [s.id, s.position]));
     const renumbered = next.map((s, i) => ({ ...s, position: i }));
     setShots(renumbered);
-    await Promise.all(
-      [renumbered[index], renumbered[j]].map((s) => sb.from("shots").update({ position: s.position }).eq("id", s.id)),
-    );
+    const changed = renumbered.filter((s) => before.get(s.id) !== s.position);
+    const res = await Promise.all(changed.map((s) => sb.from("shots").update({ position: s.position }).eq("id", s.id)));
+    const bad = res.find((r) => r.error);
+    if (bad?.error) setError(bad.error.message);
+  }
+
+  function moveTo(from: number, to: number) {
+    if (from === to || to < 0 || to >= shots.length) return;
+    const next = [...shots];
+    const [it] = next.splice(from, 1);
+    next.splice(to, 0, it);
+    saveOrder(next);
   }
 
   async function remove(shot: Shot) {
@@ -222,6 +234,11 @@ function Editor({ id, user }: { id: string; user: User }) {
   if (!listing) return <p className="text-sm text-ink-soft">Loading…</p>;
 
   const readyCount = shots.filter((s) => s.clip_status === "ready").length;
+  const plan = packPlan(listing, shots);
+  const startAt = shots.reduce<number[]>((acc, s, i) => {
+    const prev = i ? acc[i - 1] + (shots[i - 1].effect && ["build", "staging", "dusk"].includes(shots[i - 1].effect) ? 5 : 4.6) - 0.6 : 0;
+    return [...acc, prev];
+  }, []);
   const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status));
 
   return (
@@ -312,7 +329,7 @@ function Editor({ id, user }: { id: string; user: User }) {
             <div>
               <h2 className="font-display text-2xl font-medium">Review your clips</h2>
               <p className="text-sm text-ink-soft">
-                Watch each one. If a room looks off, hit Redo and we&apos;ll make a new take.
+                Watch each one. If a room looks off, hit Redo and we&apos;ll make a new take. You can still change the order, and section 4 shows what goes in each video.
               </p>
             </div>
             <button
@@ -347,11 +364,19 @@ function Editor({ id, user }: { id: string; user: User }) {
       <section className="card p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-2xl font-medium">2. Photos, in video order</h2>
+            <h2 className="font-display text-2xl font-medium">2. Arrange your video</h2>
             <p className="text-sm text-ink-soft">
-              {MIN_PHOTOS} to {MAX_PHOTOS} photos. Lead with the front of the home. Label each room; the label appears on screen.
+              Your walkthrough plays in this order, #1 first. Drag a photo to move it, or pick its spot number.
+              {reorderable && listing.status === "review" && " Reordering is free; your clips stay as they are."}
             </p>
           </div>
+          <div className="flex flex-wrap gap-2">
+          {reorderable && shots.length > 2 && (
+            <button type="button" className="btn-ghost" onClick={() => saveOrder(walkthroughOrder(shots))}
+              title="Front of the home first, then living areas, kitchen, bedrooms, baths, outdoor spaces; aerials last">
+              Auto-arrange by room
+            </button>
+          )}
           {editable && shots.length < MAX_PHOTOS && (
             <label className="btn-primary cursor-pointer">
               {uploading ? `Uploading ${uploading}…` : "+ Add photos"}
@@ -368,7 +393,11 @@ function Editor({ id, user }: { id: string; user: User }) {
               />
             </label>
           )}
+          </div>
         </div>
+        {shots.length > 1 && (
+          <Storyboard shots={shots} thumbs={thumbs} reorderable={reorderable} onMove={moveTo} />
+        )}
         <datalist id="rooms">
           {ROOM_SUGGESTIONS.map((r) => (
             <option key={r} value={r} />
@@ -381,15 +410,26 @@ function Editor({ id, user }: { id: string; user: User }) {
         ) : (
           <ol className="space-y-3">
             {shots.map((s, i) => (
-              <li key={s.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-center">
+              <li
+                key={s.id}
+                id={`shot-${s.id}`}
+                draggable={reorderable}
+                onDragStart={(e) => { e.dataTransfer.setData("text/plain", String(i)); e.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={(e) => { if (reorderable) { e.preventDefault(); setDragOver(i); } }}
+                onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
+                onDrop={(e) => { e.preventDefault(); setDragOver(null); moveTo(Number(e.dataTransfer.getData("text/plain")), i); }}
+                className={`flex scroll-mt-24 flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center ${
+                  dragOver === i ? "border-gold bg-gold-soft" : "border-line"
+                } ${reorderable ? "sm:cursor-grab" : ""}`}
+              >
                 <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-line sm:w-56">
                   {s.clip_path && clips[s.clip_path] && listing.status !== "draft" ? (
                     <video src={clips[s.clip_path]} muted loop autoPlay playsInline className="h-full w-full object-cover" />
                   ) : thumbs[s.photo_path] ? (
                     <img src={thumbs[s.photo_path]} alt="" className="h-full w-full object-cover" />
                   ) : null}
-                  <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-xs font-semibold text-white">
-                    {i + 1}
+                  <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
+                    #{i + 1} · {fmtTime(startAt[i] ?? 0)}
                   </span>
                   {listing.status !== "draft" && <ClipBadge status={s.clip_status} />}
                 </div>
@@ -438,14 +478,27 @@ function Editor({ id, user }: { id: string; user: User }) {
                     </>
                   )}
                 </div>
-                <div className="flex shrink-0 gap-1">
-                  {editable && (
+                <div className="flex shrink-0 flex-wrap items-center gap-1">
+                  {reorderable && (
                     <>
-                      <IconBtn label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>↑</IconBtn>
-                      <IconBtn label="Move down" onClick={() => move(i, 1)} disabled={i === shots.length - 1}>↓</IconBtn>
-                      <IconBtn label="Remove" onClick={() => remove(s)}>✕</IconBtn>
+                      <label className="flex items-center gap-1 text-xs text-ink-soft">
+                        <span>Plays</span>
+                        <select
+                          aria-label={`Spot for photo ${i + 1}`}
+                          className="input w-auto py-1.5 pr-7 text-sm"
+                          value={i}
+                          onChange={(e) => moveTo(i, Number(e.target.value))}
+                        >
+                          {shots.map((_, k) => (
+                            <option key={k} value={k}>#{k + 1}{k === 0 ? " (opening)" : k === shots.length - 1 ? " (last)" : ""}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <IconBtn label="Move earlier" onClick={() => moveTo(i, i - 1)} disabled={i === 0}>↑</IconBtn>
+                      <IconBtn label="Move later" onClick={() => moveTo(i, i + 1)} disabled={i === shots.length - 1}>↓</IconBtn>
                     </>
                   )}
+                  {editable && <IconBtn label="Remove" onClick={() => remove(s)}>✕</IconBtn>}
                   {listing.status === "review" && s.clip_status === "ready" && (
                     <button className="btn-ghost py-1.5" onClick={() => redo(s)}>
                       Redo
@@ -562,6 +615,44 @@ function Editor({ id, user }: { id: string; user: User }) {
         </div>
       </section>
 
+      {/* ---------------- what's in the pack */}
+      {shots.length >= 3 && listing.status !== "done" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">4. What&apos;s in your Reel pack</h2>
+          <p className="mb-5 mt-1 text-sm text-ink-soft">
+            {plan.length} videos, each with its own style. Numbers match your photo order above; change the order there and these update.
+          </p>
+          <ol className="space-y-4">
+            {plan.map((p) => (
+              <li key={p.kind + p.format} className="rounded-xl border border-line p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className="font-semibold">{p.name}</span>
+                  <span className="text-xs text-muted">
+                    {p.format === "9:16" ? "Vertical" : "16:9"} · about {p.seconds}s · {p.shots.length} clips
+                  </span>
+                </div>
+                <p className="mt-0.5 text-sm text-ink-soft">{p.style}</p>
+                <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {p.shots.map((s, k) => (
+                    <div key={s.id + k} className="relative w-20 shrink-0 sm:w-24">
+                      <div className={`overflow-hidden rounded-md bg-line ${p.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
+                        {thumbs[s.photo_path] && <img src={thumbs[s.photo_path]} alt="" className="h-full w-full object-cover" />}
+                      </div>
+                      <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
+                        #{shots.indexOf(s) + 1}
+                      </span>
+                      <span className="mt-1 block truncate text-[11px] text-ink-soft">
+                        {k === 0 ? "Title card" : s.label || "Unlabeled"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       {/* ---------------- go */}
       {editable && (
         <PayPanel
@@ -573,6 +664,55 @@ function Editor({ id, user }: { id: string; user: User }) {
           onStarted={load}
         />
       )}
+    </div>
+  );
+}
+
+function fmtTime(sec: number) {
+  const t = Math.max(0, Math.round(sec));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** The whole video at a glance: a strip of numbered thumbnails in play order. Drag to reorder (desktop),
+ *  or tap one to jump to its settings. */
+function Storyboard({ shots, thumbs, reorderable, onMove }: {
+  shots: Shot[]; thumbs: Record<string, string>; reorderable: boolean; onMove: (from: number, to: number) => void;
+}) {
+  const [over, setOver] = useState<number | null>(null);
+  return (
+    <div className="mb-5 rounded-xl bg-bg p-3 ring-1 ring-line">
+      <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        <span>Play order</span>
+        <span className="font-normal normal-case tracking-normal text-muted">Start → end</span>
+      </div>
+      <ol className="flex gap-2 overflow-x-auto pb-1">
+        {shots.map((s, i) => (
+          <li
+            key={s.id}
+            draggable={reorderable}
+            onDragStart={(e) => e.dataTransfer.setData("text/plain", String(i))}
+            onDragOver={(e) => { if (reorderable) { e.preventDefault(); setOver(i); } }}
+            onDragLeave={() => setOver((o) => (o === i ? null : o))}
+            onDrop={(e) => { e.preventDefault(); setOver(null); onMove(Number(e.dataTransfer.getData("text/plain")), i); }}
+            className="flex shrink-0 items-center gap-2"
+          >
+            <button
+              type="button"
+              onClick={() => document.getElementById(`shot-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className={`relative w-24 overflow-hidden rounded-md border-2 text-left sm:w-28 ${over === i ? "border-gold" : "border-transparent"} ${reorderable ? "cursor-grab" : ""}`}
+            >
+              <div className="aspect-video bg-line">
+                {thumbs[s.photo_path] && <img src={thumbs[s.photo_path]} alt="" draggable={false} className="h-full w-full object-cover" />}
+              </div>
+              <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">#{i + 1}</span>
+              <span className="block truncate bg-white px-1 py-0.5 text-[11px] text-ink-soft">
+                {i === 0 ? "Opening" : s.label || "Unlabeled"}
+              </span>
+            </button>
+            {i < shots.length - 1 && <span aria-hidden className="text-muted">→</span>}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

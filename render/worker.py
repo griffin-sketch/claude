@@ -25,6 +25,7 @@ import render as engine  # template renderer
 import reels             # the Reel pack: several cuts per listing
 import effects           # per-photo effects + centered vertical framing
 import notify            # customer emails (Resend)
+from motion import motion_score
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -33,6 +34,9 @@ POLL = int(os.environ.get("POLL_SECONDS", "10"))
 MODEL = os.environ.get("FAL_MODEL", am.DEFAULT_MODEL)
 MAX_ATTEMPTS = 3
 CLIP_SECONDS = 5
+STATIC_BELOW = 2.5        # motion score under this = the AI camera barely moved: remake it once, pushing harder
+BOOST = (" IMPORTANT: the camera must move clearly and continuously for the entire clip, a steady and noticeable"
+         " dolly forward through the space with strong parallax. Never hold still.")
 VERTICAL_SHOTS = 8      # photos that also get a true 9:16 clip (the Reels use these)
 TRANSFORMS = {"build", "staging", "dusk"}   # effects whose room changes on screen: labels wait for the change
 
@@ -117,6 +121,9 @@ def submit_clip(shot, index, user_id, orient="h"):
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
         body, _ = effects.kling_body(shot.get("effect") or "none", kind, src, tmp, f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}")
+        if (shot.get("error") or "").startswith("static") and orient == "h":
+            body["prompt"] += BOOST   # the last take barely moved
+            body["cfg_scale"] = max(body.get("cfg_scale", 0.6), 0.8)
         body.setdefault("negative_prompt", am.NEGATIVE)
         body["duration"] = str(CLIP_SECONDS)
         r = fal_call(f"https://queue.fal.run/{MODEL}", body)
@@ -169,8 +176,9 @@ def step_redo():
         idx = s["position"]
         log(f"listing {s['listing_id'][:8]} redo shot {idx + 1}")
         try:
+            static = (s.get("error") or "").startswith("static")
             submit_clip(s, idx, l[0]["user_id"])
-            if wants_vertical(l[0], idx):
+            if wants_vertical(l[0], idx) and not static:
                 try:
                     submit_clip(s, idx, l[0]["user_id"], "v")
                 except Exception as e:
@@ -213,10 +221,14 @@ def step_poll():
                     suffix = "-v" if orient == "v" else ""
                     path = f"{user_id}/{s['listing_id']}/{s['id']}-{s.get('clip_attempts') or 1}{suffix}.mp4"
                     storage_put("clips", path, dest)
+                    score = motion_score(dest)
                 upd = {status_f: "ready", path_f: path}
                 if orient == "h": upd["error"] = None
+                if (orient == "h" and score < STATIC_BELOW and (s.get("effect") or "none") not in TRANSFORMS
+                        and (s.get("clip_attempts") or 1) < MAX_ATTEMPTS and not (s.get("error") or "").startswith("static")):
+                    upd.update(clip_status="redo", error=f"static take (motion {score:.1f}), remaking with a stronger move")
                 db_patch("shots", {"id": s["id"]}, upd)
-                log(f"  shot {s['position'] + 1} [{orient}] of {s['listing_id'][:8]}: ready")
+                log(f"  shot {s['position'] + 1} [{orient}] of {s['listing_id'][:8]}: {upd[status_f]} · motion {score:.1f}")
             except Exception as e:
                 log(f"  shot {s['position'] + 1} [{orient}]: result failed: {e}")
                 if orient == "v":

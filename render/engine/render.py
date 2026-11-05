@@ -999,23 +999,42 @@ class PhotoSource:
         return self.img.resize((W, H), Image.BICUBIC, box=(x0, y0, x0 + cw, y0 + ch))
     def close(self): pass
 
+DRIFTS = ["push", "pan_r", "pull", "pan_l", "rise"]
+
 class ClipSource:
-    def __init__(self, path, start, nframes, curve=None):
-        self.n = nframes; self.curve = curve
+    """Decodes an AI clip. Every clip also gets a slow digital camera drift (a push, pull or pan of a few
+    percent), so even a take where the AI camera barely moved never looks like a still photo."""
+    def __init__(self, path, start, nframes, curve=None, move="push", drift=0.07):
+        self.n = nframes; self.curve = curve; self.move = move; self.drift = max(0.0, float(drift or 0))
+        z = 1 + self.drift
+        self.cw, self.ch = int(round(W * z / 2)) * 2, int(round(H * z / 2)) * 2
         need = int(curve[-1]) + 2 if curve else nframes
-        vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}")
+        vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,crop={self.cw}:{self.ch},fps={FPS}")
         self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1", "-ss", f"{start:.3f}", "-i", path, "-an",
                                    "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
                                   stdout=subprocess.PIPE)
         self.last = None; self.read_n = 0
     def _read(self):
-        buf = self.p.stdout.read(W * H * 3)
-        if len(buf) == W * H * 3:
-            self.last = Image.frombytes("RGB", (W, H), buf)
+        buf = self.p.stdout.read(self.cw * self.ch * 3)
+        if len(buf) == self.cw * self.ch * 3:
+            self.last = Image.frombytes("RGB", (self.cw, self.ch), buf)
         if self.last is None:
-            self.last = Image.new("RGB", (W, H), (0, 0, 0))
+            self.last = Image.new("RGB", (self.cw, self.ch), (0, 0, 0))
         self.read_n += 1
         return self.last
+    def cam(self, img, k):
+        """Crop a moving window out of the slightly oversized frame."""
+        q = k / max(1, self.n - 1); p = ease_io(q) * 0.6 + q * 0.4
+        bw, bh = img.size; smin = 1 / (1 + self.drift)
+        if self.move == "push":   s = 1 - (1 - smin) * p; cx, cy = 0.5, 0.5
+        elif self.move == "pull": s = smin + (1 - smin) * p; cx, cy = 0.5, 0.5
+        elif self.move == "rise": s = smin; cx, cy = 0.5, 0.5 + (1 - smin) * (0.5 - p)
+        else:
+            s = smin; d = (1 - smin) * (p - 0.5)
+            cx, cy = (0.5 + d if self.move == "pan_r" else 0.5 - d), 0.5
+        w, h = bw * s, bh * s
+        x0 = min(max(0.0, cx * bw - w / 2), bw - w); y0 = min(max(0.0, cy * bh - h / 2), bh - h)
+        return img.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + w, y0 + h))
     def frame(self, k):
         if self.curve:
             # read forward to this output frame's source position; average what we pass (motion blur)
@@ -1024,31 +1043,48 @@ class ClipSource:
             while self.read_n <= target:
                 got.append(self._read())
             if not got:
-                return self.last if self.last is not None else self._read()
-            if len(got) == 1:
-                return got[0]
-            got = got[-5:]
-            acc = sum(np.asarray(g, dtype=np.float32) for g in got) / len(got)
-            return Image.fromarray(acc.astype(np.uint8))
-        buf = self.p.stdout.read(W * H * 3)
-        if len(buf) == W * H * 3:
-            self.last = Image.frombytes("RGB", (W, H), buf)
-        if self.last is None:
-            self.last = Image.new("RGB", (W, H), (0, 0, 0))
-        return self.last
+                img = self.last if self.last is not None else self._read()
+            elif len(got) == 1:
+                img = got[0]
+            else:
+                got = got[-5:]
+                acc = sum(np.asarray(g, dtype=np.float32) for g in got) / len(got)
+                img = Image.fromarray(acc.astype(np.uint8))
+        else:
+            img = self._read()
+        return self.cam(img, k)
     def close(self):
         try: self.p.stdout.close(); self.p.kill()
         except Exception: pass
 
 # ---------------------------------------------------------------- grade
-def make_vignette():
+def make_vignette(strength=0.38):
     v = Image.radial_gradient("L").resize((W, H), Image.BILINEAR)   # 0 center -> 255 edge
-    return v.point(lambda x: int(255 - max(0, x - 70) * 0.38)).convert("RGB")
+    return v.point(lambda x: int(255 - max(0, x - 70) * strength)).convert("RGB")
 
-def grade(img, vign):
-    img = img.point(lambda v: max(0, min(255, int((v - 128) * 1.05 + 128 + 2))))
-    img = ImageEnhance.Color(img).enhance(1.06)
-    return ImageChops.multiply(img, vign)
+# Color looks, so each video in a Reel pack has its own feel.
+# contrast, brightness lift, saturation, (r, g, b) gains, vignette strength
+GRADES = {
+    "natural": (1.05, 2, 1.06, (1.00, 1.00, 1.00), 0.38),
+    "warm":    (1.06, 3, 1.08, (1.05, 1.01, 0.93), 0.40),
+    "punchy":  (1.14, 0, 1.18, (1.01, 1.00, 0.99), 0.48),
+    "cool":    (1.07, 2, 0.98, (0.96, 1.00, 1.05), 0.36),
+    "bright":  (1.00, 10, 1.04, (1.01, 1.01, 1.00), 0.18),
+    "film":    (0.96, 6, 0.90, (1.03, 1.00, 0.95), 0.45),
+}
+
+class Grade:
+    def __init__(self, name):
+        c, lift, sat, gains, vig = GRADES.get(name or "natural", GRADES["natural"])
+        self.lut = []
+        for g in gains:
+            self.lut += [max(0, min(255, int(((v - 128) * c + 128 + lift) * g))) for v in range(256)]
+        self.sat = sat; self.vign = make_vignette(vig)
+    def __call__(self, img):
+        img = img.point(self.lut)
+        if abs(self.sat - 1) > 0.01:
+            img = ImageEnhance.Color(img).enhance(self.sat)
+        return ImageChops.multiply(img, self.vign)
 
 # ---------------------------------------------------------------- render
 def build_timeline(job, base):
@@ -1064,13 +1100,12 @@ def build_timeline(job, base):
         if ext in VIDEO_EXT:
             dur_src = probe_duration(path)
             start = float(s.get("trim_start", 0))
+            speed = max(0.5, min(2.5, float(s.get("speed") or 1.0)))   # 0.8 = slow motion, 1.8 = fast forward
             d = float(s.get("duration") or min(max(dur_src - start, 1.0), 6.0))
-            d = max(2.4, min(d, max(dur_src - start, 1.0)))
-            if ramped:  # the ramp eats source footage; shorten the shot so it never runs out
-                avail = max(dur_src - start, 1.0) * FPS - 2
-                n = int(min(d * FPS, avail - ramp_extra(r_in, r_out)))
-                d = max(1.6, n / FPS)
-            segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s, r_in=r_in, r_out=r_out))
+            avail = max(dur_src - start, 1.0) * FPS - 2          # source frames we can use
+            n = int(min(d * FPS, avail / speed - (ramp_extra(r_in, r_out) if ramped else 0)))
+            d = max(1.2, n / FPS)
+            segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s, r_in=r_in, r_out=r_out, speed=speed))
         else:
             d = float(s.get("duration") or (5.2 if i == 0 else 3.8))
             segs.append(dict(kind="photo", path=path, dur=d, shot=s, r_in=r_in, r_out=r_out))
@@ -1115,14 +1150,20 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
         els += tpl.outro(body_f / FPS + 0.55)
         tpl.in_outro = False
 
-    vign = make_vignette()
+    grade = Grade(job.get("grade"))
+    drift = float(job.get("drift", 0.07))
     sources = {}
     def get_src(i):
         if i not in sources:
             sg = segs[i]
             curve = speed_curve(sg["n"], sg.get("r_in"), sg.get("r_out")) if (sg.get("r_in") or sg.get("r_out")) else None
+            sp = sg.get("speed", 1.0)
+            if sp != 1.0:
+                curve = [v * sp for v in (curve or range(sg["n"] + 1))]
             if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)], curve)
-            else: sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve)
+            else:
+                mv = sg["shot"].get("drift_move") or DRIFTS[(i + int(job.get("drift_offset", 0))) % len(DRIFTS)]
+                sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve, mv, drift)
         return sources[i]
 
     frames_to_do = range(total_f) if preview is None else preview
@@ -1166,7 +1207,7 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             for i in list(sources):
                 if fi >= segs[i]["f0"] + segs[i]["n"] - 1 and i not in active[-1:]:
                     sources[i].close(); del sources[i]
-            bg = grade(bg, vign)
+            bg = grade(bg)
             last_bg = bg
         else:
             if frozen is None:
@@ -1174,6 +1215,9 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
                 frozen_blur = ImageEnhance.Brightness(frozen.filter(ImageFilter.GaussianBlur(16))).enhance(0.82)
             p = ease_io((fi - body_f) / (0.9 * FPS))
             bg = Image.blend(frozen, frozen_blur, p)
+            z = 1 + 0.10 * ((fi - body_f) / max(1, outro_f))    # slow push so the outro never sits still
+            cw, ch = W / z, H / z
+            bg = bg.resize((W, H), Image.BILINEAR, box=((W - cw) / 2, (H - ch) / 2, (W + cw) / 2, (H + ch) / 2))
         frame = bg.convert("RGBA")
         if tpl.letterbox:
             d = ImageDraw.Draw(frame)
