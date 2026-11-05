@@ -1135,7 +1135,9 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
                "-r", str(FPS), "-i", "-"]
         if music and os.path.exists(music):
             cmd += ["-stream_loop", "-1", "-i", music]
-            af = f"atrim=0:{total_s:.3f},afade=t=in:d=0.4,afade=t=out:st={max(0, total_s - 2.5):.3f}:d=2.5"
+            # even out loudness across tracks (and customer uploads), then fade in and out
+            af = (f"aresample=48000,loudnorm=I=-16:TP=-1.5:LRA=11,atrim=0:{total_s:.3f},"
+                  f"afade=t=in:d=0.4,afade=t=out:st={max(0, total_s - 2.5):.3f}:d=2.5")
         else:
             cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
             af = f"atrim=0:{total_s:.3f}"

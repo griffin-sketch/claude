@@ -48,6 +48,18 @@ export const HOOKS = [
   { id: "backyard", text: "Wait for the backyard" },
 ] as const;
 
+// Background music library. Files: web/public/music/<id>.mp3 (previews) and render/engine/music/<id>.mp3 (renders).
+export const MUSIC = [
+  { id: "luxe", name: "Luxe Piano", mood: "Elegant piano and soft strings" },
+  { id: "bright", name: "Bright Days", mood: "Upbeat, feel-good pop" },
+  { id: "cinematic", name: "Grand Entrance", mood: "Cinematic and inspiring" },
+  { id: "acoustic", name: "Front Porch", mood: "Warm acoustic guitar" },
+  { id: "lofi", name: "Sunday Coffee", mood: "Chill lo-fi beat" },
+  { id: "house", name: "Night Drive", mood: "Modern deep house" },
+  { id: "ambient", name: "Open Space", mood: "Calm, airy ambient" },
+  { id: "drive", name: "Momentum", mood: "Energetic, punchy, social-first" },
+] as const;
+
 export const ROOM_SUGGESTIONS = [
   "Front Exterior",
   "Open Living Room",

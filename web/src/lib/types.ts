@@ -34,6 +34,8 @@ export type Listing = {
   price: string | null;
   template: number;
   hook: string | null;
+  music: string;
+  music_path: string | null;
   client_name: string | null;
   client_brokerage: string | null;
   client_phone: string | null;

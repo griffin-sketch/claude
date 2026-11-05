@@ -312,12 +312,22 @@ def render_listing(l):
             outro = "branded"
         if outro == "branded" and not (agent["name"] or agent["phone"]):
             outro = "simple"   # no branding saved yet
+        music = None   # a track from the built-in library, or the customer's own upload
+        mid = l.get("music") or "none"
+        if mid == "custom" and l.get("music_path"):
+            try:
+                music = storage_get("photos", l["music_path"], os.path.join(media, "music" + (os.path.splitext(l["music_path"])[1] or ".mp3")))
+            except Exception as e:
+                log(f"  music download failed: {e}")
+        elif mid != "none":
+            lib = os.path.join(HERE, "engine", "music", f"{mid}.mp3")
+            music = lib if os.path.exists(lib) else None
         job = {
             "template": l["template"], "transition": l.get("transition") or "crossfade", "kicker": l["kicker"] or "NOW AVAILABLE", "headline": l["headline"] or "",
             "address": l["address"], "city_line": l["city_line"],
             "stats": {"beds": l.get("beds"), "baths": l.get("baths"), "sqft": l.get("sqft"),
                       "acres": l.get("acres"), "price": l.get("price")},
-            "shots": job_shots, "agent": agent, "outro": outro, "music": None,
+            "shots": job_shots, "agent": agent, "outro": outro, "music": music,
         }
         made = []
         pack = reels.build_pack(job, l)

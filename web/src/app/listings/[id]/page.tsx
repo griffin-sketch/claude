@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
@@ -497,6 +497,7 @@ function Editor({ id, user }: { id: string; user: User }) {
             ))}
           </div>
         </div>
+        <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <fieldset disabled={!labelsEditable}>
             <span className="label">Formats</span>
@@ -605,6 +606,74 @@ function IconBtn(props: { label: string; onClick: () => void; disabled?: boolean
 }
 
 /** Text input that saves on blur (and on Enter). */
+/** Background music: a library track (with a preview), the customer's own MP3, or none. */
+function MusicPicker({ listing, user, disabled, onSave }: {
+  listing: Listing; user: User; disabled: boolean; onSave: (p: Partial<Listing>) => Promise<void> | void;
+}) {
+  const [playing, setPlaying] = useState<string | null>(null);
+  const [audio] = useState(() => (typeof Audio !== "undefined" ? new Audio() : null));
+  const [note, setNote] = useState("");
+  useEffect(() => () => audio?.pause(), [audio]);
+  function preview(id: string) {
+    if (!audio) return;
+    if (playing === id) { audio.pause(); setPlaying(null); return; }
+    audio.src = `/music/${id}.mp3`;
+    audio.currentTime = 0;
+    audio.play().then(() => setPlaying(id)).catch(() => setNote("Preview not available yet."));
+    audio.onended = () => setPlaying(null);
+  }
+  async function upload(file: File) {
+    if (file.size > 25 * 1024 * 1024) return setNote("Please use an MP3 under 25 MB.");
+    setNote("Uploading…");
+    const path = `${user.id}/${listing.id}/music-${crypto.randomUUID()}.${fileExt(file.name) || "mp3"}`;
+    const { error } = await supabase().storage.from("photos").upload(path, file, { upsert: true, contentType: file.type || "audio/mpeg" });
+    if (error) return setNote(error.message);
+    await onSave({ music: "custom", music_path: path });
+    setNote(`Using "${file.name}".`);
+  }
+  const current = listing.music ?? "none";
+  const choice = (id: string, name: string, mood: string, previewable: boolean) => (
+    <div
+      key={id}
+      className={`flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 ${current === id ? "border-gold bg-gold-soft" : "border-line"}`}
+    >
+      {previewable ? (
+        <button type="button" onClick={() => preview(id)} aria-label={`${playing === id ? "Stop" : "Play"} ${name}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+          {playing === id ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="3.5" height="10" fill="currentColor" /><rect x="8.5" y="2" width="3.5" height="10" fill="currentColor" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
+          )}
+        </button>
+      ) : <span className="h-11 w-11 shrink-0" />}
+      <button type="button" disabled={disabled} onClick={() => onSave({ music: id })} className="min-w-0 flex-1 text-left">
+        <span className="block text-sm font-semibold">{name}</span>
+        <span className="block text-xs text-ink-soft">{mood}</span>
+      </button>
+    </div>
+  );
+  return (
+    <div className="mt-6">
+      <span className="label">Music</span>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {choice("none", "No music", "Silent, add your own sound when you post", false)}
+        {MUSIC.map((m) => choice(m.id, m.name, m.mood, true))}
+        <label className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-3 py-2.5 ${current === "custom" ? "border-gold bg-gold-soft" : "border-dashed border-line"}`}>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-line text-lg text-ink" aria-hidden="true">+</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">{current === "custom" ? "Your own track" : "Upload your own"}</span>
+            <span className="block text-xs text-ink-soft">MP3 you have the rights to use</span>
+          </span>
+          <input type="file" accept="audio/mpeg,audio/mp3,audio/*" className="hidden" disabled={disabled}
+            onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+        </label>
+      </div>
+      {note && <p className="mt-2 text-xs text-ink-soft">{note}</p>}
+    </div>
+  );
+}
+
 /** A private link the realtor or photographer sends to a client: they watch and download, no account needed. */
 function ShareLink({ listing, onSave }: { listing: Listing; onSave: (p: Partial<Listing>) => Promise<void> | void }) {
   const [copied, setCopied] = useState(false);
