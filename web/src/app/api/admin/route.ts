@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     if (body?.ping) return Response.json({ ok: true });
     const db = admin();
+    if (typeof body?.listing === "string") return Response.json(await media(db, body.listing));
     const [{ data: listings }, { data: shots }, { data: renders }, { data: profiles }, users] = await Promise.all([
       db.from("listings").select("id, user_id, address, city_line, status, paid, paid_via, error, created_at, updated_at, outro").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),
@@ -63,4 +64,25 @@ export async function POST(request: Request) {
   } catch (e) {
     return fail(e);
   }
+}
+
+/** One listing's finished videos and AI clips, as signed links the owner can play or download (1 hour). */
+async function media(db: ReturnType<typeof admin>, listingId: string) {
+  const [{ data: l }, { data: renders }, { data: shots }] = await Promise.all([
+    db.from("listings").select("address").eq("id", listingId).single(),
+    db.from("renders").select("kind, format, video_path, created_at").eq("listing_id", listingId),
+    db.from("shots").select("position, label, effect, clip_path, vclip_path").eq("listing_id", listingId).order("position"),
+  ]);
+  const slug = (l?.address || "listing").replace(/[^a-z0-9]+/gi, "-");
+  const sign = async (bucket: string, path: string, download?: string) =>
+    (await db.storage.from(bucket).createSignedUrl(path, 3600, download ? { download } : undefined)).data?.signedUrl ?? null;
+  const videos = await Promise.all((renders ?? []).map(async (r) => {
+    const name = `${slug}-${r.kind ?? "tour"}-${r.format === "9:16" ? "vertical" : "16x9"}.mp4`;
+    return { kind: r.kind ?? "tour", format: r.format, play: await sign("videos", r.video_path), download: await sign("videos", r.video_path, name) };
+  }));
+  const clips = await Promise.all((shots ?? []).filter((s) => s.clip_path).map(async (s) => ({
+    position: s.position, label: s.label, effect: s.effect, play: await sign("clips", s.clip_path!),
+    vertical: s.vclip_path ? await sign("clips", s.vclip_path) : null,
+  })));
+  return { address: l?.address ?? "", videos, clips };
 }
