@@ -3,25 +3,19 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 
-const manrope = localFont({
-  variable: "--font-manrope",
+// Coastal modern: Figtree for text, Fraunces (serif, with optical sizes) for headlines.
+const figtree = localFont({
+  variable: "--font-figtree",
   display: "swap",
-  src: [
-    { path: "../fonts/manrope-400.woff2", weight: "400" },
-    { path: "../fonts/manrope-500.woff2", weight: "500" },
-    { path: "../fonts/manrope-600.woff2", weight: "600" },
-    { path: "../fonts/manrope-700.woff2", weight: "700" },
-    { path: "../fonts/manrope-800.woff2", weight: "800" },
-  ],
+  src: [{ path: "../fonts/figtree.woff2", weight: "300 900", style: "normal" }],
 });
 
-const cormorant = localFont({
-  variable: "--font-cormorant",
+const fraunces = localFont({
+  variable: "--font-fraunces",
   display: "swap",
   src: [
-    { path: "../fonts/cormorant-500.woff2", weight: "500", style: "normal" },
-    { path: "../fonts/cormorant-500-italic.woff2", weight: "500", style: "italic" },
-    { path: "../fonts/cormorant-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/fraunces.woff2", weight: "100 900", style: "normal" },
+    { path: "../fonts/fraunces-italic.woff2", weight: "100 900", style: "italic" },
   ],
 });
 
@@ -32,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${manrope.variable} ${cormorant.variable} h-full antialiased`}>
+    <html lang="en" className={`${figtree.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

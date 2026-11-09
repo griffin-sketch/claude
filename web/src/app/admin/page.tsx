@@ -74,7 +74,7 @@ function Admin() {
     <div className="flex flex-col gap-8">
       <div>
         <p className="eyebrow">Owner view</p>
-        <h1 className="mt-2 font-display text-5xl font-medium leading-none">Admin</h1>
+        <h1 className="mt-2 font-display text-5xl leading-none">Admin</h1>
         <p className="mt-2 text-sm text-ink-soft">Every customer listing, live. Refreshes every 30 seconds.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -168,7 +168,7 @@ function Viewer({ listingId, onClose }: { listingId: string; onClose: () => void
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Customer videos</p>
-            <h2 className="mt-1 font-display text-3xl font-medium">{m?.address || "Loading…"}</h2>
+            <h2 className="mt-1 font-display text-3xl">{m?.address || "Loading…"}</h2>
           </div>
           <button className="btn-ghost" onClick={onClose}>Close</button>
         </div>

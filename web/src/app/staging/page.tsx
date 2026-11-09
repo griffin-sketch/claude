@@ -152,7 +152,7 @@ function StagingStudio({ user }: { user: User }) {
     <div className="space-y-8 pb-24">
       <div>
         <p className="eyebrow">Virtual staging</p>
-        <h1 className="font-display text-4xl font-medium">Furnish empty rooms in seconds</h1>
+        <h1 className="font-display text-4xl">Furnish empty rooms in seconds</h1>
         <p className="mt-2 max-w-2xl text-ink-soft">
           Upload a photo of an empty room, pick a style and get a photoreal staged version. Previews are free;
           unlock the full-size photo for ${STAGING_PRICE} each.
@@ -164,7 +164,7 @@ function StagingStudio({ user }: { user: User }) {
 
       {/* ---------------- new photos */}
       <section className="card p-6">
-        <h2 className="font-display text-2xl font-medium">1. Pick a style</h2>
+        <h2 className="font-display text-2xl">1. Pick a style</h2>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STAGE_STYLES.map((s) => (
             <button key={s.id} type="button" onClick={() => setStyle(s.id)}
@@ -184,7 +184,7 @@ function StagingStudio({ user }: { user: User }) {
           </select>
         </div>
 
-        <h2 className="mt-8 font-display text-2xl font-medium">2. Add photos of empty rooms</h2>
+        <h2 className="mt-8 font-display text-2xl">2. Add photos of empty rooms</h2>
         <label
           onDragOver={(e) => { e.preventDefault(); setDropping(true); }}
           onDragLeave={() => setDropping(false)}
@@ -236,7 +236,7 @@ function StagingStudio({ user }: { user: User }) {
       {/* ---------------- results */}
       <section>
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-2xl font-medium">Your staged photos</h2>
+          <h2 className="font-display text-2xl">Your staged photos</h2>
           {pickable.length > 1 && (
             <button type="button" className="text-sm font-semibold text-gold-deep underline"
               onClick={() => setPicked(picked.size === pickable.length ? new Set() : new Set(pickable.map((r) => r.id)))}>

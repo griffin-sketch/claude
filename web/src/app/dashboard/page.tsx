@@ -48,7 +48,7 @@ function Listings({ user }: { user: User }) {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{greeting(user)}</p>
-          <h1 className="mt-2 font-display text-5xl font-medium leading-none">Your listings</h1>
+          <h1 className="mt-2 font-display text-5xl leading-none">Your listings</h1>
           <p className="mt-2 text-sm text-ink-soft">Upload photos, pick a look, and we make the video.</p>
         </div>
         <button onClick={create} disabled={creating} className="btn-gold">
@@ -62,7 +62,7 @@ function Listings({ user }: { user: User }) {
         <div className="card grid overflow-hidden md:grid-cols-2">
           <img src="/home/house.jpg" alt="" className="h-full min-h-56 w-full object-cover" />
           <div className="flex flex-col justify-center gap-5 p-8 sm:p-10">
-            <h2 className="font-display text-4xl font-medium leading-tight">
+            <h2 className="font-display text-4xl leading-tight">
               Let&apos;s make your <span className="italic">first video.</span>
             </h2>
             <ol className="space-y-3 text-sm text-ink-soft">
@@ -87,7 +87,7 @@ function Listings({ user }: { user: User }) {
                 className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition hover:-translate-y-px hover:border-gold hover:shadow-[0_8px_24px_rgba(23,25,28,.06)]"
               >
                 <div>
-                  <p className="font-display text-2xl font-medium leading-tight">{l.address || "Untitled listing"}</p>
+                  <p className="font-display text-2xl leading-tight">{l.address || "Untitled listing"}</p>
                   <p className="text-sm text-ink-soft">
                     {[l.city_line, TEMPLATES.find((t) => t.id === l.template)?.name].filter(Boolean).join(" · ")}
                   </p>

@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
-/* Tourvo: clean light ground, navy ink, brand blue accent. */
+/* Tourvo · Coastal modern: misty ground, deep sea-green ink, teal accent, sand highlights.
+   (The "champagne"/"gold" names are kept so every page picks up the theme.) */
 :root {
-  --bg: #f5f7fa;
+  --bg: #f3f7f7;
   --surface: #ffffff;
-  --ink: #0b1b2e;
-  --ink-soft: #44546a;
-  --muted: #5d6b7e;
-  --line: #dce4ee;
-  --night: #0b1b2e;
-  --champagne: #1f5fd1;
-  --champagne-deep: #174baa;
-  --champagne-light: #9cc3ff;
-  --champagne-soft: #e8f0fd;
+  --ink: #1d3438;
+  --ink-soft: #4a6266;
+  --muted: #587074;
+  --line: #cfe0df;
+  --night: #1d3438;
+  --champagne: #2f6f73;
+  --champagne-deep: #245a5d;
+  --champagne-light: #9cc5c2;
+  --champagne-soft: #dcebea;
+  --sand: #e8b07a;
   --danger: #b42318;
   --ok: #1f7a4d;
 }
@@ -32,8 +34,9 @@
   --color-gold-soft: var(--champagne-soft);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
-  --font-sans: var(--font-manrope), "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-cormorant), Georgia, serif;
+  --color-sand: var(--sand);
+  --font-sans: var(--font-figtree), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
 }
 
 body {
@@ -43,22 +46,23 @@ body {
 
 @utility font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
 }
 @utility eyebrow {
-  @apply text-xs font-semibold uppercase tracking-[0.28em] text-gold-deep;
+  @apply inline-flex w-fit items-center rounded-full bg-gold-soft px-3.5 py-1.5 text-[13px] font-semibold text-gold-deep;
 }
 @utility btn {
   @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-ink text-white hover:bg-black;
+  @apply btn bg-gold text-white hover:bg-gold-deep;
 }
 @utility btn-gold {
   @apply btn bg-gold text-white hover:bg-gold-deep;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-surface text-ink hover:border-ink;
+  @apply btn border border-line bg-surface text-ink hover:border-gold hover:text-gold-deep;
 }
 @utility input {
   @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-gold;
@@ -67,5 +71,5 @@ body {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-muted;
 }
 @utility card {
-  @apply rounded-2xl border border-line bg-surface;
+  @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(29,52,56,0.05)];
 }

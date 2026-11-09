@@ -369,7 +369,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   const packSection = shots.length >= 3 && (
     <section className="card p-6">
-      <h2 className="font-display text-2xl font-medium">What&apos;s in your Reel pack</h2>
+      <h2 className="font-display text-2xl">What&apos;s in your Reel pack</h2>
       <p className="mb-5 mt-1 text-sm text-ink-soft">
         {plan.length} videos, each with its own style. The numbers match your photo order; change it in Arrange and these update.
       </p>
@@ -411,7 +411,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <Link href="/dashboard" className="text-sm text-ink-soft hover:text-ink">
             ← All listings
           </Link>
-          <h1 className="font-display text-4xl font-medium">{listing.address || "New listing video"}</h1>
+          <h1 className="font-display text-4xl">{listing.address || "New listing video"}</h1>
         </div>
         <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[status]}</span>
       </div>
@@ -458,7 +458,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 1. photos */}
       {step === "photos" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Upload your listing photos</h2>
+          <h2 className="font-display text-2xl">Upload your listing photos</h2>
           <p className="mt-1 text-sm text-ink-soft">
             Add {MIN_PHOTOS} to {MAX_PHOTOS} photos. Use the MLS photos, landscape is best. You&apos;ll put them in order next.
           </p>
@@ -509,7 +509,7 @@ function Editor({ id, user }: { id: string; user: User }) {
         <section className="card p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-2xl font-medium">Put them in order and name the rooms</h2>
+              <h2 className="font-display text-2xl">Put them in order and name the rooms</h2>
               <p className="text-sm text-ink-soft">
                 Your video plays top to bottom, #1 first. Drag a photo, use the arrows, or pick its spot number.
                 Room names show on screen.
@@ -584,7 +584,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 3. motion */}
       {step === "motion" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Choose how each shot moves</h2>
+          <h2 className="font-display text-2xl">Choose how each shot moves</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">
             Leave everything on Auto and we&apos;ll pick the best camera move for each room, or choose an AI effect and
             set the camera yourself.
@@ -606,7 +606,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 4. style */}
       {step === "style" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Pick a look and music</h2>
+          <h2 className="font-display text-2xl">Pick a look and music</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">This sets the text style of your full walkthrough. The short Reels each get their own style.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {TEMPLATES.map((t) => (
@@ -639,7 +639,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 5. details */}
       {step === "details" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Listing details and branding</h2>
+          <h2 className="font-display text-2xl">Listing details and branding</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">These go on the title card and closing card.</p>
           <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
@@ -708,7 +708,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {step === "checkout" && (
         <>
           <section className="card p-6">
-            <h2 className="font-display text-2xl font-medium">Check everything, then make it</h2>
+            <h2 className="font-display text-2xl">Check everything, then make it</h2>
             <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {([
                 ["Photos", `${shots.length} photos`, "arrange"],
@@ -740,7 +740,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 7. clips */}
       {step === "clips" && (status === "queued" || status === "generating") && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Making your camera moves</h2>
+          <h2 className="font-display text-2xl">Making your camera moves</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page; we&apos;ll keep going.
           </p>
@@ -754,7 +754,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <section className="card p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-2xl font-medium">Review your clips</h2>
+                <h2 className="font-display text-2xl">Review your clips</h2>
                 <p className="text-sm text-ink-soft">
                   Watch each one. If a room looks off, hit Redo for a new take, or change its effect or camera move.
                   When you&apos;re happy, make your Reel pack.
@@ -788,7 +788,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 8. videos */}
       {step === "videos" && status === "rendering" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Building your videos</h2>
+          <h2 className="font-display text-2xl">Building your videos</h2>
           <p className="mt-1 text-sm text-ink-soft">
             Cutting your Reel pack: the full walkthrough plus short versions for social. About 10 minutes. You can leave this page.
           </p>
@@ -799,7 +799,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
       {step === "videos" && status === "done" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Your Reel pack is ready</h2>
+          <h2 className="font-display text-2xl">Your Reel pack is ready</h2>
           <p className="mb-5 mt-1 text-sm text-ink-soft">
             {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
           </p>

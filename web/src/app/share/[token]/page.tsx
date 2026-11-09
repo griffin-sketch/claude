@@ -59,7 +59,7 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
       </header>
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <p className="eyebrow">{l.client_name ? `For ${l.client_name}` : "Your listing videos"}</p>
-        <h1 className="mt-2 font-display text-5xl font-medium leading-tight">{l.address || "Listing videos"}</h1>
+        <h1 className="mt-2 font-display text-5xl leading-tight">{l.address || "Listing videos"}</h1>
         {l.city_line && <p className="mt-1 text-ink-soft">{l.city_line}</p>}
         <p className="mt-4 max-w-xl text-sm text-ink-soft">
           {urls.length} videos, ready to post. Tap Download on each one. These links work for 7 days; ask for a new link any time.

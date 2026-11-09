@@ -65,7 +65,7 @@ function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <p className="eyebrow">Welcome</p>
-      <h1 className="mt-3 font-display text-5xl font-medium leading-none">Sign in</h1>
+      <h1 className="mt-3 font-display text-5xl leading-none">Sign in</h1>
       <p className="mt-3 text-sm text-ink-soft">No password needed. New here? This creates your free account.</p>
       {state !== "sent" && GOOGLE_ON && (
         <>
@@ -165,7 +165,7 @@ export default function LoginPage() {
           <Logo size={34} light />
         </Link>
         <div>
-          <p className="font-display text-6xl font-medium leading-[0.95]">
+          <p className="font-display text-6xl leading-[0.95]">
             Your listing,
             <br />
             <span className="italic">in motion.</span>
