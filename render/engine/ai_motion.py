@@ -199,3 +199,48 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- custom camera (six sliders, -10..10)
+# Stored in shots.move as "custom:h=2.9,v=0,z=8.7,p=6.3,t=0,r=0". Keep in sync with web/src/lib/camera.ts
+AXES = {
+    #     positive                      negative
+    "z": ("dollies forward into the space", "dollies backward out of the space"),
+    "h": ("trucks sideways to the right", "trucks sideways to the left"),
+    "v": ("cranes upward", "cranes downward"),
+    "p": ("pans to the right", "pans to the left"),
+    "t": ("tilts upward", "tilts downward"),
+    "r": ("rolls clockwise", "rolls counterclockwise"),
+}
+
+def parse_custom(move):
+    if not (move or "").startswith("custom:"):
+        return None
+    vals = {k: 0.0 for k in AXES}
+    for part in move[7:].split(","):
+        k, _, v = part.partition("=")
+        try:
+            if k in vals: vals[k] = max(-10.0, min(10.0, float(v)))
+        except ValueError:
+            pass
+    return vals
+
+def custom_prompt(vals):
+    """Slider values -> one camera sentence, strongest move first."""
+    parts = []
+    for k, v in sorted(vals.items(), key=lambda kv: -abs(kv[1])):
+        if abs(v) < 0.5: continue
+        how = "slightly" if abs(v) <= 3 else ("steadily" if abs(v) <= 7 else "strongly and quickly")
+        parts.append(f"{how} {AXES[k][0 if v > 0 else 1]}")
+    if not parts:
+        return MOVES_BOLD["push"]
+    moves = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+    return (f"The camera {moves}, all as one smooth continuous motion for the whole clip, "
+            "strong depth and parallax, stable and cinematic.")
+
+def custom_drift(vals):
+    """The renderer's digital drift: follow the strongest translating move."""
+    k, v = max(((k, vals[k]) for k in ("z", "h", "p", "v", "t")), key=lambda kv: abs(kv[1]))
+    if abs(v) < 0.5: return "push"
+    return {("z", 1): "push", ("z", -1): "pull", ("h", 1): "pan_r", ("h", -1): "pan_l", ("p", 1): "pan_r",
+            ("p", -1): "pan_l", ("v", 1): "rise", ("v", -1): "push", ("t", 1): "rise", ("t", -1): "push"}[(k, 1 if v > 0 else -1)]

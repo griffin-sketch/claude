@@ -6,9 +6,11 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { CAMERA_MOVES, EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
+import { describeMove } from "@/lib/camera";
+import { CameraControl } from "@/components/CameraControl";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
@@ -433,9 +435,9 @@ function Editor({ id, user }: { id: string; user: User }) {
                   </span>
                   {listing.status !== "draft" && <ClipBadge status={s.clip_status} />}
                   {(() => {
-                    const m = CAMERA_MOVES.find((c) => c.id === (s.move || "auto"));
-                    return m && m.id !== "auto" ? (
-                      <span title={`Camera: ${m.name}`} className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-base text-white">
+                    const m = describeMove(s.move);
+                    return (s.move || "auto") !== "auto" ? (
+                      <span title={`Camera: ${m.text}`} className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-base text-white">
                         {m.icon}
                       </span>
                     ) : null;
@@ -464,28 +466,13 @@ function Editor({ id, user }: { id: string; user: User }) {
                       {listing.status === "review" && " Changing it remakes this clip."}
                     </span>
                   </label>
-                  <label className="sm:col-span-2">
-                    <span className="sr-only">Camera move for photo {i + 1}</span>
-                    <select
-                      className="input py-2"
-                      disabled={!(editable || listing.status === "review") || s.effect === "reveal"}
-                      value={CAMERA_MOVES.some((c) => c.id === s.move) ? s.move : "auto"}
-                      onChange={(e) => {
-                        const move = e.target.value;
-                        saveShot(s, listing.status === "review" ? { move, clip_status: "redo" } : { move });
-                      }}
-                    >
-                      {CAMERA_MOVES.map((c) => (
-                        <option key={c.id} value={c.id}>{`Camera: ${c.icon}  ${c.name}`}</option>
-                      ))}
-                    </select>
-                    <span className="mt-1 block text-xs text-muted">
-                      {s.effect === "reveal"
-                        ? "Drone reveal sets its own camera move."
-                        : CAMERA_MOVES.find((c) => c.id === (s.move || "auto"))?.blurb}
-                      {listing.status === "review" && s.effect !== "reveal" && " Changing it remakes this clip."}
-                    </span>
-                  </label>
+                  <CameraControl
+                    shot={s}
+                    photo={thumbs[s.photo_path]}
+                    disabled={!(editable || listing.status === "review") || s.effect === "reveal"}
+                    review={listing.status === "review"}
+                    onSave={(move) => saveShot(s, listing.status === "review" ? { move, clip_status: "redo" } : { move })}
+                  />
                   {i === 0 ? (
                     <p className="text-sm text-ink-soft sm:col-span-2">
                       Opening shot. Your title card shows over this one, so it has no label.

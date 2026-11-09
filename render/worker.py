@@ -122,12 +122,14 @@ def submit_clip(shot, index, user_id, orient="h"):
         kind = effects.kind_of(shot, index)
         if orient == "v":
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
-        chosen = (shot.get("move") or "auto") in am.MOVES_BOLD          # the realtor picked a camera direction
+        custom = am.parse_custom(shot.get("move"))
+        chosen = custom is not None or (shot.get("move") or "auto") in am.MOVES_BOLD   # the realtor picked the camera
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
+        cam = am.custom_prompt(custom) if custom else am.MOVES_BOLD[mv]
         fx = shot.get("effect") or "none"
-        body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}")
+        body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {cam}")
         if chosen and fx not in ("none", "reveal"):
-            body["prompt"] += " Camera direction: " + am.MOVES_BOLD[mv]
+            body["prompt"] += " Camera direction: " + cam
         if (shot.get("error") or "").startswith("static") and orient == "h":
             body["prompt"] += BOOST   # the last take barely moved
             body["cfg_scale"] = max(body.get("cfg_scale", 0.6), 0.8)
@@ -143,7 +145,7 @@ def submit_clip(shot, index, user_id, orient="h"):
             "fal_response_url": r["response_url"], "clip_attempts": (shot.get("clip_attempts") or 0) + 1,
             "approved": False, "error": None,
         })
-    log(f"  shot {index + 1} [{orient}]: submitted [{shot.get('effect') or mv}]")
+    log(f"  shot {index + 1} [{orient}]: submitted [{shot.get('effect') or 'none'} · {shot.get('move') if custom else mv}]")
 
 
 def wants_vertical(l, index):
@@ -293,7 +295,8 @@ def render_listing(l):
                 shot = {"path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
-                shot["drift_move"] = DRIFT_FOR.get(am.pick_move(s, s["position"]), "push")   # digital drift follows the AI camera
+                cv = am.parse_custom(s.get("move"))   # digital drift follows the AI camera
+                shot["drift_move"] = am.custom_drift(cv) if cv else DRIFT_FOR.get(am.pick_move(s, s["position"]), "push")
                 job_shots.append(shot)
                 if s.get("vclip_status") == "ready" and s.get("vclip_path"):
                     try:
