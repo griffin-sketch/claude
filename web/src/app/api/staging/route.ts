@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
       if (isAdmin(user)) {
         await db.from("stagings").update({ paid: true, paid_via: "comp" }).in("id", todo).eq("user_id", user.id);
-        return Response.json({ ok: true });
+        return Response.json({ ok: true, comp: true });
       }
 
       const back = `${siteUrl(request)}/staging`;

@@ -120,9 +120,10 @@ function StagingStudio({ user }: { user: User }) {
     setBusy("unlock");
     setError("");
     try {
-      const res = await api("/api/staging", { action: "checkout", ids: [...picked] });
+      const res = await api<{ url?: string; comp?: boolean }>("/api/staging", { action: "checkout", ids: [...picked] });
       if (res.url) window.location.href = res.url;
       else {
+        if (res.comp) setNote("Unlocked free because this is an admin account. Use a different email to test the real checkout.");
         setPicked(new Set());
         await load();
       }
