@@ -86,17 +86,18 @@ export default function Home() {
     <div className="bg-bg text-ink">
       {/* Nav: a floating white pill */}
       <header className={`sticky top-0 z-50 pt-3 sm:pt-5 ${pad}`}>
-        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2.5 pl-6 pr-2.5 shadow-[0_8px_30px_rgba(29,52,56,0.10)] backdrop-blur`}>
-          <Link href="/" aria-label="Tourvo home">
-            <Logo size={30} />
+        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2 pl-4 pr-2 sm:py-2.5 sm:pl-6 sm:pr-2.5 shadow-[0_8px_30px_rgba(29,52,56,0.10)] backdrop-blur`}>
+          <Link href="/" aria-label="Tourvo home" className="shrink-0">
+            <span className="sm:hidden"><Logo size={24} /></span>
+            <span className="hidden sm:inline"><Logo size={30} /></span>
           </Link>
-          <nav aria-label="Main" className="flex items-center gap-5 whitespace-nowrap text-[15px] font-medium sm:gap-7">
+          <nav aria-label="Main" className="flex items-center gap-3.5 whitespace-nowrap text-[15px] font-medium sm:gap-7">
             <a href="#how" className="hidden hover:text-gold lg:inline">How it works</a>
             <a href="#effects" className="hidden hover:text-gold sm:inline">Effects</a>
             <a href="#photographers" className="hidden hover:text-gold lg:inline">Photographers</a>
             <a href="#pricing" className="hidden hover:text-gold sm:inline">Pricing</a>
             <Link href="/login" className="hover:text-gold">Sign in</Link>
-            <Link href="/login" className="inline-flex min-h-11 items-center rounded-full bg-gold px-5 font-semibold text-white hover:bg-gold-deep">
+            <Link href="/login" className="inline-flex min-h-10 items-center rounded-full bg-gold px-3.5 text-sm font-semibold text-white hover:bg-gold-deep sm:min-h-11 sm:px-5 sm:text-[15px]">
               Make a video
             </Link>
           </nav>
