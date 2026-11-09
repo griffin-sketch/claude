@@ -85,8 +85,8 @@ export default function Home() {
   return (
     <div className="bg-bg text-ink">
       {/* Nav: a floating white pill */}
-      <header className={`pt-5 ${pad}`}>
-        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full bg-white py-2.5 pl-6 pr-2.5 shadow-[0_6px_24px_rgba(29,52,56,0.06)]`}>
+      <header className={`sticky top-0 z-50 pt-3 sm:pt-5 ${pad}`}>
+        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2.5 pl-6 pr-2.5 shadow-[0_8px_30px_rgba(29,52,56,0.10)] backdrop-blur`}>
           <Link href="/" aria-label="Tourvo home">
             <Logo size={30} />
           </Link>
@@ -173,7 +173,7 @@ export default function Home() {
       </section>
 
       {/* Effects */}
-      <section id="effects" className={`scroll-mt-6 py-16 sm:py-24 ${pad}`}>
+      <section id="effects" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
@@ -226,7 +226,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how" className={`scroll-mt-6 py-16 sm:py-24 ${pad}`}>
+      <section id="how" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-10 sm:gap-12`}>
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className={h2}>Three easy steps</h2>
@@ -248,7 +248,7 @@ export default function Home() {
       </section>
 
       {/* Looks */}
-      <section id="looks" className={`scroll-mt-6 bg-white py-16 sm:py-24 ${pad}`}>
+      <section id="looks" className={`scroll-mt-24 bg-white py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
@@ -307,7 +307,7 @@ export default function Home() {
       </section>
 
       {/* Photographers */}
-      <section id="photographers" className={`scroll-mt-6 bg-white py-16 sm:py-24 ${pad}`}>
+      <section id="photographers" className={`scroll-mt-24 bg-white py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-12 lg:gap-16`}>
           <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
             <span className="eyebrow">For real estate photographers</span>
@@ -333,7 +333,7 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className={`scroll-mt-6 py-16 sm:py-24 ${pad}`}>
+      <section id="pricing" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className="mx-auto flex max-w-[1000px] flex-col gap-10">
           <div className="flex flex-col items-center gap-4 text-center">
             <span className="eyebrow">Pricing</span>
