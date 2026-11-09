@@ -25,6 +25,42 @@ const REEL_LABEL: Record<string, string> = {
   open_house: "Open house",
 };
 
+type StepId = "photos" | "arrange" | "motion" | "style" | "details" | "checkout" | "clips" | "videos";
+const STEPS: { id: StepId; name: string }[] = [
+  { id: "photos", name: "Upload photos" },
+  { id: "arrange", name: "Arrange" },
+  { id: "motion", name: "Motion" },
+  { id: "style", name: "Style & music" },
+  { id: "details", name: "Details" },
+  { id: "checkout", name: "Checkout" },
+  { id: "clips", name: "Review clips" },
+  { id: "videos", name: "Your videos" },
+];
+
+function stepAllowed(st: StepId, status: Listing["status"], photos: number): boolean {
+  if (status === "draft" || status === "failed") {
+    if (st === "photos") return true;
+    if (st === "clips" || st === "videos") return false;
+    return photos >= MIN_PHOTOS;
+  }
+  if (status === "queued" || status === "generating") return st === "clips";
+  if (status === "review") return ["arrange", "motion", "style", "details", "clips"].includes(st);
+  return st === "videos"; // rendering, done
+}
+
+function defaultStep(l: Listing, photos: number): StepId {
+  if (l.status === "draft" || l.status === "failed") {
+    if (photos < MIN_PHOTOS) return "photos";
+    try {
+      const saved = localStorage.getItem(`tourvo-step-${l.id}`) as StepId | null;
+      if (saved && stepAllowed(saved, l.status, photos)) return saved;
+    } catch {}
+    return "arrange";
+  }
+  if (l.status === "rendering" || l.status === "done") return "videos";
+  return "clips";
+}
+
 function Editor({ id, user }: { id: string; user: User }) {
   const [listing, setListing] = useState<Listing | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
@@ -141,6 +177,21 @@ function Editor({ id, user }: { id: string; user: User }) {
   const reorderable = editable || listing?.status === "review";
   const [dragOver, setDragOver] = useState<number | null>(null);
   const labelsEditable = editable || listing?.status === "review" || listing?.status === "done";
+  const [dropping, setDropping] = useState(false);
+
+  // Which step is open. Follows the listing's status (paying moves you to clips, etc.); while a draft, the
+  // last step you were on is remembered on this device.
+  const [step, setStep] = useState<StepId>("photos");
+  const [stepFor, setStepFor] = useState("");
+  if (listing && stepFor !== `${listing.id}:${listing.status}`) {
+    setStepFor(`${listing.id}:${listing.status}`);
+    setStep(defaultStep(listing, shots.length));
+  }
+  function go(st: StepId) {
+    setStep(st);
+    try { localStorage.setItem(`tourvo-step-${id}`, st); } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function saveListing(patch: Partial<Listing>) {
     if (!listing) return;
@@ -243,8 +294,115 @@ function Editor({ id, user }: { id: string; user: User }) {
   }, []);
   const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status));
 
+  const status = listing.status;
+  const ok = (st: StepId) => stepAllowed(st, status, shots.length);
+  const idx = STEPS.findIndex((x) => x.id === step);
+  const prevStep = STEPS.slice(0, idx).reverse().find((x) => ok(x.id));
+  const nextStep = STEPS.slice(idx + 1).find((x) => ok(x.id));
+  const nextBlocked =
+    (step === "photos" && shots.length < MIN_PHOTOS) ||
+    (step === "details" && (!listing.address.trim() || !listing.formats.length));
+  const nextHint =
+    step === "photos" && shots.length < MIN_PHOTOS
+      ? `Add at least ${MIN_PHOTOS} photos to continue.`
+      : step === "details" && !listing.address.trim()
+        ? "Add the street address to continue."
+        : step === "details" && !listing.formats.length
+          ? "Pick at least one format to continue."
+          : "";
+
+  const thumb = (sh: Shot, i: number, playClip: boolean) => (
+    <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-line sm:w-56">
+      {playClip && sh.clip_path && clips[sh.clip_path] ? (
+        <video src={clips[sh.clip_path]} muted loop autoPlay playsInline className="h-full w-full object-cover" />
+      ) : thumbs[sh.photo_path] ? (
+        <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />
+      ) : null}
+      <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
+        #{i + 1} · {fmtTime(startAt[i] ?? 0)}
+      </span>
+      {playClip && <ClipBadge status={sh.clip_status} />}
+      {(sh.move || "auto") !== "auto" && (
+        <span title={`Camera: ${describeMove(sh.move).text}`}
+          className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-base text-white">
+          {describeMove(sh.move).icon}
+        </span>
+      )}
+    </div>
+  );
+
+  const motionControls = (sh: Shot, i: number) => (
+    <>
+      <label className="sm:col-span-2">
+        <span className="sr-only">Effect for photo {i + 1}</span>
+        <select
+          className="input py-2"
+          value={sh.effect ?? "none"}
+          onChange={(e) => {
+            const effect = e.target.value as Effect;
+            saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect });
+          }}
+        >
+          {EFFECTS.map((fx) => (
+            <option key={fx.id} value={fx.id}>
+              {fx.id === "none" ? "Effect: none (camera move only)" : `Effect: ${fx.name}`}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-muted">
+          {EFFECTS.find((fx) => fx.id === (sh.effect ?? "none"))?.blurb}
+          {status === "review" && " Changing it remakes this clip."}
+        </span>
+      </label>
+      <CameraControl
+        shot={sh}
+        photo={thumbs[sh.photo_path]}
+        disabled={sh.effect === "reveal"}
+        review={status === "review"}
+        onSave={(move) => saveShot(sh, status === "review" ? { move, clip_status: "redo" } : { move })}
+      />
+    </>
+  );
+
+  const packSection = shots.length >= 3 && (
+    <section className="card p-6">
+      <h2 className="font-display text-2xl font-medium">What&apos;s in your Reel pack</h2>
+      <p className="mb-5 mt-1 text-sm text-ink-soft">
+        {plan.length} videos, each with its own style. The numbers match your photo order; change it in Arrange and these update.
+      </p>
+      <ol className="space-y-4">
+        {plan.map((pl) => (
+          <li key={pl.kind + pl.format} className="rounded-xl border border-line p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="font-semibold">{pl.name}</span>
+              <span className="text-xs text-muted">
+                {pl.format === "9:16" ? "Vertical" : "16:9"} · about {pl.seconds}s · {pl.shots.length} clips
+              </span>
+            </div>
+            <p className="mt-0.5 text-sm text-ink-soft">{pl.style}</p>
+            <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+              {pl.shots.map((sh, k) => (
+                <div key={sh.id + k} className="relative w-20 shrink-0 sm:w-24">
+                  <div className={`overflow-hidden rounded-md bg-line ${pl.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
+                    {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />}
+                  </div>
+                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
+                    #{shots.indexOf(sh) + 1}
+                  </span>
+                  <span className="mt-1 block truncate text-[11px] text-ink-soft">
+                    {k === 0 ? "Title card" : sh.label || "Unlabeled"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link href="/dashboard" className="text-sm text-ink-soft hover:text-ink">
@@ -252,136 +410,66 @@ function Editor({ id, user }: { id: string; user: User }) {
           </Link>
           <h1 className="font-display text-4xl font-medium">{listing.address || "New listing video"}</h1>
         </div>
-        <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[listing.status]}</span>
+        <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[status]}</span>
       </div>
+
+      {/* ---------------- step bar */}
+      <nav aria-label="Steps" className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+        <ol className="flex min-w-max gap-1 sm:min-w-0">
+          {STEPS.map((st, k) => {
+            const allowed = ok(st.id);
+            const current = st.id === step;
+            const done = k < idx;
+            return (
+              <li key={st.id} className="flex-1">
+                <button
+                  type="button"
+                  disabled={!allowed || current}
+                  onClick={() => go(st.id)}
+                  className={`group flex w-full flex-col items-start gap-1.5 rounded-lg px-1 py-1 text-left ${allowed && !current ? "hover:bg-line/50" : ""}`}
+                >
+                  <span className={`h-1 w-full rounded-full ${current || done ? "bg-gold" : "bg-line"}`} />
+                  <span className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${
+                    current ? "font-semibold text-ink" : allowed ? "text-ink-soft" : "text-muted/70"}`}>
+                    <span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${
+                      current ? "bg-ink text-white" : done ? "bg-gold text-white" : "bg-line text-ink-soft"}`}>
+                      {done ? "✓" : k + 1}
+                    </span>
+                    {st.name}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+
       {error && <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{error}</p>}
-      {awaitingPayment && (listing.status === "draft" || listing.status === "failed") && (
+      {awaitingPayment && (status === "draft" || status === "failed") && (
         <p className="rounded-lg bg-gold-soft p-3 text-sm">Payment received. Starting your clips…</p>
       )}
-      {listing.status === "failed" && listing.error && (
+      {status === "failed" && listing.error && (
         <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">Something went wrong: {listing.error}</p>
       )}
 
-      {/* ---------------- finished videos */}
-      {listing.status === "done" && (
+      {/* ---------------- 1. photos */}
+      {step === "photos" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Your Reel pack</h2>
-          <p className="mb-5 mt-1 text-sm text-ink-soft">
-            {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
-          </p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {sortedRenders.map((r) => (
-              <div key={r.id}>
-                {videos[r.video_path] ? (
-                  <video
-                    src={videos[r.video_path].play}
-                    controls
-                    playsInline
-                    className={`w-full rounded-xl bg-black ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
-                  />
-                ) : (
-                  <div className={`rounded-xl bg-line ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`} />
-                )}
-                <div className="mt-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="min-w-0">
-                    <span className="block font-semibold">{REEL_LABEL[r.kind ?? "tour"] ?? "Video"}</span>
-                    <span className="block text-xs text-muted">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
-                  </span>
-                  {videos[r.video_path] && (
-                    <a href={videos[r.video_path].download} className="btn-ghost py-1.5">
-                      Download
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <ShareLink listing={listing} onSave={saveListing} />
-            <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
-              Change clips or labels
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* ---------------- progress */}
-      {(listing.status === "queued" || listing.status === "generating") && (
-        <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Making your camera moves</h2>
+          <h2 className="font-display text-2xl font-medium">Upload your listing photos</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page.
+            Add {MIN_PHOTOS} to {MAX_PHOTOS} photos. Use the MLS photos, landscape is best. You&apos;ll put them in order next.
           </p>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-line">
-            <div className="h-full bg-gold transition-all" style={{ width: `${(readyCount / Math.max(1, shots.length)) * 100}%` }} />
-          </div>
-        </section>
-      )}
-      {listing.status === "rendering" && (
-        <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">Building your video</h2>
-          <p className="mt-1 text-sm text-ink-soft">Cutting your Reel pack: the full walkthrough plus short versions for social. About 10 to 15 minutes.</p>
-        </section>
-      )}
-
-      {/* ---------------- clip review */}
-      {listing.status === "review" && (
-        <section className="card p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-2xl font-medium">Review your clips</h2>
-              <p className="text-sm text-ink-soft">
-                Watch each one. If a room looks off, hit Redo and we&apos;ll make a new take. You can still change the order, and section 4 shows what goes in each video.
-              </p>
-            </div>
-            <button
-              className="btn-gold"
-              disabled={busy || stillWorking || readyCount === 0}
-              onClick={() => setStatus("rendering")}
-            >
-              {stillWorking ? "Waiting on redos…" : "Make my Reel pack"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* ---------------- details */}
-      <section className="card p-6">
-        <h2 className="mb-4 font-display text-2xl font-medium">1. Listing details</h2>
-        <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
-          <Field label="City, state, ZIP" value={listing.city_line} onSave={(v) => saveListing({ city_line: v })} placeholder="Austin, TX 78704" />
-          <Field label="Price (optional)" value={listing.price ?? ""} onSave={(v) => saveListing({ price: v || null })} placeholder="$875,000" />
-          <Field label="Beds" type="number" value={listing.beds?.toString() ?? ""} onSave={(v) => saveListing({ beds: v ? Number(v) : null })} />
-          <Field label="Baths" type="number" value={listing.baths?.toString() ?? ""} onSave={(v) => saveListing({ baths: v ? Number(v) : null })} />
-          <Field label="Square feet" type="number" value={listing.sqft?.toString() ?? ""} onSave={(v) => saveListing({ sqft: v ? Number(v) : null })} />
-          <Field label="Top line" value={listing.kicker} onSave={(v) => saveListing({ kicker: v || "NOW AVAILABLE" })} placeholder="NOW AVAILABLE" hint="e.g. JUST LISTED, OPEN HOUSE SAT, or the community name" />
-          <Field label="Headline (optional)" value={listing.headline} onSave={(v) => saveListing({ headline: v })} placeholder="Defaults to the address" />
-          <Field label="Acres (optional)" type="number" value={listing.acres?.toString() ?? ""} onSave={(v) => saveListing({ acres: v ? Number(v) : null })} />
-          <Field label="Open house (optional)" value={listing.open_house ?? ""} onSave={(v) => saveListing({ open_house: v || null })} placeholder="Sat, Nov 8 · 1–4 PM" hint="Adds an Open House reel to your pack" />
-        </fieldset>
-      </section>
-
-      {/* ---------------- photos */}
-      <section className="card p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display text-2xl font-medium">2. Arrange your video</h2>
-            <p className="text-sm text-ink-soft">
-              Your walkthrough plays in this order, #1 first. Drag a photo to move it, or pick its spot number.
-              {reorderable && listing.status === "review" && " Reordering is free; your clips stay as they are."}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-          {reorderable && shots.length > 2 && (
-            <button type="button" className="btn-ghost" onClick={() => saveOrder(walkthroughOrder(shots))}
-              title="Front of the home first, then living areas, kitchen, bedrooms, baths, outdoor spaces; aerials last">
-              Auto-arrange by room
-            </button>
-          )}
           {editable && shots.length < MAX_PHOTOS && (
-            <label className="btn-primary cursor-pointer">
-              {uploading ? `Uploading ${uploading}…` : "+ Add photos"}
+            <label
+              onDragOver={(e) => { e.preventDefault(); setDropping(true); }}
+              onDragLeave={() => setDropping(false)}
+              onDrop={(e) => { e.preventDefault(); setDropping(false); if (e.dataTransfer.files.length) addPhotos(e.dataTransfer.files); }}
+              className={`mt-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition ${
+                dropping ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"}`}
+            >
+              <span className="text-3xl" aria-hidden>⇪</span>
+              <span className="mt-2 font-semibold">{uploading ? `Uploading ${uploading}…` : "Drop photos here or tap to choose"}</span>
+              <span className="mt-1 text-xs text-muted">JPG, PNG or HEIC · {shots.length} of {MAX_PHOTOS} added</span>
               <input
                 type="file"
                 accept="image/*,.heic,.heif"
@@ -395,103 +483,74 @@ function Editor({ id, user }: { id: string; user: User }) {
               />
             </label>
           )}
+          {shots.length > 0 && (
+            <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+              {shots.map((sh) => (
+                <li key={sh.id} className="relative aspect-video overflow-hidden rounded-lg bg-line">
+                  {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />}
+                  {editable && (
+                    <button type="button" aria-label="Remove photo" onClick={() => remove(sh)}
+                      className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-sm text-white hover:bg-black">
+                      ✕
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* ---------------- 2. arrange */}
+      {step === "arrange" && (
+        <section className="card p-6">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-2xl font-medium">Put them in order and name the rooms</h2>
+              <p className="text-sm text-ink-soft">
+                Your video plays top to bottom, #1 first. Drag a photo, use the arrows, or pick its spot number.
+                Room names show on screen.
+                {status === "review" && " Reordering is free; your clips stay as they are."}
+              </p>
+            </div>
+            {reorderable && shots.length > 2 && (
+              <button type="button" className="btn-ghost" onClick={() => saveOrder(walkthroughOrder(shots))}
+                title="Front of the home first, then living areas, kitchen, bedrooms, baths, outdoor spaces; aerials last">
+                Auto-arrange by room
+              </button>
+            )}
           </div>
-        </div>
-        {shots.length > 1 && (
           <Storyboard shots={shots} thumbs={thumbs} reorderable={reorderable} onMove={moveTo} />
-        )}
-        <datalist id="rooms">
-          {ROOM_SUGGESTIONS.map((r) => (
-            <option key={r} value={r} />
-          ))}
-        </datalist>
-        {shots.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line p-10 text-center text-sm text-ink-soft">
-            No photos yet.
-          </div>
-        ) : (
+          <datalist id="rooms">
+            {ROOM_SUGGESTIONS.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
           <ol className="space-y-3">
-            {shots.map((s, i) => (
+            {shots.map((sh, i) => (
               <li
-                key={s.id}
-                id={`shot-${s.id}`}
+                key={sh.id}
+                id={`shot-${sh.id}`}
                 draggable={reorderable}
                 onDragStart={(e) => { e.dataTransfer.setData("text/plain", String(i)); e.dataTransfer.effectAllowed = "move"; }}
                 onDragOver={(e) => { if (reorderable) { e.preventDefault(); setDragOver(i); } }}
                 onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
                 onDrop={(e) => { e.preventDefault(); setDragOver(null); moveTo(Number(e.dataTransfer.getData("text/plain")), i); }}
                 className={`flex scroll-mt-24 flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center ${
-                  dragOver === i ? "border-gold bg-gold-soft" : "border-line"
-                } ${reorderable ? "sm:cursor-grab" : ""}`}
+                  dragOver === i ? "border-gold bg-gold-soft" : "border-line"} ${reorderable ? "sm:cursor-grab" : ""}`}
               >
-                <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-line sm:w-56">
-                  {s.clip_path && clips[s.clip_path] && listing.status !== "draft" ? (
-                    <video src={clips[s.clip_path]} muted loop autoPlay playsInline className="h-full w-full object-cover" />
-                  ) : thumbs[s.photo_path] ? (
-                    <img src={thumbs[s.photo_path]} alt="" className="h-full w-full object-cover" />
-                  ) : null}
-                  <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
-                    #{i + 1} · {fmtTime(startAt[i] ?? 0)}
-                  </span>
-                  {listing.status !== "draft" && <ClipBadge status={s.clip_status} />}
-                  {(() => {
-                    const m = describeMove(s.move);
-                    return (s.move || "auto") !== "auto" ? (
-                      <span title={`Camera: ${m.text}`} className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-base text-white">
-                        {m.icon}
-                      </span>
-                    ) : null;
-                  })()}
-                </div>
+                {thumb(sh, i, false)}
                 <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                  <label className="sm:col-span-2">
-                    <span className="sr-only">Effect for photo {i + 1}</span>
-                    <select
-                      className="input py-2"
-                      disabled={!(editable || listing.status === "review")}
-                      value={s.effect ?? "none"}
-                      onChange={(e) => {
-                        const effect = e.target.value as Effect;
-                        saveShot(s, listing.status === "review" ? { effect, clip_status: "redo" } : { effect });
-                      }}
-                    >
-                      {EFFECTS.map((fx) => (
-                        <option key={fx.id} value={fx.id}>
-                          {fx.id === "none" ? "Effect: none (camera move)" : `Effect: ${fx.name}`}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="mt-1 block text-xs text-muted">
-                      {EFFECTS.find((fx) => fx.id === (s.effect ?? "none"))?.blurb}
-                      {listing.status === "review" && " Changing it remakes this clip."}
-                    </span>
-                  </label>
-                  <CameraControl
-                    shot={s}
-                    photo={thumbs[s.photo_path]}
-                    disabled={!(editable || listing.status === "review") || s.effect === "reveal"}
-                    review={listing.status === "review"}
-                    onSave={(move) => saveShot(s, listing.status === "review" ? { move, clip_status: "redo" } : { move })}
-                  />
                   {i === 0 ? (
                     <p className="text-sm text-ink-soft sm:col-span-2">
-                      Opening shot. Your title card shows over this one, so it has no label.
+                      Opening shot. Your title card shows over this one, so it has no room name.
                     </p>
                   ) : (
                     <>
-                      <ShotField
-                        disabled={!labelsEditable}
-                        list="rooms"
-                        placeholder="Room label, e.g. Updated Kitchen"
-                        value={s.label}
-                        onSave={(v) => saveShot(s, { label: v })}
-                      />
-                      <ShotField
-                        disabled={!labelsEditable}
-                        placeholder="Detail (optional), e.g. Quartz island"
-                        value={s.sub}
-                        onSave={(v) => saveShot(s, { sub: v })}
-                      />
+                      <ShotField disabled={!labelsEditable} list="rooms" placeholder="Room name, e.g. Updated Kitchen"
+                        value={sh.label} onSave={(v) => saveShot(sh, { label: v })} />
+                      <ShotField disabled={!labelsEditable} placeholder="Detail (optional), e.g. Quartz island"
+                        value={sh.sub} onSave={(v) => saveShot(sh, { sub: v })} />
                     </>
                   )}
                 </div>
@@ -500,12 +559,8 @@ function Editor({ id, user }: { id: string; user: User }) {
                     <>
                       <label className="flex items-center gap-1 text-xs text-ink-soft">
                         <span>Plays</span>
-                        <select
-                          aria-label={`Spot for photo ${i + 1}`}
-                          className="input w-auto py-1.5 pr-7 text-sm"
-                          value={i}
-                          onChange={(e) => moveTo(i, Number(e.target.value))}
-                        >
+                        <select aria-label={`Spot for photo ${i + 1}`} className="input w-auto py-1.5 pr-7 text-sm" value={i}
+                          onChange={(e) => moveTo(i, Number(e.target.value))}>
                           {shots.map((_, k) => (
                             <option key={k} value={k}>#{k + 1}{k === 0 ? " (opening)" : k === shots.length - 1 ? " (last)" : ""}</option>
                           ))}
@@ -515,154 +570,7 @@ function Editor({ id, user }: { id: string; user: User }) {
                       <IconBtn label="Move later" onClick={() => moveTo(i, i + 1)} disabled={i === shots.length - 1}>↓</IconBtn>
                     </>
                   )}
-                  {editable && <IconBtn label="Remove" onClick={() => remove(s)}>✕</IconBtn>}
-                  {listing.status === "review" && s.clip_status === "ready" && (
-                    <button className="btn-ghost py-1.5" onClick={() => redo(s)}>
-                      Redo
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      {/* ---------------- look */}
-      <section className="card p-6">
-        <h2 className="mb-4 font-display text-2xl font-medium">3. Pick a look</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              disabled={!labelsEditable}
-              onClick={() => saveListing({ template: t.id })}
-              className={`overflow-hidden rounded-xl border-2 text-left transition ${
-                listing.template === t.id ? "border-gold" : "border-transparent hover:border-line"
-              }`}
-            >
-              <img src={`/templates/t${t.id}.jpg`} alt="" className="aspect-video w-full object-cover" />
-              <span className="block px-2 py-1.5 text-sm font-semibold">{t.name}</span>
-              <span className="block px-2 pb-2 text-xs text-ink-soft">{t.blurb}</span>
-            </button>
-          ))}
-        </div>
-        <div className="mt-6">
-          <span className="label">Transitions between rooms</span>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {TRANSITIONS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                disabled={!labelsEditable}
-                onClick={() => saveListing({ transition: t.id })}
-                className={`rounded-xl border-2 px-3 py-2.5 text-left transition ${
-                  (listing.transition ?? "crossfade") === t.id ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"
-                }`}
-              >
-                <span className="block text-sm font-semibold">{t.name}</span>
-                <span className="block text-xs text-ink-soft">{t.blurb}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <fieldset disabled={!labelsEditable}>
-            <span className="label">Formats</span>
-            {[
-              { v: "16:9", t: "16:9 · MLS, YouTube, website" },
-              { v: "9:16", t: "9:16 · Reels, TikTok, Shorts" },
-            ].map((f) => (
-              <label key={f.v} className="flex items-center gap-2 py-1 text-sm">
-                <input
-                  type="checkbox"
-                  checked={listing.formats.includes(f.v)}
-                  onChange={(e) =>
-                    saveListing({
-                      formats: e.target.checked
-                        ? [...new Set([...listing.formats, f.v])]
-                        : listing.formats.filter((x) => x !== f.v),
-                    })
-                  }
-                />
-                {f.t}
-              </label>
-            ))}
-          </fieldset>
-          <div>
-            <label htmlFor="outro" className="label">Closing card</label>
-            <select
-              id="outro"
-              className="input"
-              disabled={!labelsEditable}
-              value={listing.outro}
-              onChange={(e) => saveListing({ outro: e.target.value as Listing["outro"] })}
-            >
-              <option value="branded">Your branding (name, brokerage, phone, headshot, logo)</option>
-              <option value="client">Your client&apos;s branding (for photographers)</option>
-              <option value="simple">Address only</option>
-              <option value="none">No closing card (unbranded)</option>
-            </select>
-            {listing.outro === "branded" && (
-              <p className="mt-1 text-xs text-ink-soft">
-                Edit it in <Link href="/settings" className="underline">Branding</Link>.
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="hook" className="label">Teaser opening line</label>
-            <select
-              id="hook"
-              className="input"
-              disabled={!labelsEditable}
-              value={listing.hook ?? "inside"}
-              onChange={(e) => saveListing({ hook: e.target.value })}
-            >
-              {HOOKS.map((h) => (
-                <option key={h.id} value={h.id}>{h.text}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-ink-soft">Shown at the start of the 15-second teaser Reel.</p>
-          </div>
-          {listing.outro === "client" && (
-            <ClientBranding listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
-          )}
-        </div>
-      </section>
-
-      {/* ---------------- what's in the pack */}
-      {shots.length >= 3 && listing.status !== "done" && (
-        <section className="card p-6">
-          <h2 className="font-display text-2xl font-medium">4. What&apos;s in your Reel pack</h2>
-          <p className="mb-5 mt-1 text-sm text-ink-soft">
-            {plan.length} videos, each with its own style. Numbers match your photo order above; change the order there and these update.
-          </p>
-          <ol className="space-y-4">
-            {plan.map((p) => (
-              <li key={p.kind + p.format} className="rounded-xl border border-line p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="font-semibold">{p.name}</span>
-                  <span className="text-xs text-muted">
-                    {p.format === "9:16" ? "Vertical" : "16:9"} · about {p.seconds}s · {p.shots.length} clips
-                  </span>
-                </div>
-                <p className="mt-0.5 text-sm text-ink-soft">{p.style}</p>
-                <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
-                  {p.shots.map((s, k) => (
-                    <div key={s.id + k} className="relative w-20 shrink-0 sm:w-24">
-                      <div className={`overflow-hidden rounded-md bg-line ${p.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
-                        {thumbs[s.photo_path] && <img src={thumbs[s.photo_path]} alt="" className="h-full w-full object-cover" />}
-                      </div>
-                      <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
-                        #{shots.indexOf(s) + 1}
-                      </span>
-                      <span className="mt-1 block truncate text-[11px] text-ink-soft">
-                        {k === 0 ? "Title card" : s.label || "Unlabeled"}
-                      </span>
-                    </div>
-                  ))}
+                  {editable && <IconBtn label="Remove" onClick={() => remove(sh)}>✕</IconBtn>}
                 </div>
               </li>
             ))}
@@ -670,20 +578,276 @@ function Editor({ id, user }: { id: string; user: User }) {
         </section>
       )}
 
-      {/* ---------------- go */}
-      {editable && (
-        <PayPanel
-          user={user}
-          listingId={id}
-          missing={missing}
-          clipCount={shots.length}
-          paid={listing.paid}
-          onStarted={load}
-        />
+      {/* ---------------- 3. motion */}
+      {step === "motion" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Choose how each shot moves</h2>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">
+            Leave everything on Auto and we&apos;ll pick the best camera move for each room, or choose an AI effect and
+            set the camera yourself.
+          </p>
+          <ol className="space-y-3">
+            {shots.map((sh, i) => (
+              <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
+                {thumb(sh, i, false)}
+                <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                  <p className="text-sm font-semibold sm:col-span-2">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
+                  {motionControls(sh, i)}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ---------------- 4. style */}
+      {step === "style" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Pick a look and music</h2>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">This sets the text style of your full walkthrough. The short Reels each get their own style.</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {TEMPLATES.map((t) => (
+              <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ template: t.id })}
+                className={`overflow-hidden rounded-xl border-2 text-left transition ${
+                  listing.template === t.id ? "border-gold" : "border-transparent hover:border-line"}`}>
+                <img src={`/templates/t${t.id}.jpg`} alt="" className="aspect-video w-full object-cover" />
+                <span className="block px-2 py-1.5 text-sm font-semibold">{t.name}</span>
+                <span className="block px-2 pb-2 text-xs text-ink-soft">{t.blurb}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-6">
+            <span className="label">Transitions between rooms</span>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {TRANSITIONS.map((t) => (
+                <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ transition: t.id })}
+                  className={`rounded-xl border-2 px-3 py-2.5 text-left transition ${
+                    (listing.transition ?? "crossfade") === t.id ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"}`}>
+                  <span className="block text-sm font-semibold">{t.name}</span>
+                  <span className="block text-xs text-ink-soft">{t.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+        </section>
+      )}
+
+      {/* ---------------- 5. details */}
+      {step === "details" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Listing details and branding</h2>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">These go on the title card and closing card.</p>
+          <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
+            <Field label="City, state, ZIP" value={listing.city_line} onSave={(v) => saveListing({ city_line: v })} placeholder="Austin, TX 78704" />
+            <Field label="Price (optional)" value={listing.price ?? ""} onSave={(v) => saveListing({ price: v || null })} placeholder="$875,000" hint="Needed for the Guess the Price Reel" />
+            <Field label="Beds" type="number" value={listing.beds?.toString() ?? ""} onSave={(v) => saveListing({ beds: v ? Number(v) : null })} />
+            <Field label="Baths" type="number" value={listing.baths?.toString() ?? ""} onSave={(v) => saveListing({ baths: v ? Number(v) : null })} />
+            <Field label="Square feet" type="number" value={listing.sqft?.toString() ?? ""} onSave={(v) => saveListing({ sqft: v ? Number(v) : null })} />
+            <Field label="Top line" value={listing.kicker} onSave={(v) => saveListing({ kicker: v || "NOW AVAILABLE" })} placeholder="NOW AVAILABLE" hint="e.g. JUST LISTED, OPEN HOUSE SAT, or the community name" />
+            <Field label="Headline (optional)" value={listing.headline} onSave={(v) => saveListing({ headline: v })} placeholder="Defaults to the address" />
+            <Field label="Acres (optional)" type="number" value={listing.acres?.toString() ?? ""} onSave={(v) => saveListing({ acres: v ? Number(v) : null })} />
+            <Field label="Open house (optional)" value={listing.open_house ?? ""} onSave={(v) => saveListing({ open_house: v || null })} placeholder="Sat, Nov 8 · 1–4 PM" hint="Adds an Open House Reel to your pack" />
+          </fieldset>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <fieldset disabled={!labelsEditable}>
+              <span className="label">Formats</span>
+              {[
+                { v: "16:9", t: "16:9 · MLS, YouTube, website" },
+                { v: "9:16", t: "9:16 · Reels, TikTok, Shorts" },
+              ].map((f) => (
+                <label key={f.v} className="flex items-center gap-2 py-1 text-sm">
+                  <input type="checkbox" checked={listing.formats.includes(f.v)}
+                    onChange={(e) => saveListing({
+                      formats: e.target.checked ? [...new Set([...listing.formats, f.v])] : listing.formats.filter((x) => x !== f.v),
+                    })} />
+                  {f.t}
+                </label>
+              ))}
+            </fieldset>
+            <div>
+              <label htmlFor="outro" className="label">Closing card</label>
+              <select id="outro" className="input" disabled={!labelsEditable} value={listing.outro}
+                onChange={(e) => saveListing({ outro: e.target.value as Listing["outro"] })}>
+                <option value="branded">Your branding (name, brokerage, phone, headshot, logo)</option>
+                <option value="client">Your client&apos;s branding (for photographers)</option>
+                <option value="simple">Address only</option>
+                <option value="none">No closing card (unbranded)</option>
+              </select>
+              {listing.outro === "branded" && (
+                <p className="mt-1 text-xs text-ink-soft">Edit it in <Link href="/settings" className="underline">Branding</Link>.</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="hook" className="label">Teaser opening line</label>
+              <select id="hook" className="input" disabled={!labelsEditable} value={listing.hook ?? "inside"}
+                onChange={(e) => saveListing({ hook: e.target.value })}>
+                {HOOKS.map((h) => (
+                  <option key={h.id} value={h.id}>{h.text}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-ink-soft">Shown at the start of the 15-second teaser Reel.</p>
+            </div>
+            {listing.outro === "client" && (
+              <ClientBranding listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ---------------- 6. checkout */}
+      {step === "checkout" && (
+        <>
+          <section className="card p-6">
+            <h2 className="font-display text-2xl font-medium">Check everything, then make it</h2>
+            <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+              {([
+                ["Photos", `${shots.length} photos`, "arrange"],
+                ["Motion", `${shots.filter((x) => x.effect && x.effect !== "none").length} AI effects · ${
+                  shots.filter((x) => (x.move || "auto") !== "auto").length} custom camera moves`, "motion"],
+                ["Look", `${TEMPLATES.find((t) => t.id === listing.template)?.name ?? "—"} · ${
+                  TRANSITIONS.find((t) => t.id === (listing.transition ?? "crossfade"))?.name ?? ""}`, "style"],
+                ["Music", MUSIC.find((m) => m.id === (listing.music ?? "none"))?.name ?? (listing.music === "custom" ? "Your upload" : "None"), "style"],
+                ["Address", [listing.address, listing.city_line].filter(Boolean).join(", ") || "—", "details"],
+                ["Formats", listing.formats.join(" + ") || "—", "details"],
+              ] as [string, string, StepId][]).map(([k, v, st]) => (
+                <div key={k} className="flex items-baseline justify-between gap-3 border-b border-line pb-2">
+                  <dt className="text-ink-soft">{k}</dt>
+                  <dd className="text-right">
+                    {v}{" "}
+                    <button type="button" className="ml-1 text-xs font-semibold text-gold-deep underline" onClick={() => go(st)}>Edit</button>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          {packSection}
+          {editable && (
+            <PayPanel user={user} listingId={id} missing={missing} clipCount={shots.length} paid={listing.paid} onStarted={load} />
+          )}
+        </>
+      )}
+
+      {/* ---------------- 7. clips */}
+      {step === "clips" && (status === "queued" || status === "generating") && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Making your camera moves</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page; we&apos;ll keep going.
+          </p>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-line">
+            <div className="h-full bg-gold transition-all" style={{ width: `${(readyCount / Math.max(1, shots.length)) * 100}%` }} />
+          </div>
+        </section>
+      )}
+      {step === "clips" && status === "review" && (
+        <>
+          <section className="card p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-2xl font-medium">Review your clips</h2>
+                <p className="text-sm text-ink-soft">
+                  Watch each one. If a room looks off, hit Redo for a new take, or change its effect or camera move.
+                  When you&apos;re happy, make your Reel pack.
+                </p>
+              </div>
+              <button className="btn-gold" disabled={busy || stillWorking || readyCount === 0} onClick={() => setStatus("rendering")}>
+                {stillWorking ? "Waiting on redos…" : "Make my Reel pack →"}
+              </button>
+            </div>
+            <ol className="mt-5 space-y-3">
+              {shots.map((sh, i) => (
+                <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
+                  {thumb(sh, i, true)}
+                  <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                    <div className="flex items-center justify-between gap-2 sm:col-span-2">
+                      <p className="text-sm font-semibold">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
+                      {sh.clip_status === "ready" && (
+                        <button className="btn-ghost py-1.5" onClick={() => redo(sh)}>Redo</button>
+                      )}
+                    </div>
+                    {motionControls(sh, i)}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+          {packSection}
+        </>
+      )}
+
+      {/* ---------------- 8. videos */}
+      {step === "videos" && status === "rendering" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Building your videos</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Cutting your Reel pack: the full walkthrough plus short versions for social. About 10 minutes. You can leave this page.
+          </p>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-line">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-gold" />
+          </div>
+        </section>
+      )}
+      {step === "videos" && status === "done" && (
+        <section className="card p-6">
+          <h2 className="font-display text-2xl font-medium">Your Reel pack is ready</h2>
+          <p className="mb-5 mt-1 text-sm text-ink-soft">
+            {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
+          </p>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {sortedRenders.map((r) => (
+              <div key={r.id}>
+                {videos[r.video_path] ? (
+                  <video src={videos[r.video_path].play} controls playsInline
+                    className={`w-full rounded-xl bg-black ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`} />
+                ) : (
+                  <div className={`rounded-xl bg-line ${r.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`} />
+                )}
+                <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{REEL_LABEL[r.kind ?? "tour"] ?? "Video"}</span>
+                    <span className="block text-xs text-muted">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
+                  </span>
+                  {videos[r.video_path] && (
+                    <a href={videos[r.video_path].download} className="btn-ghost py-1.5">Download</a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <ShareLink listing={listing} onSave={saveListing} />
+            <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
+              Change clips or labels
+            </button>
+          </div>
+          <p className="mt-4 text-xs text-muted">
+            Tip: in Instagram, turn on Settings → Media quality → &quot;Upload at highest quality&quot; so your Reels stay sharp.
+          </p>
+        </section>
+      )}
+
+      {/* ---------------- back / next */}
+      {(prevStep || (nextStep && step !== "checkout")) && !(step === "clips" && status !== "review") && (
+        <div className="sticky bottom-0 z-10 -mx-5 flex items-center justify-between gap-3 border-t border-line bg-bg/95 px-5 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+          {prevStep ? (
+            <button type="button" className="btn-ghost" onClick={() => go(prevStep.id)}>← {prevStep.name}</button>
+          ) : <span />}
+          {nextStep && step !== "checkout" && (
+            <span className="flex items-center gap-3">
+              {nextHint && <span className="hidden text-xs text-muted sm:inline">{nextHint}</span>}
+              <button type="button" className="btn-primary" disabled={nextBlocked} onClick={() => go(nextStep.id)}>
+                Next: {nextStep.name} →
+              </button>
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
 }
+
 
 function fmtTime(sec: number) {
   const t = Math.max(0, Math.round(sec));
