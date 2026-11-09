@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
-/* Tourvo · Coastal modern: misty ground, deep sea-green ink, teal accent, sand highlights.
-   (The "champagne"/"gold" names are kept so every page picks up the theme.) */
+/* Tourvo · Coastal modern layout in the logo's blue: cool misty ground, navy ink, Tourvo blue accent,
+   sand highlights. (The "champagne"/"gold" names are kept so every page picks up the theme.) */
 :root {
-  --bg: #f3f7f7;
+  --bg: #f4f7fb;
   --surface: #ffffff;
-  --ink: #1d3438;
-  --ink-soft: #4a6266;
-  --muted: #587074;
-  --line: #cfe0df;
-  --night: #1d3438;
-  --champagne: #2f6f73;
-  --champagne-deep: #245a5d;
-  --champagne-light: #9cc5c2;
-  --champagne-soft: #dcebea;
+  --ink: #0b1b2e;
+  --ink-soft: #44546a;
+  --muted: #5a6a7f;
+  --line: #d9e3f0;
+  --night: #0b1b2e;
+  --champagne: #1f5fd1;
+  --champagne-deep: #174baa;
+  --champagne-light: #9cc3ff;
+  --champagne-soft: #e8f0fd;
   --sand: #e8b07a;
   --danger: #b42318;
   --ok: #1f7a4d;
@@ -71,5 +71,5 @@ body {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-muted;
 }
 @utility card {
-  @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(29,52,56,0.05)];
+  @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(11,27,46,0.05)];
 }

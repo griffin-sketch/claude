@@ -86,7 +86,7 @@ export default function Home() {
     <div className="bg-bg text-ink">
       {/* Nav: a floating white pill */}
       <header className={`sticky top-0 z-50 pt-3 sm:pt-5 ${pad}`}>
-        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2 pl-4 pr-2 sm:py-2.5 sm:pl-6 sm:pr-2.5 shadow-[0_8px_30px_rgba(29,52,56,0.10)] backdrop-blur`}>
+        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2 pl-4 pr-2 sm:py-2.5 sm:pl-6 sm:pr-2.5 shadow-[0_8px_30px_rgba(11,27,46,0.10)] backdrop-blur`}>
           <Link href="/" aria-label="Tourvo home" className="shrink-0">
             <span className="sm:hidden"><Logo size={24} /></span>
             <span className="hidden sm:inline"><Logo size={30} /></span>
@@ -132,7 +132,7 @@ export default function Home() {
           <div className="relative min-w-0 flex-[1_1_520px]">
             <LoopVideo src="/fx/build_hero.mp4" poster="/fx/build.jpg" label="A house building itself, from framing to finished"
               className="aspect-[5/4] w-full rounded-[32px] bg-line object-cover" />
-            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(29,52,56,0.15)] sm:bottom-5 sm:left-5">
+            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(11,27,46,0.15)] sm:bottom-5 sm:left-5">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-gold text-white">
                 <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
               </span>
@@ -282,7 +282,7 @@ export default function Home() {
             <img
               src="/home/pool_v.jpg"
               alt="The same shot as a vertical 9:16 video"
-              className="absolute bottom-0 right-3 aspect-[9/16] w-[26%] rounded-[20px] border-[5px] border-bg object-cover shadow-[0_10px_30px_rgba(29,52,56,0.15)]"
+              className="absolute bottom-0 right-3 aspect-[9/16] w-[26%] rounded-[20px] border-[5px] border-bg object-cover shadow-[0_10px_30px_rgba(11,27,46,0.15)]"
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
