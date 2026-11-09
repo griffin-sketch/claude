@@ -684,7 +684,12 @@ function Editor({ id, user }: { id: string; user: User }) {
               <select id="hook" className="input" disabled={!labelsEditable} value={listing.hook ?? "inside"}
                 onChange={(e) => saveListing({ hook: e.target.value })}>
                 {HOOKS.map((h) => (
-                  <option key={h.id} value={h.id}>{h.text}</option>
+                  <option key={h.id} value={h.id}>
+                    {h.text
+                      .replace("{beds}", listing.beds ? String(listing.beds) : "#")
+                      .replace("{city}", listing.city_line.split(",")[0].trim() || "your city")
+                      .replace("{price}", listing.price || "$___")}
+                  </option>
                 ))}
               </select>
               <p className="mt-1 text-xs text-ink-soft">Shown at the start of the 15-second teaser Reel.</p>
