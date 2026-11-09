@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { CAMERA_MOVES, EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 
@@ -432,6 +432,14 @@ function Editor({ id, user }: { id: string; user: User }) {
                     #{i + 1} · {fmtTime(startAt[i] ?? 0)}
                   </span>
                   {listing.status !== "draft" && <ClipBadge status={s.clip_status} />}
+                  {(() => {
+                    const m = CAMERA_MOVES.find((c) => c.id === (s.move || "auto"));
+                    return m && m.id !== "auto" ? (
+                      <span title={`Camera: ${m.name}`} className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-base text-white">
+                        {m.icon}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="grid flex-1 gap-2 sm:grid-cols-2">
                   <label className="sm:col-span-2">
@@ -454,6 +462,28 @@ function Editor({ id, user }: { id: string; user: User }) {
                     <span className="mt-1 block text-xs text-muted">
                       {EFFECTS.find((fx) => fx.id === (s.effect ?? "none"))?.blurb}
                       {listing.status === "review" && " Changing it remakes this clip."}
+                    </span>
+                  </label>
+                  <label className="sm:col-span-2">
+                    <span className="sr-only">Camera move for photo {i + 1}</span>
+                    <select
+                      className="input py-2"
+                      disabled={!(editable || listing.status === "review") || s.effect === "reveal"}
+                      value={CAMERA_MOVES.some((c) => c.id === s.move) ? s.move : "auto"}
+                      onChange={(e) => {
+                        const move = e.target.value;
+                        saveShot(s, listing.status === "review" ? { move, clip_status: "redo" } : { move });
+                      }}
+                    >
+                      {CAMERA_MOVES.map((c) => (
+                        <option key={c.id} value={c.id}>{`Camera: ${c.icon}  ${c.name}`}</option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-xs text-muted">
+                      {s.effect === "reveal"
+                        ? "Drone reveal sets its own camera move."
+                        : CAMERA_MOVES.find((c) => c.id === (s.move || "auto"))?.blurb}
+                      {listing.status === "review" && s.effect !== "reveal" && " Changing it remakes this clip."}
                     </span>
                   </label>
                   {i === 0 ? (

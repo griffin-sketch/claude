@@ -51,6 +51,10 @@ MOVES_BOLD = {
     "orbit_right": "The camera travels forward while arcing to the right around the room, strong parallax.",
     "rise":        "Drone shot: the camera flies forward toward the house while rising, smooth and continuous.",
     "glide":       "The camera tracks sideways from left to right across the scene with strong parallax between foreground and background.",
+    "pan_right":   "The camera trucks smoothly sideways from left to right across the scene with strong parallax between foreground and background.",
+    "pan_left":    "The camera trucks smoothly sideways from right to left across the scene with strong parallax between foreground and background.",
+    "descend":     "The camera glides slowly downward and forward, lowering from a high angle to eye level, smooth and continuous.",
+    "tilt_up":     "The camera tilts slowly upward from the floor to reveal the full height of the space and the ceiling, smooth and continuous.",
 }
 
 KEYWORDS = [  # label keyword -> default move
@@ -66,7 +70,7 @@ NEGATIVE = ("warping, morphing walls, bending lines, new windows, new doors, ext
 
 def pick_move(shot, i):
     m = (shot.get("move") or "auto").lower()
-    if m in MOVES: return m
+    if m in MOVES_BOLD: return m
     label = (shot.get("label", "") + " " + shot.get("sub", "")).lower()
     if i == 0 and not label.strip(): return "rise"
     for words, mv in KEYWORDS:

@@ -36,6 +36,20 @@ export const EFFECTS = [
   { id: "reveal", name: "Drone reveal", blurb: "Flies back and up to reveal the whole property. Use on aerials." },
 ] as const;
 
+// Camera direction per photo. Keep in sync with render/engine/ai_motion.py MOVES_BOLD
+export const CAMERA_MOVES = [
+  { id: "auto", icon: "✦", name: "Auto", blurb: "We pick the best move for the room." },
+  { id: "push", icon: "↑", name: "Push in", blurb: "Glides forward into the room." },
+  { id: "pull", icon: "↓", name: "Pull out", blurb: "Backs out to reveal more of the space." },
+  { id: "pan_left", icon: "←", name: "Pan left", blurb: "Slides sideways, right to left." },
+  { id: "pan_right", icon: "→", name: "Pan right", blurb: "Slides sideways, left to right." },
+  { id: "orbit_left", icon: "↺", name: "Orbit left", blurb: "Arcs around the room to the left. Best in open spaces." },
+  { id: "orbit_right", icon: "↻", name: "Orbit right", blurb: "Arcs around the room to the right. Best in open spaces." },
+  { id: "rise", icon: "⤴", name: "Rise", blurb: "Flies forward and up, like a drone. Great on exteriors." },
+  { id: "descend", icon: "⤵", name: "Descend", blurb: "Lowers from up high down to eye level." },
+  { id: "tilt_up", icon: "⇡", name: "Tilt up", blurb: "Tilts from the floor up to the ceiling. Great for tall rooms." },
+] as const;
+
 // Opening line of the teaser Reel. Keep in sync with render/reels.py HOOKS
 export const HOOKS = [
   { id: "inside", text: "Wait till you see inside" },

@@ -34,6 +34,9 @@ POLL = int(os.environ.get("POLL_SECONDS", "10"))
 MODEL = os.environ.get("FAL_MODEL", am.DEFAULT_MODEL)
 MAX_ATTEMPTS = 3
 CLIP_SECONDS = 5
+# The renderer's subtle digital drift goes the same way as the AI camera move, so they never fight.
+DRIFT_FOR = {"push": "push", "pull": "pull", "pan_left": "pan_l", "pan_right": "pan_r", "glide": "pan_r",
+             "orbit_left": "pan_l", "orbit_right": "pan_r", "rise": "push", "descend": "push", "tilt_up": "rise"}
 STATIC_BELOW = 2.5        # motion score under this = the AI camera barely moved: remake it once, pushing harder
 BOOST = (" IMPORTANT: the camera must move clearly and continuously for the entire clip, a steady and noticeable"
          " dolly forward through the space with strong parallax. Never hold still.")
@@ -119,8 +122,12 @@ def submit_clip(shot, index, user_id, orient="h"):
         kind = effects.kind_of(shot, index)
         if orient == "v":
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
+        chosen = (shot.get("move") or "auto") in am.MOVES_BOLD          # the realtor picked a camera direction
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
-        body, _ = effects.kling_body(shot.get("effect") or "none", kind, src, tmp, f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}")
+        fx = shot.get("effect") or "none"
+        body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {am.MOVES_BOLD[mv]}")
+        if chosen and fx not in ("none", "reveal"):
+            body["prompt"] += " Camera direction: " + am.MOVES_BOLD[mv]
         if (shot.get("error") or "").startswith("static") and orient == "h":
             body["prompt"] += BOOST   # the last take barely moved
             body["cfg_scale"] = max(body.get("cfg_scale", 0.6), 0.8)
@@ -132,7 +139,7 @@ def submit_clip(shot, index, user_id, orient="h"):
                                                 "vfal_response_url": r["response_url"]})
     else:
         db_patch("shots", {"id": shot["id"]}, {
-            "clip_status": "generating", "move": mv, "fal_status_url": r["status_url"],
+            "clip_status": "generating", "fal_status_url": r["status_url"],
             "fal_response_url": r["response_url"], "clip_attempts": (shot.get("clip_attempts") or 0) + 1,
             "approved": False, "error": None,
         })
@@ -286,6 +293,7 @@ def render_listing(l):
                 shot = {"path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
+                shot["drift_move"] = DRIFT_FOR.get(am.pick_move(s, s["position"]), "push")   # digital drift follows the AI camera
                 job_shots.append(shot)
                 if s.get("vclip_status") == "ready" and s.get("vclip_path"):
                     try:
