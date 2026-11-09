@@ -1,4 +1,4 @@
-import { admin, customerFor, fail, HttpError, isAdmin, PRICES, requireUser, siteUrl, stripe } from "@/lib/server";
+import { admin, customerFor, fail, HttpError, isAdmin, PRICES, requireUser, siteUrl, STATEMENT_SUFFIX, stripe } from "@/lib/server";
 import { MIN_PHOTOS } from "@/lib/config";
 
 /**
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
           },
         ],
         metadata: { kind: "single", listing_id: listingId, user_id: user.id },
-        payment_intent_data: { metadata: { listing_id: listingId, user_id: user.id } },
+        payment_intent_data: { metadata: { listing_id: listingId, user_id: user.id }, statement_descriptor_suffix: STATEMENT_SUFFIX },
         success_url: `${back}?paid=1`,
         cancel_url: back,
       });

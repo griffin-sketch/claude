@@ -1,4 +1,4 @@
-import { admin, customerFor, fail, HttpError, isAdmin, PRICES, requireUser, siteUrl, stripe } from "@/lib/server";
+import { admin, customerFor, fail, HttpError, isAdmin, PRICES, requireUser, siteUrl, STATEMENT_SUFFIX, stripe } from "@/lib/server";
 
 /**
  * Staged photos.
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
           },
         ],
         metadata: { kind: "staging", user_id: user.id, staging_ids: todo.join(",") },
+        payment_intent_data: { statement_descriptor_suffix: STATEMENT_SUFFIX },
         success_url: `${back}?paid=1`,
         cancel_url: back,
       });

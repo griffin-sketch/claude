@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 /** Pricing. Amounts are in cents. */
+// Shown after the account's name on customers' card statements, e.g. "KGB MARKETING* TOURVO".
+export const STATEMENT_SUFFIX = "TOURVO";
+
 export const PRICES = {
   single: { amount: 4900, name: "Listing video", description: "One listing: AI camera moves, 16:9 + 9:16 videos" },
   staging: { amount: 500, name: "Virtually staged photo", description: "Full-size, unwatermarked staged photo" },
@@ -67,7 +70,13 @@ export function siteUrl(request: Request) {
 export async function customerFor(user: User): Promise<string> {
   const db = admin();
   const { data: prof } = await db.from("profiles").select("stripe_customer_id, full_name").eq("id", user.id).single();
-  if (prof?.stripe_customer_id) return prof.stripe_customer_id;
+  if (prof?.stripe_customer_id) {
+    // A customer saved under a different Stripe account or mode (test vs live) doesn't exist here: make a new one.
+    try {
+      const existing = await stripe().customers.retrieve(prof.stripe_customer_id);
+      if (!("deleted" in existing && existing.deleted)) return prof.stripe_customer_id;
+    } catch {}
+  }
   const c = await stripe().customers.create({
     email: user.email ?? undefined,
     name: prof?.full_name ?? undefined,
