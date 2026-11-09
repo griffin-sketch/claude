@@ -138,7 +138,7 @@ def make_vertical(src, kind, dest):
     return dest
 
 # ------------------------------------------------------------------ build the Kling request
-def kling_body(effect, kind, src, tmpdir, base_prompt):
+def kling_body(effect, kind, src, tmpdir, base_prompt, stage_style="modern", stage_room="auto"):
     """Returns (body, extra_image_path or None). src is the (already vertical, if needed) photo."""
     effect = effect if effect in EFFECTS else "none"
     if effect == "build":
@@ -146,7 +146,8 @@ def kling_body(effect, kind, src, tmpdir, base_prompt):
         return {"prompt": BUILD_MOTION[kind], "image_url": data_uri(stage), "tail_image_url": data_uri(src),
                 "negative_prompt": NEG_FX, "cfg_scale": 0.6}, stage
     if effect == "staging":
-        staged = edit(src, STAGING_EDIT + KEEP, os.path.join(tmpdir, "fx_staged.jpg"))
+        import staging
+        staged = edit(src, staging.prompt(stage_style, stage_room), os.path.join(tmpdir, "fx_staged.jpg"))
         return {"prompt": STAGING_MOTION, "image_url": data_uri(src), "tail_image_url": data_uri(staged),
                 "negative_prompt": NEG_FX, "cfg_scale": 0.6}, staged
     if effect == "dusk":

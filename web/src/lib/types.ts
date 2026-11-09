@@ -71,6 +71,22 @@ export type Shot = {
   clip_attempts: number;
   approved: boolean;
   error: string | null;
+  stage_style?: string;
+  stage_room?: string;
+};
+
+export type Staging = {
+  id: string;
+  user_id: string;
+  listing_id: string | null;
+  source_path: string;
+  room: string;
+  style: string;
+  status: "queued" | "processing" | "ready" | "failed";
+  preview_path: string | null;
+  paid: boolean;
+  error: string | null;
+  created_at: string;
 };
 
 export type Render = {

@@ -35,6 +35,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
   }, [user]);
   const nav = [
     { href: "/dashboard", label: "Listings" },
+    { href: "/staging", label: "Staging" },
     { href: "/settings", label: "Branding" },
     { href: "/billing", label: "Billing" },
     ...(isOwner ? [{ href: "/admin", label: "Admin" }] : []),
@@ -47,12 +48,12 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
           <Link href="/dashboard" aria-label={`${APP_NAME} dashboard`}>
             <Logo size={30} />
           </Link>
-          <nav className="flex items-center gap-1 text-sm">
+          <nav className="-mr-2 flex items-center gap-1 overflow-x-auto text-sm">
             {nav.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
-                className={`rounded-full px-3.5 py-2 font-medium ${
+                className={`whitespace-nowrap rounded-full px-3.5 py-2 font-medium ${
                   path.startsWith(n.href) ? "bg-ink text-white" : "text-ink-soft hover:text-ink"
                 }`}
               >

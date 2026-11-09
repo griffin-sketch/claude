@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
@@ -339,6 +339,24 @@ function Editor({ id, user }: { id: string; user: User }) {
         review={status === "review"}
         onPick={(effect) => saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect })}
       />
+      {sh.effect === "staging" && (
+        <div className="grid grid-cols-2 gap-2 sm:col-span-2">
+          <label>
+            <span className="label">Furniture style</span>
+            <select className="input py-2" value={sh.stage_style ?? "modern"}
+              onChange={(e) => saveShot(sh, status === "review" ? { stage_style: e.target.value, clip_status: "redo" } : { stage_style: e.target.value })}>
+              {STAGE_STYLES.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className="label">Room</span>
+            <select className="input py-2" value={sh.stage_room ?? "auto"}
+              onChange={(e) => saveShot(sh, status === "review" ? { stage_room: e.target.value, clip_status: "redo" } : { stage_room: e.target.value })}>
+              {STAGE_ROOMS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
       <CameraControl
         shot={sh}
         photo={thumbs[sh.photo_path]}

@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 /** Pricing. Amounts are in cents. */
 export const PRICES = {
   single: { amount: 4900, name: "Listing video", description: "One listing: AI camera moves, 16:9 + 9:16 videos" },
+  staging: { amount: 500, name: "Virtually staged photo", description: "Full-size, unwatermarked staged photo" },
   monthly: { amount: 8000, name: "Listing videos: monthly", description: "3 listing videos every month", credits: 3 },
 } as const;
 

@@ -90,3 +90,26 @@ export const ROOM_SUGGESTIONS = [
   "Pool + Patio",
   "Aerial View",
 ];
+
+// Virtual staging styles and rooms. Keep in sync with render/staging.py (STYLES, ROOMS)
+export const STAGE_STYLES = [
+  { id: "modern", name: "Modern", blurb: "Clean lines, warm greys and natural wood" },
+  { id: "farmhouse", name: "Modern farmhouse", blurb: "Warm whites, oak, linen and black metal" },
+  { id: "scandinavian", name: "Scandinavian", blurb: "Light oak, soft textiles, no clutter" },
+  { id: "coastal", name: "Coastal", blurb: "Airy whites, sand and soft blues, rattan" },
+  { id: "luxury", name: "Luxury", blurb: "Velvet, marble, brass and statement lighting" },
+  { id: "midcentury", name: "Mid-century", blurb: "Walnut, tapered legs, mustard and teal" },
+  { id: "industrial", name: "Industrial", blurb: "Leather, dark metal, reclaimed wood" },
+  { id: "transitional", name: "Transitional", blurb: "Classic shapes, fresh neutral palette" },
+] as const;
+export const STAGE_ROOMS = [
+  { id: "auto", name: "Detect the room" },
+  { id: "living", name: "Living room" },
+  { id: "bedroom", name: "Bedroom" },
+  { id: "dining", name: "Dining room" },
+  { id: "kitchen", name: "Kitchen" },
+  { id: "office", name: "Home office" },
+  { id: "kids", name: "Kid's room" },
+  { id: "outdoor", name: "Patio" },
+] as const;
+export const STAGING_PRICE = 5; // dollars per staged photo

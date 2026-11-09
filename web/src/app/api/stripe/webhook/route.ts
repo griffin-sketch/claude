@@ -53,6 +53,13 @@ async function onCheckout(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id;
   if (!userId) return;
 
+  if (kind === "staging" && session.payment_status === "paid") {
+    const ids = (session.metadata?.staging_ids ?? "").split(",").filter(Boolean);
+    if (ids.length)
+      await db.from("stagings").update({ paid: true, paid_via: "single", stripe_session_id: session.id }).in("id", ids).eq("user_id", userId);
+    return;
+  }
+
   if (kind === "single" && listingId && session.payment_status === "paid") {
     const { data: l } = await db.from("listings").select("status, paid").eq("id", listingId).single();
     if (!l || l.paid) return;

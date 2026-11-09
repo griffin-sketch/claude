@@ -26,6 +26,7 @@ import reels             # the Reel pack: several cuts per listing
 import effects           # per-photo effects + centered vertical framing
 import notify            # customer emails (Resend)
 from motion import motion_score
+import staging
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -127,7 +128,8 @@ def submit_clip(shot, index, user_id, orient="h"):
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
         cam = am.custom_prompt(custom) if custom else am.MOVES_BOLD[mv]
         fx = shot.get("effect") or "none"
-        body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {cam}")
+        body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {cam}",
+                                     shot.get("stage_style") or "modern", shot.get("stage_room") or "auto")
         if chosen and fx not in ("none", "reveal"):
             body["prompt"] += " Camera direction: " + cam
         if (shot.get("error") or "").startswith("static") and orient == "h":
@@ -372,13 +374,39 @@ def render_listing(l):
         db_insert("renders", made)
 
 
+def step_stagings():
+    """Staged photos: AI-stage each queued photo, save a clean full-size copy (sold) and a watermarked preview."""
+    stale = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 600))
+    for st in db_get("stagings", status="eq.processing", updated_at=f"lt.{stale}"):   # the worker restarted mid-job
+        db_patch("stagings", {"id": st["id"]}, {"status": "queued"})
+    for st in db_get("stagings", status="eq.queued", order="created_at", limit="4"):
+        n = (st.get("attempts") or 0) + 1
+        db_patch("stagings", {"id": st["id"]}, {"status": "processing", "attempts": n, "error": None})
+        log(f"staging {st['id'][:8]}: {st['style']} {st['room']} (take {n})")
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                src = storage_get("photos", st["source_path"], os.path.join(tmp, "src"))
+                res = effects.run(staging.PHOTO_MODEL, {"prompt": staging.prompt(st["style"], st["room"]),
+                                                        "image_urls": [effects.data_uri(src)], "num_images": 1,
+                                                        "resolution": "2K", "output_format": "jpeg"}, timeout=300)
+                full = effects.fetch(res["images"][0]["url"], os.path.join(tmp, "full.jpg"))
+                prev = staging.preview(full, os.path.join(tmp, "prev.jpg"))
+                full_path = f"{st['user_id']}/{st['id']}-{n}.jpg"
+                storage_put("staged-full", full_path, full, "image/jpeg")
+                storage_put("staged", full_path, prev, "image/jpeg")
+            db_patch("stagings", {"id": st["id"]}, {"status": "ready", "result_path": full_path, "preview_path": full_path})
+        except Exception as e:
+            log(f"  staging {st['id'][:8]} failed: {e}")
+            db_patch("stagings", {"id": st["id"]}, {"status": "failed", "error": "Staging didn't work this time. Try again."})
+
+
 def main():
     missing = [n for n, v in (("SUPABASE_URL", SB), ("SUPABASE_SERVICE_ROLE_KEY", KEY), ("FAL_KEY", FAL)) if not v]
     if missing:
         sys.exit("Missing environment variables: " + ", ".join(missing))
     log(f"worker up · model {MODEL} · polling every {POLL}s")
     while True:
-        for step in (step_queued, step_redo, step_poll, step_to_review, step_render):
+        for step in (step_queued, step_redo, step_poll, step_to_review, step_stagings, step_render):
             try:
                 step()
             except Exception as e:
