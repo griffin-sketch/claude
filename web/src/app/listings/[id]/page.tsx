@@ -11,6 +11,7 @@ import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from 
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
 import { CameraControl } from "@/components/CameraControl";
+import { EffectPicker } from "@/components/EffectPicker";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
@@ -333,27 +334,11 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   const motionControls = (sh: Shot, i: number) => (
     <>
-      <label className="sm:col-span-2">
-        <span className="sr-only">Effect for photo {i + 1}</span>
-        <select
-          className="input py-2"
-          value={sh.effect ?? "none"}
-          onChange={(e) => {
-            const effect = e.target.value as Effect;
-            saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect });
-          }}
-        >
-          {EFFECTS.map((fx) => (
-            <option key={fx.id} value={fx.id}>
-              {fx.id === "none" ? "Effect: none (camera move only)" : `Effect: ${fx.name}`}
-            </option>
-          ))}
-        </select>
-        <span className="mt-1 block text-xs text-muted">
-          {EFFECTS.find((fx) => fx.id === (sh.effect ?? "none"))?.blurb}
-          {status === "review" && " Changing it remakes this clip."}
-        </span>
-      </label>
+      <EffectPicker
+        value={(sh.effect ?? "none") as Effect}
+        review={status === "review"}
+        onPick={(effect) => saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect })}
+      />
       <CameraControl
         shot={sh}
         photo={thumbs[sh.photo_path]}
