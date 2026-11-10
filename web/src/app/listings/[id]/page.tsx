@@ -397,7 +397,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   );
 
   const packSection = shots.length >= 3 && (
-    <section className="card p-6">
+    <section className="card p-4 sm:p-6">
       <h2 className="font-display text-2xl">The videos you&apos;ll get</h2>
       <p className="mb-5 mt-1 text-sm text-ink-soft">
         {plan.length} videos from one listing, each with its own style, ready to post. The numbers match your photo order.
@@ -440,14 +440,35 @@ function Editor({ id, user }: { id: string; user: User }) {
           <Link href="/dashboard" className="text-sm text-ink-soft hover:text-ink">
             ← All listings
           </Link>
-          <h1 className="font-display text-4xl">{listing.address || "New listing video"}</h1>
+          <h1 className="font-display text-3xl sm:text-4xl">{listing.address || "New listing video"}</h1>
         </div>
         <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-semibold">{STATUS_LABEL[status]}</span>
       </div>
 
       {/* ---------------- step bar */}
-      <nav aria-label="Steps" className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-        <ol className="flex min-w-max gap-1 sm:min-w-0">
+      {/* phones: "Step 3 of 8 · Effects" + thin progress, tap to jump */}
+      <div className="sm:hidden">
+        <div className="flex gap-1" aria-hidden="true">
+          {STEPS.map((st, k) => (
+            <span key={st.id} className={`h-1.5 flex-1 rounded-full ${k <= idx ? "bg-gold" : "bg-line"}`} />
+          ))}
+        </div>
+        <label className="mt-2 flex items-center justify-between gap-3">
+          <span className="shrink-0 text-sm text-muted">Step {idx + 1} of {STEPS.length}</span>
+          <select
+            aria-label="Jump to a step"
+            value={step}
+            onChange={(e) => go(e.target.value as StepId)}
+            className="min-h-11 min-w-0 flex-1 rounded-full border border-line bg-surface px-4 text-base font-semibold"
+          >
+            {STEPS.map((st) => (
+              <option key={st.id} value={st.id} disabled={!ok(st.id)}>{st.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <nav aria-label="Steps" className="hidden sm:block">
+        <ol className="flex gap-1">
           {STEPS.map((st, k) => {
             const allowed = ok(st.id);
             const current = st.id === step;
@@ -486,7 +507,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 1. photos */}
       {step === "photos" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Upload your listing photos</h2>
           <p className="mt-1 text-sm text-ink-soft">
             Add {MIN_PHOTOS} to {MAX_PHOTOS} photos. Use the MLS photos, landscape is best. You&apos;ll put them in order next.
@@ -535,7 +556,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 2. arrange */}
       {step === "arrange" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div className="max-w-xl">
               <h2 className="font-display text-2xl">Put your photos in order</h2>
@@ -606,7 +627,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 3. motion */}
       {step === "motion" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <div className="mb-5 max-w-xl">
             <h2 className="font-display text-2xl">Add effects (optional)</h2>
             <p className="mt-1 text-sm text-ink-soft">
@@ -650,20 +671,20 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* effect sheet for one photo */}
       {fxShot && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-8" onClick={() => setFxFor(null)}>
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/60 sm:p-8" onClick={() => setFxFor(null)}>
           <div role="dialog" aria-modal="true" aria-label="Effects for this photo"
-            className="card mx-auto max-w-4xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between gap-3">
+            className="min-h-full bg-surface px-4 pb-8 sm:card sm:mx-auto sm:min-h-0 sm:max-w-4xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
               <div className="flex min-w-0 items-center gap-3">
                 {thumbs[fxShot.photo_path] && (
-                  <img src={thumbs[fxShot.photo_path]} alt="" className="aspect-[4/3] w-20 shrink-0 rounded-lg object-cover" />
+                  <img src={thumbs[fxShot.photo_path]} alt="" className="aspect-[4/3] w-14 shrink-0 rounded-lg object-cover sm:w-20" />
                 )}
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-muted">Photo {fxIndex + 1}</p>
-                  <h3 className="truncate font-display text-2xl">{fxIndex === 0 ? "Opening shot" : fxShot.label || `Photo ${fxIndex + 1}`}</h3>
+                  <h3 className="truncate font-display text-xl sm:text-2xl">{fxIndex === 0 ? "Opening shot" : fxShot.label || `Photo ${fxIndex + 1}`}</h3>
                 </div>
               </div>
-              <button type="button" className="btn-primary" onClick={() => setFxFor(null)}>Done</button>
+              <button type="button" className="btn-primary min-h-11 shrink-0" onClick={() => setFxFor(null)}>Done</button>
             </div>
             <p className="mb-3 text-sm text-ink-soft">Pick an effect for this photo. Each card plays an example.</p>
             <div className="grid gap-3 sm:grid-cols-2">{motionControls(fxShot, fxIndex, true)}</div>
@@ -673,7 +694,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 4. style */}
       {step === "style" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Pick a look and music</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">Choose how the words on your video look. Any of them works; pick the one that feels like you.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -706,16 +727,18 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 5. details */}
       {step === "details" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Tell us about the home</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">This shows at the start of your video. Only the address is required.</p>
           <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
             <Field label="City, state, ZIP" value={listing.city_line} onSave={(v) => saveListing({ city_line: v })} placeholder="Austin, TX 78704" />
             <Field label="Price (optional)" value={listing.price ?? ""} onSave={(v) => saveListing({ price: v || null })} placeholder="$875,000" />
+            <div className="grid grid-cols-3 gap-3 sm:contents">
             <Field label="Beds" type="number" value={listing.beds?.toString() ?? ""} onSave={(v) => saveListing({ beds: v ? Number(v) : null })} />
             <Field label="Baths" type="number" value={listing.baths?.toString() ?? ""} onSave={(v) => saveListing({ baths: v ? Number(v) : null })} />
             <Field label="Square feet" type="number" value={listing.sqft?.toString() ?? ""} onSave={(v) => saveListing({ sqft: v ? Number(v) : null })} />
+            </div>
           </fieldset>
 
           <div className="mt-6 max-w-xl">
@@ -783,7 +806,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 6. checkout */}
       {step === "checkout" && (
         <>
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <h2 className="font-display text-2xl">Look it over, then we&apos;ll make it</h2>
             <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {([
@@ -814,7 +837,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 7. clips */}
       {step === "clips" && (status === "queued" || status === "generating") && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Bringing your photos to life</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page; we&apos;ll keep going.
@@ -826,7 +849,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
       {step === "clips" && status === "review" && (
         <>
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-2xl">Approve your clips</h2>
@@ -862,7 +885,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
       {/* ---------------- 8. videos */}
       {step === "videos" && status === "rendering" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Building your videos</h2>
           <p className="mt-1 text-sm text-ink-soft">
             Putting together your full video and short social clips. This takes about 10 minutes, and you can leave this page; we&apos;ll keep going.
@@ -873,7 +896,7 @@ function Editor({ id, user }: { id: string; user: User }) {
         </section>
       )}
       {step === "videos" && status === "done" && (
-        <section className="card p-6">
+        <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Your videos are ready</h2>
           <p className="mb-5 mt-1 text-sm text-ink-soft">
             {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
@@ -912,16 +935,18 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
 
       {/* ---------------- back / next */}
-      {(prevStep || (nextStep && step !== "checkout")) && !(step === "clips" && status !== "review") && (
-        <div className="sticky bottom-0 z-10 -mx-5 flex items-center justify-between gap-3 border-t border-line bg-bg/95 px-5 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+      {!fxFor && (prevStep || (nextStep && step !== "checkout")) && !(step === "clips" && status !== "review") && (
+        <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-between gap-3 border-t border-line bg-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
           {prevStep ? (
-            <button type="button" className="btn-ghost" onClick={() => go(prevStep.id)}>← {prevStep.name}</button>
+            <button type="button" className="btn-ghost min-h-12 sm:min-h-0" onClick={() => go(prevStep.id)}>
+              ← <span className="sm:hidden">Back</span><span className="hidden sm:inline">{prevStep.name}</span>
+            </button>
           ) : <span />}
           {nextStep && step !== "checkout" && (
-            <span className="flex items-center gap-3">
-              {nextHint && <span className="hidden text-xs text-muted sm:inline">{nextHint}</span>}
-              <button type="button" className="btn-primary" disabled={nextBlocked} onClick={() => go(nextStep.id)}>
-                Next: {nextStep.name} →
+            <span className="flex min-w-0 flex-1 items-center justify-end gap-3">
+              {nextHint && <span className="min-w-0 text-right text-xs text-muted">{nextHint}</span>}
+              <button type="button" className="btn-primary min-h-12 shrink-0 px-6 sm:min-h-0" disabled={nextBlocked} onClick={() => go(nextStep.id)}>
+                Next<span className="hidden sm:inline">: {nextStep.name}</span> →
               </button>
             </span>
           )}
@@ -957,9 +982,11 @@ function RoomName({ shot, disabled, onSave }: { shot: Shot; disabled: boolean; o
 function MoreOptions({ children }: { children: React.ReactNode }) {
   return (
     <details className="group mt-6 rounded-xl border border-line">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold">
-        More options
-        <span className="text-xs font-normal text-muted group-open:hidden">Optional · the defaults work great</span>
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold">
+        <span>
+          More options
+          <span className="block text-xs font-normal text-muted group-open:hidden">Optional · the defaults work great</span>
+        </span>
         <span aria-hidden className="text-muted transition group-open:rotate-180">▾</span>
       </summary>
       <div className="border-t border-line p-4">{children}</div>
@@ -1143,6 +1170,7 @@ function ShotField(props: {
       id={props.id}
       className="input"
       type={props.type ?? "text"}
+      inputMode={props.type === "number" ? "decimal" : undefined}
       list={props.list}
       disabled={props.disabled}
       value={v}

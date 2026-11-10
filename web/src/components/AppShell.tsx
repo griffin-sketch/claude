@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
     if (!user) return;
     api("/api/admin", { ping: true }).then(() => setIsOwner(true)).catch(() => {});
   }, [user]);
+  const [menu, setMenu] = useState(false);
   const nav = [
     { href: "/dashboard", label: "Listings" },
     { href: "/staging", label: "Staging" },
@@ -44,11 +45,11 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
           <Link href="/dashboard" aria-label={`${APP_NAME} dashboard`}>
             <Logo size={30} />
           </Link>
-          <nav className="-mr-2 flex items-center gap-1 overflow-x-auto text-sm">
+          <nav className="-mr-2 hidden items-center gap-1 text-sm md:flex">
             {nav.map((n) => (
               <Link
                 key={n.href}
@@ -67,9 +68,48 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
               Sign out
             </button>
           </nav>
+          {/* phones: one Menu button instead of a row of links */}
+          <button
+            type="button"
+            aria-expanded={menu}
+            aria-controls="phone-menu"
+            onClick={() => setMenu((m) => !m)}
+            className="flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold md:hidden"
+          >
+            {menu ? "Close" : "Menu"}
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              {menu ? (
+                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              ) : (
+                <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
         </div>
+        {menu && (
+          <nav id="phone-menu" className="border-t border-line px-4 pb-4 pt-2 md:hidden">
+            {nav.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                onClick={() => setMenu(false)}
+                className={`flex min-h-12 items-center rounded-xl px-3 text-base font-medium ${
+                  path.startsWith(n.href) ? "bg-gold-soft text-ink" : "text-ink-soft"
+                }`}
+              >
+                {n.label}
+              </Link>
+            ))}
+            <button
+              onClick={() => supabase().auth.signOut()}
+              className="flex min-h-12 w-full items-center rounded-xl px-3 text-base font-medium text-muted"
+            >
+              Sign out
+            </button>
+          </nav>
+        )}
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {user ? children(user) : <p className="text-sm text-ink-soft">Loading…</p>}
       </main>
     </div>

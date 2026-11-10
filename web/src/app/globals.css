@@ -71,7 +71,7 @@ body {
   @apply btn border border-line bg-surface text-ink hover:border-ink;
 }
 @utility input {
-  @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-gold;
+  @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none sm:text-sm placeholder:text-muted focus:border-gold;
 }
 @utility label {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-muted;
