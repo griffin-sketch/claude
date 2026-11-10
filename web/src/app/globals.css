@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
-/* Tourvo · Coastal modern layout in the logo's blue: cool misty ground, navy ink, Tourvo blue accent,
-   sand highlights. (The "champagne"/"gold" names are kept so every page picks up the theme.) */
+/* Tourvo color rule: two base colors do 90% of the work (navy + cream), one bold accent (coral) does the
+   last 10%, and only on the button we want pressed. The logo keeps Tourvo blue.
+   ("champagne"/"gold" = the navy structure color; "accent" = coral, for the main call to action only.) */
 :root {
-  --bg: #f4f7fb;
+  --bg: #fbf8f3;
   --surface: #ffffff;
   --ink: #0b1b2e;
-  --ink-soft: #44546a;
-  --muted: #5a6a7f;
-  --line: #d9e3f0;
+  --ink-soft: #46505f;
+  --muted: #5e6776;
+  --line: #e6dfd3;
   --night: #0b1b2e;
-  --champagne: #1f5fd1;
-  --champagne-deep: #174baa;
-  --champagne-light: #9cc3ff;
-  --champagne-soft: #e8f0fd;
-  --sand: #e8b07a;
+  --champagne: #0b1b2e;
+  --champagne-deep: #22344d;
+  --champagne-light: #c7cedb;
+  --champagne-soft: #f1ebe1;
+  --accent: #ff7452;
+  --accent-deep: #ff5a33;
+  --sand: #f1ebe1;
   --danger: #b42318;
   --ok: #1f7a4d;
 }
@@ -35,6 +38,8 @@
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --color-sand: var(--sand);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
   --font-sans: var(--font-figtree), "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-fraunces), Georgia, serif;
 }
@@ -56,13 +61,14 @@ body {
   @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-gold text-white hover:bg-gold-deep;
+  @apply btn bg-ink text-white hover:bg-gold-deep;
 }
+/* the one button per screen we want pressed */
 @utility btn-gold {
-  @apply btn bg-gold text-white hover:bg-gold-deep;
+  @apply btn bg-accent text-ink hover:bg-accent-deep;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-surface text-ink hover:border-gold hover:text-gold-deep;
+  @apply btn border border-line bg-surface text-ink hover:border-ink;
 }
 @utility input {
   @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-gold;

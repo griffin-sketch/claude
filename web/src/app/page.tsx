@@ -56,10 +56,10 @@ const wrap = "mx-auto w-full max-w-[1240px]";
 const h2 = "font-display text-[clamp(34px,4.2vw,56px)] font-normal leading-[1.08] text-balance";
 const lead = "text-[17px] leading-[1.7] text-ink-soft sm:text-lg";
 const swipe = "text-xs font-semibold text-muted sm:hidden";
-const btnTeal = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full bg-gold px-7 text-base font-semibold text-white hover:bg-gold-deep";
-const btnWhite = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full border border-line bg-white px-7 text-base font-semibold text-ink hover:border-gold";
+const btnCta = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full bg-accent px-7 text-base font-semibold text-ink hover:bg-accent-deep";
+const btnWhite = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full border border-line bg-white px-7 text-base font-semibold text-ink hover:border-ink";
 const rail = "-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0";
-const STEP_TILE = ["bg-gold text-white", "bg-sand text-ink", "bg-gold-light text-ink"];
+const STEP_TILE = ["bg-ink text-white", "bg-ink text-white", "bg-ink text-white"];
 
 function Check() {
   return (
@@ -97,7 +97,7 @@ export default function Home() {
             <a href="#photographers" className="hidden hover:text-gold lg:inline">Photographers</a>
             <a href="#pricing" className="hidden hover:text-gold sm:inline">Pricing</a>
             <Link href="/login" className="hover:text-gold">Sign in</Link>
-            <Link href="/login" className="inline-flex min-h-10 items-center rounded-full bg-gold px-3.5 text-sm font-semibold text-white hover:bg-gold-deep sm:min-h-11 sm:px-5 sm:text-[15px]">
+            <Link href="/login" className="inline-flex min-h-10 items-center rounded-full bg-accent px-3.5 text-sm font-semibold text-ink hover:bg-accent-deep sm:min-h-11 sm:px-5 sm:text-[15px]">
               Make a video
             </Link>
           </nav>
@@ -117,7 +117,7 @@ export default function Home() {
               branding: a full walkthrough plus a pack of ready-to-post Reels.
             </p>
             <div className="flex flex-wrap gap-3.5">
-              <Link href="/login" className={btnTeal}>Make your first video</Link>
+              <Link href="/login" className={btnCta}>Make your first video</Link>
               <a href="#how" className={btnWhite}>
                 <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
                 See how it works
@@ -349,21 +349,21 @@ export default function Home() {
                 <span className="text-[15px] text-muted">per listing</span>
               </p>
               <p className="text-[15px] leading-relaxed text-ink-soft">Pay for the listing in front of you. The full Reel pack and clip redos included.</p>
-              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full border border-gold text-base font-semibold text-gold-deep hover:bg-gold hover:text-white">
+              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full border border-ink text-base font-semibold text-ink hover:bg-ink hover:text-white">
                 Make one video
               </Link>
             </div>
             <div className="flex flex-col gap-4 rounded-[28px] bg-gold p-8 text-white sm:p-10">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-xl font-semibold">Monthly</h3>
-                <span className="rounded-full bg-sand px-3 py-1.5 text-xs font-bold text-ink">Best value</span>
+                <span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white">Best value</span>
               </div>
               <p className="flex items-baseline gap-2">
                 <span className="font-display text-[64px] leading-none">$80</span>
-                <span className="text-[15px] text-gold-soft">per month</span>
+                <span className="text-[15px] text-white/75">per month</span>
               </p>
-              <p className="text-[15px] leading-relaxed text-gold-soft">Three listing videos every month, about $27 each. Cancel anytime.</p>
-              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full bg-white text-base font-semibold text-gold-deep hover:bg-gold-soft">
+              <p className="text-[15px] leading-relaxed text-white/80">Three listing videos every month, about $27 each. Cancel anytime.</p>
+              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full bg-accent text-base font-semibold text-ink hover:bg-accent-deep">
                 Start the monthly plan
               </Link>
             </div>
@@ -373,7 +373,7 @@ export default function Home() {
               <strong className="font-semibold">Virtual staging</strong>{" "}
               <span className="text-ink-soft">· free previews, $5 per full-size staged photo</span>
             </p>
-            <Link href="/login" className="text-[15px] font-semibold text-gold-deep underline underline-offset-4">Stage a photo</Link>
+            <Link href="/login" className="text-[15px] font-semibold text-ink underline underline-offset-4">Stage a photo</Link>
           </div>
         </div>
       </section>
@@ -404,7 +404,7 @@ export default function Home() {
           </h2>
           <p className="text-lg text-ink-soft">Sign up free. You only pay when you make a video.</p>
           <div className="flex flex-wrap justify-center gap-3.5">
-            <Link href="/login" className={btnTeal}>
+            <Link href="/login" className={btnCta}>
               <span className="grid h-7 w-7 place-items-center rounded-full bg-white"><GoogleIcon /></span>
               Start with Google
             </Link>

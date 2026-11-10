@@ -1021,7 +1021,7 @@ function ShareLink({ listing, onSave }: { listing: Listing; onSave: (p: Partial<
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button onClick={make} className="btn-gold">
+      <button onClick={make} className="btn-primary">
         {copied ? "Link copied" : listing.share_token ? "Copy client link" : "Share with client"}
       </button>
       {url && <span className="max-w-full truncate text-xs text-muted">{url}</span>}
