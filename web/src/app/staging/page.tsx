@@ -280,7 +280,7 @@ function StagingStudio({ user }: { user: User }) {
                     </select>
                     <span className="flex-1" />
                     {!r.paid && !BUSY.has(r.status) && (
-                      <button type="button" className="btn-ghost py-1.5" onClick={() => restage(r)}>New take</button>
+                      <button type="button" className="btn-ghost py-1.5" onClick={() => restage(r)}>Try another version</button>
                     )}
                     {!r.paid && (
                       <button type="button" aria-label="Delete" className="btn-ghost px-3 py-1.5" onClick={() => removeRow(r)}>✕</button>

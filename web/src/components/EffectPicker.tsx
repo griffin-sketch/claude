@@ -21,10 +21,10 @@ export function EffectPicker({ value, review, onPick }: { value: Effect; review:
         className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-2 text-left hover:border-ink-soft sm:col-span-2">
         <img src={`/fx/${EXAMPLE[cur.id]}.jpg`} alt="" className="aspect-video w-20 shrink-0 rounded-md object-cover" />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold">{cur.id === "none" ? "No effect: camera move only" : cur.name}</span>
+          <span className="block text-sm font-semibold">{cur.id === "none" ? "No effect (smooth camera move)" : cur.name}</span>
           <span className="block truncate text-xs text-ink-soft">{cur.blurb}</span>
         </span>
-        <span className="shrink-0 pr-1 text-xs font-semibold text-gold-deep">See effects</span>
+        <span className="shrink-0 pr-1 text-xs font-semibold text-ink underline underline-offset-2">See effects</span>
       </button>
     );
 
@@ -46,7 +46,7 @@ export function EffectPicker({ value, review, onPick }: { value: Effect; review:
                   className="aspect-video w-full object-cover" />
                 {on && <span className="absolute right-1.5 top-1.5 rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-white">Selected</span>}
               </div>
-              <span className="block px-2 pt-1.5 text-sm font-semibold">{fx.id === "none" ? "Camera move only" : fx.name}</span>
+              <span className="block px-2 pt-1.5 text-sm font-semibold">{fx.id === "none" ? "No effect" : fx.name}</span>
               <span className="block px-2 pb-2 text-xs leading-snug text-ink-soft">{fx.blurb}</span>
             </button>
           );

@@ -30,12 +30,12 @@ const REEL_LABEL: Record<string, string> = {
 type StepId = "photos" | "arrange" | "motion" | "style" | "details" | "checkout" | "clips" | "videos";
 const STEPS: { id: StepId; name: string }[] = [
   { id: "photos", name: "Upload photos" },
-  { id: "arrange", name: "Arrange" },
-  { id: "motion", name: "Motion" },
-  { id: "style", name: "Style & music" },
-  { id: "details", name: "Details" },
-  { id: "checkout", name: "Checkout" },
-  { id: "clips", name: "Review clips" },
+  { id: "arrange", name: "Order & rooms" },
+  { id: "motion", name: "Effects" },
+  { id: "style", name: "Look & music" },
+  { id: "details", name: "Home details" },
+  { id: "checkout", name: "Review & pay" },
+  { id: "clips", name: "Approve clips" },
   { id: "videos", name: "Your videos" },
 ];
 
@@ -387,9 +387,9 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   const packSection = shots.length >= 3 && (
     <section className="card p-6">
-      <h2 className="font-display text-2xl">What&apos;s in your Reel pack</h2>
+      <h2 className="font-display text-2xl">The videos you&apos;ll get</h2>
       <p className="mb-5 mt-1 text-sm text-ink-soft">
-        {plan.length} videos, each with its own style. The numbers match your photo order; change it in Arrange and these update.
+        {plan.length} videos from one listing, each with its own style, ready to post. The numbers match your photo order.
       </p>
       <ol className="space-y-4">
         {plan.map((pl) => (
@@ -397,7 +397,7 @@ function Editor({ id, user }: { id: string; user: User }) {
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="font-semibold">{pl.name}</span>
               <span className="text-xs text-muted">
-                {pl.format === "9:16" ? "Vertical" : "16:9"} · about {pl.seconds}s · {pl.shots.length} clips
+                {pl.format === "9:16" ? "Tall" : "Wide"} · about {pl.seconds} seconds
               </span>
             </div>
             <p className="mt-0.5 text-sm text-ink-soft">{pl.style}</p>
@@ -411,7 +411,7 @@ function Editor({ id, user }: { id: string; user: User }) {
                     #{shots.indexOf(sh) + 1}
                   </span>
                   <span className="mt-1 block truncate text-[11px] text-ink-soft">
-                    {k === 0 ? "Title card" : sh.label || "Unlabeled"}
+                    {k === 0 ? "Opening" : sh.label || "Photo"}
                   </span>
                 </div>
               ))}
@@ -529,8 +529,8 @@ function Editor({ id, user }: { id: string; user: User }) {
             <div>
               <h2 className="font-display text-2xl">Put them in order and name the rooms</h2>
               <p className="text-sm text-ink-soft">
-                Your video plays top to bottom, #1 first. Drag a photo, use the arrows, or pick its spot number.
-                Room names show on screen.
+                Your video plays from #1 down. Drag photos or use the arrows to change the order, or tap
+                Auto-arrange and we&apos;ll do it for you. Room names appear on screen.
                 {status === "review" && " Reordering is free; your clips stay as they are."}
               </p>
             </div>
@@ -564,7 +564,7 @@ function Editor({ id, user }: { id: string; user: User }) {
                 <div className="grid flex-1 gap-2 sm:grid-cols-2">
                   {i === 0 ? (
                     <p className="text-sm text-ink-soft sm:col-span-2">
-                      Opening shot. Your title card shows over this one, so it has no room name.
+                      First shot. The address and price show over this one, so it doesn&apos;t need a room name.
                     </p>
                   ) : (
                     <>
@@ -602,17 +602,17 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 3. motion */}
       {step === "motion" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl">Choose how each shot moves</h2>
+          <h2 className="font-display text-2xl">Add effects (optional)</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">
-            Leave everything on Auto and we&apos;ll pick the best camera move for each room, or choose an AI effect and
-            set the camera yourself.
+            Every photo already gets a smooth camera move, so you can skip this step. Want something extra, like
+            staging an empty room or turning the sky to sunset? Tap &quot;See effects&quot; on that photo.
           </p>
           <ol className="space-y-3">
             {shots.map((sh, i) => (
               <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
                 {thumb(sh, i, false)}
                 <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                  <p className="text-sm font-semibold sm:col-span-2">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
+                  <p className="text-sm font-semibold sm:col-span-2">{i === 0 ? "First shot" : sh.label || `Photo ${i + 1}`}</p>
                   {motionControls(sh, i)}
                 </div>
               </li>
@@ -625,7 +625,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {step === "style" && (
         <section className="card p-6">
           <h2 className="font-display text-2xl">Pick a look and music</h2>
-          <p className="mb-4 mt-1 text-sm text-ink-soft">This sets the text style of your full walkthrough. The short Reels each get their own style.</p>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">Choose how the words on your video look. Any of them works; pick the one that feels like you.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {TEMPLATES.map((t) => (
               <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ template: t.id })}
@@ -637,8 +637,9 @@ function Editor({ id, user }: { id: string; user: User }) {
               </button>
             ))}
           </div>
-          <div className="mt-6">
-            <span className="label">Transitions between rooms</span>
+          <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+          <MoreOptions>
+            <span className="label">How the video moves between rooms</span>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {TRANSITIONS.map((t) => (
                 <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ transition: t.id })}
@@ -649,76 +650,83 @@ function Editor({ id, user }: { id: string; user: User }) {
                 </button>
               ))}
             </div>
-          </div>
-          <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+          </MoreOptions>
         </section>
       )}
 
       {/* ---------------- 5. details */}
       {step === "details" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl">Listing details and branding</h2>
-          <p className="mb-4 mt-1 text-sm text-ink-soft">These go on the title card and closing card.</p>
+          <h2 className="font-display text-2xl">Tell us about the home</h2>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">This shows at the start of your video. Only the address is required.</p>
           <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Street address" value={listing.address} onSave={(v) => saveListing({ address: v })} placeholder="1234 Oak Hollow Dr" />
             <Field label="City, state, ZIP" value={listing.city_line} onSave={(v) => saveListing({ city_line: v })} placeholder="Austin, TX 78704" />
-            <Field label="Price (optional)" value={listing.price ?? ""} onSave={(v) => saveListing({ price: v || null })} placeholder="$875,000" hint="Needed for the Guess the Price Reel" />
+            <Field label="Price (optional)" value={listing.price ?? ""} onSave={(v) => saveListing({ price: v || null })} placeholder="$875,000" />
             <Field label="Beds" type="number" value={listing.beds?.toString() ?? ""} onSave={(v) => saveListing({ beds: v ? Number(v) : null })} />
             <Field label="Baths" type="number" value={listing.baths?.toString() ?? ""} onSave={(v) => saveListing({ baths: v ? Number(v) : null })} />
             <Field label="Square feet" type="number" value={listing.sqft?.toString() ?? ""} onSave={(v) => saveListing({ sqft: v ? Number(v) : null })} />
-            <Field label="Top line" value={listing.kicker} onSave={(v) => saveListing({ kicker: v || "NOW AVAILABLE" })} placeholder="NOW AVAILABLE" hint="e.g. JUST LISTED, OPEN HOUSE SAT, or the community name" />
-            <Field label="Headline (optional)" value={listing.headline} onSave={(v) => saveListing({ headline: v })} placeholder="Defaults to the address" />
-            <Field label="Acres (optional)" type="number" value={listing.acres?.toString() ?? ""} onSave={(v) => saveListing({ acres: v ? Number(v) : null })} />
-            <Field label="Open house (optional)" value={listing.open_house ?? ""} onSave={(v) => saveListing({ open_house: v || null })} placeholder="Sat, Nov 8 · 1–4 PM" hint="Adds an Open House Reel to your pack" />
           </fieldset>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <fieldset disabled={!labelsEditable}>
-              <span className="label">Formats</span>
-              {[
-                { v: "16:9", t: "16:9 · MLS, YouTube, website" },
-                { v: "9:16", t: "9:16 · Reels, TikTok, Shorts" },
-              ].map((f) => (
-                <label key={f.v} className="flex items-center gap-2 py-1 text-sm">
-                  <input type="checkbox" checked={listing.formats.includes(f.v)}
-                    onChange={(e) => saveListing({
-                      formats: e.target.checked ? [...new Set([...listing.formats, f.v])] : listing.formats.filter((x) => x !== f.v),
-                    })} />
-                  {f.t}
-                </label>
-              ))}
-            </fieldset>
-            <div>
-              <label htmlFor="outro" className="label">Closing card</label>
-              <select id="outro" className="input" disabled={!labelsEditable} value={listing.outro}
-                onChange={(e) => saveListing({ outro: e.target.value as Listing["outro"] })}>
-                <option value="branded">Your branding (name, brokerage, phone, headshot, logo)</option>
-                <option value="client">Your client&apos;s branding (for photographers)</option>
-                <option value="simple">Address only</option>
-                <option value="none">No closing card (unbranded)</option>
-              </select>
-              {listing.outro === "branded" && (
-                <p className="mt-1 text-xs text-ink-soft">Edit it in <Link href="/settings" className="underline">Branding</Link>.</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="hook" className="label">Teaser opening line</label>
-              <select id="hook" className="input" disabled={!labelsEditable} value={listing.hook ?? "inside"}
-                onChange={(e) => saveListing({ hook: e.target.value })}>
-                {HOOKS.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.text
-                      .replace("{beds}", listing.beds ? String(listing.beds) : "#")
-                      .replace("{city}", listing.city_line.split(",")[0].trim() || "your city")
-                      .replace("{price}", listing.price || "$___")}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-ink-soft">Shown at the start of the 15-second teaser Reel.</p>
-            </div>
-            {listing.outro === "client" && (
-              <ClientBranding listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+
+          <div className="mt-6 max-w-xl">
+            <label htmlFor="outro" className="label">What shows at the end of the video?</label>
+            <select id="outro" className="input" disabled={!labelsEditable} value={listing.outro}
+              onChange={(e) => saveListing({ outro: e.target.value as Listing["outro"] })}>
+              <option value="branded">My name, photo, brokerage and phone</option>
+              <option value="client">My client&apos;s info (I&apos;m a photographer)</option>
+              <option value="simple">Just the address</option>
+              <option value="none">Nothing</option>
+            </select>
+            {listing.outro === "branded" && (
+              <p className="mt-1 text-xs text-ink-soft">Change your name, photo or logo anytime in <Link href="/settings" className="underline">Branding</Link>.</p>
             )}
           </div>
+          {listing.outro === "client" && (
+            <div className="mt-4"><ClientBranding listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} /></div>
+          )}
+
+          <MoreOptions>
+            <fieldset disabled={!labelsEditable} className="grid gap-4 sm:grid-cols-2">
+              <Field label="Small line above the address" value={listing.kicker} onSave={(v) => saveListing({ kicker: v || "NOW AVAILABLE" })}
+                placeholder="NOW AVAILABLE" hint="For example JUST LISTED, OPEN HOUSE SAT, or the neighborhood name" />
+              <Field label="Big headline" value={listing.headline} onSave={(v) => saveListing({ headline: v })}
+                placeholder="Uses the address if left blank" />
+              <Field label="Acres" type="number" value={listing.acres?.toString() ?? ""} onSave={(v) => saveListing({ acres: v ? Number(v) : null })} />
+              <Field label="Open house date and time" value={listing.open_house ?? ""} onSave={(v) => saveListing({ open_house: v || null })}
+                placeholder="Sat, Nov 8 · 1–4 PM" hint="We'll add an Open House Reel" />
+            </fieldset>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <fieldset disabled={!labelsEditable}>
+                <span className="label">Video shapes</span>
+                {[
+                  { v: "16:9", t: "Wide, for MLS, YouTube and your website" },
+                  { v: "9:16", t: "Tall, for Instagram, TikTok and Facebook Reels" },
+                ].map((f) => (
+                  <label key={f.v} className="flex items-center gap-2 py-1 text-sm">
+                    <input type="checkbox" checked={listing.formats.includes(f.v)}
+                      onChange={(e) => saveListing({
+                        formats: e.target.checked ? [...new Set([...listing.formats, f.v])] : listing.formats.filter((x) => x !== f.v),
+                      })} />
+                    {f.t}
+                  </label>
+                ))}
+              </fieldset>
+              <div>
+                <label htmlFor="hook" className="label">First words of your short teaser video</label>
+                <select id="hook" className="input" disabled={!labelsEditable} value={listing.hook ?? "inside"}
+                  onChange={(e) => saveListing({ hook: e.target.value })}>
+                  {HOOKS.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.text
+                        .replace("{beds}", listing.beds ? String(listing.beds) : "#")
+                        .replace("{city}", listing.city_line.split(",")[0].trim() || "your city")
+                        .replace("{price}", listing.price || "$___")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </MoreOptions>
         </section>
       )}
 
@@ -726,17 +734,16 @@ function Editor({ id, user }: { id: string; user: User }) {
       {step === "checkout" && (
         <>
           <section className="card p-6">
-            <h2 className="font-display text-2xl">Check everything, then make it</h2>
+            <h2 className="font-display text-2xl">Look it over, then we&apos;ll make it</h2>
             <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {([
                 ["Photos", `${shots.length} photos`, "arrange"],
-                ["Motion", `${shots.filter((x) => x.effect && x.effect !== "none").length} AI effects · ${
-                  shots.filter((x) => (x.move || "auto") !== "auto").length} custom camera moves`, "motion"],
+                ["Effects", `${shots.filter((x) => x.effect && x.effect !== "none").length || "No"} special effects`, "motion"],
                 ["Look", `${TEMPLATES.find((t) => t.id === listing.template)?.name ?? "—"} · ${
                   TRANSITIONS.find((t) => t.id === (listing.transition ?? "crossfade"))?.name ?? ""}`, "style"],
                 ["Music", MUSIC.find((m) => m.id === (listing.music ?? "none"))?.name ?? (listing.music === "custom" ? "Your upload" : "None"), "style"],
                 ["Address", [listing.address, listing.city_line].filter(Boolean).join(", ") || "—", "details"],
-                ["Formats", listing.formats.join(" + ") || "—", "details"],
+                ["Video shapes", listing.formats.map((f) => (f === "9:16" ? "Tall" : "Wide")).join(" + ") || "—", "details"],
               ] as [string, string, StepId][]).map(([k, v, st]) => (
                 <div key={k} className="flex items-baseline justify-between gap-3 border-b border-line pb-2">
                   <dt className="text-ink-soft">{k}</dt>
@@ -758,7 +765,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 7. clips */}
       {step === "clips" && (status === "queued" || status === "generating") && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl">Making your camera moves</h2>
+          <h2 className="font-display text-2xl">Bringing your photos to life</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {readyCount} of {shots.length} clips done. This usually takes 5 to 10 minutes. You can leave this page; we&apos;ll keep going.
           </p>
@@ -772,14 +779,14 @@ function Editor({ id, user }: { id: string; user: User }) {
           <section className="card p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-2xl">Review your clips</h2>
+                <h2 className="font-display text-2xl">Approve your clips</h2>
                 <p className="text-sm text-ink-soft">
-                  Watch each one. If a room looks off, hit Redo for a new take, or change its effect or camera move.
-                  When you&apos;re happy, make your Reel pack.
+                  Each photo is now a short moving clip. Watch them, and if one looks off, tap Redo for a free new
+                  version. Happy with them? Tap the button to make your videos.
                 </p>
               </div>
               <button className="btn-gold" disabled={busy || stillWorking || readyCount === 0} onClick={() => setStatus("rendering")}>
-                {stillWorking ? "Waiting on redos…" : "Make my Reel pack →"}
+                {stillWorking ? "Finishing your redos…" : "Make my videos →"}
               </button>
             </div>
             <ol className="mt-5 space-y-3">
@@ -808,7 +815,7 @@ function Editor({ id, user }: { id: string; user: User }) {
         <section className="card p-6">
           <h2 className="font-display text-2xl">Building your videos</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Cutting your Reel pack: the full walkthrough plus short versions for social. About 10 minutes. You can leave this page.
+            Putting together your full video and short social clips. This takes about 10 minutes, and you can leave this page; we&apos;ll keep going.
           </p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-line">
             <div className="h-full w-1/3 animate-pulse rounded-full bg-gold" />
@@ -817,7 +824,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
       {step === "videos" && status === "done" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl">Your Reel pack is ready</h2>
+          <h2 className="font-display text-2xl">Your videos are ready</h2>
           <p className="mb-5 mt-1 text-sm text-ink-soft">
             {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
           </p>
@@ -833,7 +840,7 @@ function Editor({ id, user }: { id: string; user: User }) {
                 <div className="mt-2 flex items-center justify-between gap-2 text-sm">
                   <span className="min-w-0">
                     <span className="block font-semibold">{REEL_LABEL[r.kind ?? "tour"] ?? "Video"}</span>
-                    <span className="block text-xs text-muted">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
+                    <span className="block text-xs text-muted">{r.format === "9:16" ? "Tall · Instagram, TikTok" : "Wide · MLS, YouTube"}</span>
                   </span>
                   {videos[r.video_path] && (
                     <a href={videos[r.video_path].download} className="btn-ghost py-1.5">Download</a>
@@ -845,7 +852,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <ShareLink listing={listing} onSave={saveListing} />
             <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
-              Change clips or labels
+              Make changes
             </button>
           </div>
           <p className="mt-4 text-xs text-muted">
@@ -874,6 +881,20 @@ function Editor({ id, user }: { id: string; user: User }) {
   );
 }
 
+
+/** Extra settings most people never need, tucked away until asked for. */
+function MoreOptions({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="group mt-6 rounded-xl border border-line">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold">
+        More options
+        <span className="text-xs font-normal text-muted group-open:hidden">Optional · the defaults work great</span>
+        <span aria-hidden className="text-muted transition group-open:rotate-180">▾</span>
+      </summary>
+      <div className="border-t border-line p-4">{children}</div>
+    </details>
+  );
+}
 
 function fmtTime(sec: number) {
   const t = Math.max(0, Math.round(sec));

@@ -34,7 +34,7 @@ export const EFFECTS = [
   { id: "water", name: "Moving water", blurb: "Pool, spa or water view ripples and shimmers." },
   { id: "fire", name: "Fireplace glow", blurb: "A warm fire flickers in the fireplace or fire pit." },
   { id: "reveal", name: "Drone reveal", blurb: "Flies back and up to reveal the whole property. Use on aerials." },
-  { id: "frames", name: "Start & end frame", blurb: "Pick a second photo and the camera travels from this view to that one." },
+  { id: "frames", name: "Room to room", blurb: "Pick a second photo and the camera walks from this room into that one." },
 ] as const;
 
 // Camera direction per photo. Keep in sync with render/engine/ai_motion.py MOVES_BOLD

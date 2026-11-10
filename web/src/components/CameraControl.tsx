@@ -34,13 +34,21 @@ export function CameraControl({ shot, photo, disabled, review, onSave }: {
 
   if (!open)
     return (
-      <div className="sm:col-span-2">
-        <button type="button" disabled={disabled} onClick={start}
-          className="input flex items-center justify-between gap-2 py-2 text-left disabled:opacity-60">
-          <span><span className="mr-2 inline-block w-4 text-center">{cur.icon}</span>Camera: {cur.text}</span>
-          <span className="text-xs font-semibold text-gold-deep">{disabled ? "" : "Adjust"}</span>
-        </button>
-        {shot.effect === "reveal" && <span className="mt-1 block text-xs text-muted">Drone reveal sets its own camera move.</span>}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft sm:col-span-2">
+        {shot.effect === "reveal" ? (
+          <span>The drone reveal sets its own camera move.</span>
+        ) : (
+          <>
+            <span>
+              Camera: {(shot.move || "auto") === "auto" ? "we pick the best move" : <>{cur.icon} {cur.text}</>}
+            </span>
+            {!disabled && (
+              <button type="button" onClick={start} className="font-semibold text-ink underline underline-offset-2">
+                Change camera direction
+              </button>
+            )}
+          </>
+        )}
       </div>
     );
 
@@ -85,7 +93,7 @@ export function CameraControl({ shot, photo, disabled, review, onSave }: {
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted">
-          The AI follows this as closely as it can; strong values in several directions at once are less predictable.
+          Tip: one or two directions at a time looks most natural.
           {review && " Applying remakes this clip."}
         </span>
         <span className="flex gap-2">
