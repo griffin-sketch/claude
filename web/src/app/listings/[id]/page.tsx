@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
@@ -525,29 +525,26 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 2. arrange */}
       {step === "arrange" && (
         <section className="card p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-2xl">Put them in order and name the rooms</h2>
-              <p className="text-sm text-ink-soft">
-                Your video plays from #1 down. Drag photos or use the arrows to change the order, or tap
-                Auto-arrange and we&apos;ll do it for you. Room names appear on screen.
-                {status === "review" && " Reordering is free; your clips stay as they are."}
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-xl">
+              <h2 className="font-display text-2xl">Put your photos in order</h2>
+              <p className="mt-1 text-sm text-ink-soft">
+                Your video plays them in this order. Drag a photo to move it, then type the room name under each one.
               </p>
             </div>
             {reorderable && shots.length > 2 && (
               <button type="button" className="btn-ghost" onClick={() => saveOrder(walkthroughOrder(shots))}
-                title="Front of the home first, then living areas, kitchen, bedrooms, baths, outdoor spaces; aerials last">
-                Auto-arrange by room
+                title="Front of the home first, then living areas, kitchen, bedrooms, baths and outdoor spaces">
+                ✨ Auto-arrange
               </button>
             )}
           </div>
-          <Storyboard shots={shots} thumbs={thumbs} reorderable={reorderable} onMove={moveTo} />
           <datalist id="rooms">
             {ROOM_SUGGESTIONS.map((r) => (
               <option key={r} value={r} />
             ))}
           </datalist>
-          <ol className="space-y-3">
+          <ol className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
             {shots.map((sh, i) => (
               <li
                 key={sh.id}
@@ -557,45 +554,42 @@ function Editor({ id, user }: { id: string; user: User }) {
                 onDragOver={(e) => { if (reorderable) { e.preventDefault(); setDragOver(i); } }}
                 onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
                 onDrop={(e) => { e.preventDefault(); setDragOver(null); moveTo(Number(e.dataTransfer.getData("text/plain")), i); }}
-                className={`flex scroll-mt-24 flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center ${
-                  dragOver === i ? "border-gold bg-gold-soft" : "border-line"} ${reorderable ? "sm:cursor-grab" : ""}`}
+                className="group flex min-w-0 flex-col gap-2"
               >
-                {thumb(sh, i, false)}
-                <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                  {i === 0 ? (
-                    <p className="text-sm text-ink-soft sm:col-span-2">
-                      First shot. The address and price show over this one, so it doesn&apos;t need a room name.
-                    </p>
-                  ) : (
-                    <>
-                      <ShotField disabled={!labelsEditable} list="rooms" placeholder="Room name, e.g. Updated Kitchen"
-                        value={sh.label} onSave={(v) => saveShot(sh, { label: v })} />
-                      <ShotField disabled={!labelsEditable} placeholder="Detail (optional), e.g. Quartz island"
-                        value={sh.sub} onSave={(v) => saveShot(sh, { sub: v })} />
-                    </>
+                <div className={`relative aspect-[4/3] overflow-hidden rounded-xl bg-line ring-2 transition ${
+                  dragOver === i ? "ring-ink" : "ring-transparent"} ${reorderable ? "cursor-grab active:cursor-grabbing" : ""}`}>
+                  {thumbs[sh.photo_path] && (
+                    <img src={thumbs[sh.photo_path]} alt={sh.label || `Photo ${i + 1}`} draggable={false} className="h-full w-full object-cover" />
                   )}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-1">
+                  <span className="absolute left-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-sm font-bold text-ink shadow">
+                    {i + 1}
+                  </span>
+                  {editable && (
+                    <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => remove(sh)}
+                      className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-xs text-white opacity-100 transition hover:bg-black sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100">
+                      ✕
+                    </button>
+                  )}
                   {reorderable && (
-                    <>
-                      <label className="flex items-center gap-1 text-xs text-ink-soft">
-                        <span>Plays</span>
-                        <select aria-label={`Spot for photo ${i + 1}`} className="input w-auto py-1.5 pr-7 text-sm" value={i}
-                          onChange={(e) => moveTo(i, Number(e.target.value))}>
-                          {shots.map((_, k) => (
-                            <option key={k} value={k}>#{k + 1}{k === 0 ? " (opening)" : k === shots.length - 1 ? " (last)" : ""}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <IconBtn label="Move earlier" onClick={() => moveTo(i, i - 1)} disabled={i === 0}>↑</IconBtn>
-                      <IconBtn label="Move later" onClick={() => moveTo(i, i + 1)} disabled={i === shots.length - 1}>↓</IconBtn>
-                    </>
+                    <span className="absolute bottom-2 right-2 flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                      <button type="button" aria-label={`Move photo ${i + 1} earlier`} disabled={i === 0} onClick={() => moveTo(i, i - 1)}
+                        className="grid h-8 w-8 place-items-center rounded-full bg-white text-ink shadow disabled:opacity-40">‹</button>
+                      <button type="button" aria-label={`Move photo ${i + 1} later`} disabled={i === shots.length - 1} onClick={() => moveTo(i, i + 1)}
+                        className="grid h-8 w-8 place-items-center rounded-full bg-white text-ink shadow disabled:opacity-40">›</button>
+                    </span>
                   )}
-                  {editable && <IconBtn label="Remove" onClick={() => remove(sh)}>✕</IconBtn>}
                 </div>
+                {i === 0 ? (
+                  <p className="px-1 text-xs leading-snug text-ink-soft">
+                    <span className="font-semibold text-ink">Opening shot.</span> The address shows here, so no room name needed.
+                  </p>
+                ) : (
+                  <RoomName shot={sh} disabled={!labelsEditable} onSave={(patch) => saveShot(sh, patch)} />
+                )}
               </li>
             ))}
           </ol>
+          {status === "review" && <p className="mt-5 text-xs text-muted">Changing the order is free; your clips stay as they are.</p>}
         </section>
       )}
 
@@ -882,6 +876,27 @@ function Editor({ id, user }: { id: string; user: User }) {
 }
 
 
+/** Room name under a photo, with an optional detail line that stays hidden until asked for. */
+function RoomName({ shot, disabled, onSave }: { shot: Shot; disabled: boolean; onSave: (patch: Partial<Shot>) => void }) {
+  const [showDetail, setShowDetail] = useState(!!shot.sub);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <ShotField disabled={disabled} list="rooms" placeholder="Room name" value={shot.label}
+        onSave={(v) => onSave({ label: v })} />
+      {showDetail ? (
+        <ShotField disabled={disabled} placeholder="Detail, e.g. Quartz island" value={shot.sub}
+          onSave={(v) => onSave({ sub: v })} />
+      ) : (
+        !disabled && (
+          <button type="button" onClick={() => setShowDetail(true)} className="self-start px-1 text-xs font-medium text-ink-soft hover:text-ink">
+            + Add detail
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
 /** Extra settings most people never need, tucked away until asked for. */
 function MoreOptions({ children }: { children: React.ReactNode }) {
   return (
@@ -901,49 +916,6 @@ function fmtTime(sec: number) {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
 
-/** The whole video at a glance: a strip of numbered thumbnails in play order. Drag to reorder (desktop),
- *  or tap one to jump to its settings. */
-function Storyboard({ shots, thumbs, reorderable, onMove }: {
-  shots: Shot[]; thumbs: Record<string, string>; reorderable: boolean; onMove: (from: number, to: number) => void;
-}) {
-  const [over, setOver] = useState<number | null>(null);
-  return (
-    <div className="mb-5 rounded-xl bg-bg p-3 ring-1 ring-line">
-      <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-ink-soft">
-        <span>Play order</span>
-        <span className="font-normal normal-case tracking-normal text-muted">Start → end</span>
-      </div>
-      <ol className="flex gap-2 overflow-x-auto pb-1">
-        {shots.map((s, i) => (
-          <li
-            key={s.id}
-            draggable={reorderable}
-            onDragStart={(e) => e.dataTransfer.setData("text/plain", String(i))}
-            onDragOver={(e) => { if (reorderable) { e.preventDefault(); setOver(i); } }}
-            onDragLeave={() => setOver((o) => (o === i ? null : o))}
-            onDrop={(e) => { e.preventDefault(); setOver(null); onMove(Number(e.dataTransfer.getData("text/plain")), i); }}
-            className="flex shrink-0 items-center gap-2"
-          >
-            <button
-              type="button"
-              onClick={() => document.getElementById(`shot-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className={`relative w-24 overflow-hidden rounded-md border-2 text-left sm:w-28 ${over === i ? "border-gold" : "border-transparent"} ${reorderable ? "cursor-grab" : ""}`}
-            >
-              <div className="aspect-video bg-line">
-                {thumbs[s.photo_path] && <img src={thumbs[s.photo_path]} alt="" draggable={false} className="h-full w-full object-cover" />}
-              </div>
-              <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">#{i + 1}</span>
-              <span className="block truncate bg-white px-1 py-0.5 text-[11px] text-ink-soft">
-                {i === 0 ? "Opening" : s.label || "Unlabeled"}
-              </span>
-            </button>
-            {i < shots.length - 1 && <span aria-hidden className="text-muted">→</span>}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
 
 function ClipBadge({ status }: { status: Shot["clip_status"] }) {
   const map: Record<string, [string, string]> = {
@@ -958,20 +930,6 @@ function ClipBadge({ status }: { status: Shot["clip_status"] }) {
   return <span className={`absolute right-2 top-2 rounded px-1.5 py-0.5 text-xs font-semibold ${m[1]}`}>{m[0]}</span>;
 }
 
-function IconBtn(props: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={props.label}
-      title={props.label}
-      onClick={props.onClick}
-      disabled={props.disabled}
-      className="h-9 w-9 rounded-lg border border-line text-sm hover:border-gold disabled:opacity-30"
-    >
-      {props.children}
-    </button>
-  );
-}
 
 /** Text input that saves on blur (and on Enter). */
 /** Background music: a library track (with a preview), the customer's own MP3, or none. */
