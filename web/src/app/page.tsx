@@ -417,7 +417,11 @@ export default function Home() {
         <div className={`${wrap} flex flex-wrap items-center justify-between gap-5 border-t border-line pt-8 text-sm text-ink-soft`}>
           <Logo size={24} />
           <span>© {new Date().getFullYear()} Tourvo · KGB Marketing LLC · Texas</span>
-          <Link href="/login" className="hover:text-gold">Sign in</Link>
+          <span className="flex gap-5">
+            <Link href="/terms" className="hover:text-gold">Terms</Link>
+            <Link href="/privacy" className="hover:text-gold">Privacy</Link>
+            <Link href="/login" className="hover:text-gold">Sign in</Link>
+          </span>
         </div>
       </footer>
     </div>

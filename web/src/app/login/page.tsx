@@ -147,6 +147,11 @@ function LoginForm() {
           {state === "error" && <p className="text-sm text-danger">{message}</p>}
         </form>
       )}
+      <p className="mt-8 text-xs leading-relaxed text-muted">
+        By continuing, you agree to our{" "}
+        <Link href="/terms" className="underline hover:text-ink">Terms of Service</Link> and{" "}
+        <Link href="/privacy" className="underline hover:text-ink">Privacy Policy</Link>.
+      </p>
     </div>
   );
 }
