@@ -24,6 +24,7 @@ EFFECTS = {
     "water":   "Moving water",
     "fire":    "Fireplace glow",
     "reveal":  "Drone reveal",
+    "frames":  "Start & end frame",
 }
 
 KEEP = (" Keep the exact same camera position, angle, lens, framing, lighting and surroundings."
@@ -76,6 +77,10 @@ MOTION_ONLY = {
     "reveal": ("Cinematic drone shot: the camera starts close and flies smoothly backward and upward, revealing the whole property "
                "and its surroundings. Continuous, stable, photorealistic."),
 }
+FRAMES_MOTION = ("A smooth, continuous real estate walkthrough shot: the camera physically travels through the home from the "
+                 "first view to the second view, as if gliding between the rooms, with natural parallax and steady motion. "
+                 "It ends exactly on the second view. Photorealistic, stable, one continuous take, no cuts, no morphing.")
+NEG_FRAMES = "cut, jump cut, morphing, warping, melting walls, people, text, watermark, blur, low quality"
 NEG_FX = "people, workers, hands, text, watermark, warping, melting, morphing walls, blur, low quality, cartoon"
 
 # ------------------------------------------------------------------ fal helpers
@@ -138,9 +143,16 @@ def make_vertical(src, kind, dest):
     return dest
 
 # ------------------------------------------------------------------ build the Kling request
-def kling_body(effect, kind, src, tmpdir, base_prompt, stage_style="modern", stage_room="auto"):
-    """Returns (body, extra_image_path or None). src is the (already vertical, if needed) photo."""
+def kling_body(effect, kind, src, tmpdir, base_prompt, stage_style="modern", stage_room="auto", end_src=None):
+    """Returns (body, extra_image_path or None). src is the (already vertical, if needed) photo.
+    end_src: the end frame for "frames" (already vertical, if needed)."""
     effect = effect if effect in EFFECTS else "none"
+    if effect == "frames":
+        if not end_src:
+            effect = "none"   # no end photo picked: a normal camera move
+        else:
+            return {"prompt": FRAMES_MOTION, "image_url": data_uri(src), "tail_image_url": data_uri(end_src),
+                    "negative_prompt": NEG_FRAMES, "cfg_scale": 0.6}, None
     if effect == "build":
         stage = edit(src, STAGE_EDIT[kind] + KEEP, os.path.join(tmpdir, "fx_stage.jpg"))
         return {"prompt": BUILD_MOTION[kind], "image_url": data_uri(stage), "tail_image_url": data_uri(src),

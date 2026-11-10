@@ -7,7 +7,7 @@ import type { Effect } from "@/lib/types";
 
 // Example clip for each effect (in /public/fx). "none" shows a plain camera move.
 const EXAMPLE: Record<string, string> = {
-  none: "move", build: "build", staging: "staging", dusk: "dusk", water: "water", fire: "fire", reveal: "reveal",
+  none: "move", build: "build", staging: "staging", dusk: "dusk", water: "water", fire: "fire", reveal: "reveal", frames: "frames",
 };
 
 /** Pick a photo's AI effect by watching an example of each one. */

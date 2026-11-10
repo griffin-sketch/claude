@@ -12,6 +12,7 @@ import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
 import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
+import { EndFramePicker } from "@/components/EndFramePicker";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
@@ -132,7 +133,7 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   // Signed URLs for photo thumbnails, clips and finished videos.
   useEffect(() => {
-    const need = shots.filter((s) => !thumbs[s.photo_path]).map((s) => s.photo_path);
+    const need = [...new Set(shots.flatMap((s) => [s.photo_path, s.end_photo_path ?? ""]))].filter((p) => p && !thumbs[p]);
     if (need.length) {
       sb.storage
         .from("photos")
@@ -339,6 +340,23 @@ function Editor({ id, user }: { id: string; user: User }) {
         review={status === "review"}
         onPick={(effect) => saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect })}
       />
+      {sh.effect === "frames" && (
+        <EndFramePicker
+          shot={sh}
+          shots={shots}
+          thumbs={thumbs}
+          review={status === "review"}
+          onPick={(end_photo_path) =>
+            saveShot(sh, status === "review" ? { end_photo_path, clip_status: "redo" } : { end_photo_path })}
+          onUpload={async (f) => {
+            const path = `${user.id}/${id}/end-${crypto.randomUUID()}.${fileExt(f.name)}`;
+            const up = await sb.storage.from("photos").upload(path, f, { contentType: f.type || undefined });
+            if (up.error) return setError(up.error.message);
+            setThumbs((prev) => ({ ...prev, [path]: URL.createObjectURL(f) }));
+            await saveShot(sh, status === "review" ? { end_photo_path: path, clip_status: "redo" } : { end_photo_path: path });
+          }}
+        />
+      )}
       {sh.effect === "staging" && (
         <div className="grid grid-cols-2 gap-2 sm:col-span-2">
           <label>

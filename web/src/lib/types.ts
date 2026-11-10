@@ -53,7 +53,7 @@ export type Listing = {
   updated_at: string;
 };
 
-export type Effect = "none" | "build" | "staging" | "dusk" | "water" | "fire" | "reveal";
+export type Effect = "none" | "build" | "staging" | "dusk" | "water" | "fire" | "reveal" | "frames";
 
 export type Shot = {
   id: string;
@@ -73,6 +73,7 @@ export type Shot = {
   error: string | null;
   stage_style?: string;
   stage_room?: string;
+  end_photo_path?: string | null;
 };
 
 export type Staging = {

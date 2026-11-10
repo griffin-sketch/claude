@@ -123,14 +123,20 @@ def submit_clip(shot, index, user_id, orient="h"):
         kind = effects.kind_of(shot, index)
         if orient == "v":
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
+        end_src = None
+        if (shot.get("effect") == "frames") and shot.get("end_photo_path"):
+            end_src = storage_get("photos", shot["end_photo_path"],
+                                  os.path.join(tmp, "end" + os.path.splitext(shot["end_photo_path"])[1]))
+            if orient == "v":
+                end_src = effects.make_vertical(end_src, kind, os.path.join(tmp, "end_vertical.jpg"))
         custom = am.parse_custom(shot.get("move"))
         chosen = custom is not None or (shot.get("move") or "auto") in am.MOVES_BOLD   # the realtor picked the camera
         mv = am.pick_move({"label": shot["label"], "sub": shot["sub"], "move": shot.get("move") or "auto"}, index)
         cam = am.custom_prompt(custom) if custom else am.MOVES_BOLD[mv]
         fx = shot.get("effect") or "none"
         body, _ = effects.kling_body(fx, kind, src, tmp, f"{am.BASE_BOLD} {cam}",
-                                     shot.get("stage_style") or "modern", shot.get("stage_room") or "auto")
-        if chosen and fx not in ("none", "reveal"):
+                                     shot.get("stage_style") or "modern", shot.get("stage_room") or "auto", end_src)
+        if chosen and fx not in ("none", "reveal", "frames"):
             body["prompt"] += " Camera direction: " + cam
         if (shot.get("error") or "").startswith("static") and orient == "h":
             body["prompt"] += BOOST   # the last take barely moved
