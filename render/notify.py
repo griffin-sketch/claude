@@ -8,7 +8,7 @@ import requests
 
 KEY = os.environ.get("RESEND_API_KEY", "").strip()
 FROM = os.environ.get("EMAIL_FROM", "Tourvo <onboarding@resend.dev>").strip()
-SITE = os.environ.get("SITE_URL", "https://listing-video-app.vercel.app").rstrip("/")
+SITE = os.environ.get("SITE_URL", "https://www.gettourvo.com").rstrip("/")
 BLUE, INK, SOFT = "#1F5FD1", "#0B1B2E", "#44546A"
 
 
