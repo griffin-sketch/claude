@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
@@ -180,6 +180,13 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [dragOver, setDragOver] = useState<number | null>(null);
   const labelsEditable = editable || listing?.status === "review" || listing?.status === "done";
   const [dropping, setDropping] = useState(false);
+  const [fxFor, setFxFor] = useState<string | null>(null); // the photo whose effects sheet is open
+  useEffect(() => {
+    if (!fxFor) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setFxFor(null);
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [fxFor]);
 
   // Which step is open. Follows the listing's status (paying moves you to clips, etc.); while a draft, the
   // last step you were on is remembered on this device.
@@ -313,6 +320,9 @@ function Editor({ id, user }: { id: string; user: User }) {
           ? "Pick at least one format to continue."
           : "";
 
+  const fxIndex = shots.findIndex((x) => x.id === fxFor);
+  const fxShot = fxIndex >= 0 ? shots[fxIndex] : null;
+
   const thumb = (sh: Shot, i: number, playClip: boolean) => (
     <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-line sm:w-56">
       {playClip && sh.clip_path && clips[sh.clip_path] ? (
@@ -333,9 +343,10 @@ function Editor({ id, user }: { id: string; user: User }) {
     </div>
   );
 
-  const motionControls = (sh: Shot, i: number) => (
+  const motionControls = (sh: Shot, i: number, inline = false) => (
     <>
       <EffectPicker
+        inline={inline}
         value={(sh.effect ?? "none") as Effect}
         review={status === "review"}
         onPick={(effect) => saveShot(sh, status === "review" ? { effect, clip_status: "redo" } : { effect })}
@@ -596,23 +607,68 @@ function Editor({ id, user }: { id: string; user: User }) {
       {/* ---------------- 3. motion */}
       {step === "motion" && (
         <section className="card p-6">
-          <h2 className="font-display text-2xl">Add effects (optional)</h2>
-          <p className="mb-4 mt-1 text-sm text-ink-soft">
-            Every photo already gets a smooth camera move, so you can skip this step. Want something extra, like
-            staging an empty room or turning the sky to sunset? Tap &quot;See effects&quot; on that photo.
-          </p>
-          <ol className="space-y-3">
-            {shots.map((sh, i) => (
-              <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
-                {thumb(sh, i, false)}
-                <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                  <p className="text-sm font-semibold sm:col-span-2">{i === 0 ? "First shot" : sh.label || `Photo ${i + 1}`}</p>
-                  {motionControls(sh, i)}
-                </div>
-              </li>
-            ))}
+          <div className="mb-5 max-w-xl">
+            <h2 className="font-display text-2xl">Add effects (optional)</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Every photo already gets a smooth camera move, so you can skip this. Want something extra, like staging an
+              empty room or turning the sky to sunset? Tap that photo.
+            </p>
+          </div>
+          <ol className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+            {shots.map((sh, i) => {
+              const fx = EFFECTS.find((x) => x.id === (sh.effect ?? "none"));
+              const has = (sh.effect ?? "none") !== "none";
+              return (
+                <li key={sh.id} className="flex min-w-0 flex-col gap-2">
+                  <button type="button" onClick={() => setFxFor(sh.id)} aria-label={`Effects for photo ${i + 1}`}
+                    className={`group relative block aspect-[4/3] overflow-hidden rounded-xl bg-line ring-2 transition ${
+                      has ? "ring-ink" : "ring-transparent hover:ring-line"}`}>
+                    {thumbs[sh.photo_path] && (
+                      <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover transition group-hover:scale-[1.03]" />
+                    )}
+                    <span className="absolute left-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-sm font-bold text-ink shadow">
+                      {i + 1}
+                    </span>
+                    {has && (
+                      <span className="absolute bottom-2 left-2 rounded-full bg-ink px-2.5 py-1 text-xs font-semibold text-white shadow">
+                        ✨ {fx?.name}
+                      </span>
+                    )}
+                  </button>
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="truncate text-sm font-medium">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</span>
+                    <button type="button" onClick={() => setFxFor(sh.id)} className="shrink-0 text-xs font-semibold text-ink underline underline-offset-2">
+                      {has ? "Change" : "Add effect"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         </section>
+      )}
+
+      {/* effect sheet for one photo */}
+      {fxShot && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-8" onClick={() => setFxFor(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Effects for this photo"
+            className="card mx-auto max-w-4xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                {thumbs[fxShot.photo_path] && (
+                  <img src={thumbs[fxShot.photo_path]} alt="" className="aspect-[4/3] w-20 shrink-0 rounded-lg object-cover" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-muted">Photo {fxIndex + 1}</p>
+                  <h3 className="truncate font-display text-2xl">{fxIndex === 0 ? "Opening shot" : fxShot.label || `Photo ${fxIndex + 1}`}</h3>
+                </div>
+              </div>
+              <button type="button" className="btn-primary" onClick={() => setFxFor(null)}>Done</button>
+            </div>
+            <p className="mb-3 text-sm text-ink-soft">Pick an effect for this photo. Each card plays an example.</p>
+            <div className="grid gap-3 sm:grid-cols-2">{motionControls(fxShot, fxIndex, true)}</div>
+          </div>
+        </div>
       )}
 
       {/* ---------------- 4. style */}

@@ -11,8 +11,11 @@ const EXAMPLE: Record<string, string> = {
 };
 
 /** Pick a photo's AI effect by watching an example of each one. */
-export function EffectPicker({ value, review, onPick }: { value: Effect; review: boolean; onPick: (fx: Effect) => void }) {
-  const [open, setOpen] = useState(false);
+export function EffectPicker({ value, review, onPick, inline = false }: {
+  value: Effect; review: boolean; onPick: (fx: Effect) => void; inline?: boolean;
+}) {
+  const [opened, setOpen] = useState(false);
+  const open = inline || opened;
   const cur = EFFECTS.find((fx) => fx.id === value) ?? EFFECTS[0];
 
   if (!open)
@@ -29,17 +32,19 @@ export function EffectPicker({ value, review, onPick }: { value: Effect; review:
     );
 
   return (
-    <div className="rounded-xl border border-line bg-bg p-3 sm:col-span-2">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">Pick an effect{review && <span className="font-normal text-ink-soft"> · changing it remakes this clip</span>}</span>
-        <button type="button" className="text-xs font-semibold text-ink-soft hover:text-ink" onClick={() => setOpen(false)}>Close</button>
-      </div>
+    <div className={inline ? "sm:col-span-2" : "rounded-xl border border-line bg-bg p-3 sm:col-span-2"}>
+      {!inline && (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Pick an effect{review && <span className="font-normal text-ink-soft"> · changing it remakes this clip</span>}</span>
+          <button type="button" className="text-xs font-semibold text-ink-soft hover:text-ink" onClick={() => setOpen(false)}>Close</button>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {EFFECTS.map((fx) => {
           const on = fx.id === value;
           return (
             <button key={fx.id} type="button" aria-pressed={on}
-              onClick={() => { if (!on) onPick(fx.id as Effect); setOpen(false); }}
+              onClick={() => { if (!on) onPick(fx.id as Effect); if (!inline) setOpen(false); }}
               className={`overflow-hidden rounded-lg border-2 bg-surface text-left transition ${on ? "border-gold" : "border-transparent hover:border-line"}`}>
               <div className="relative">
                 <LoopVideo src={`/fx/${EXAMPLE[fx.id]}.mp4`} poster={`/fx/${EXAMPLE[fx.id]}.jpg`} label={`${fx.name} example`}
