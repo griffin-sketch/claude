@@ -73,6 +73,7 @@ export type Shot = {
   vclip_path?: string | null;
   clip_path: string | null;
   clip_attempts: number;
+  user_redos?: number;
   approved: boolean;
   error: string | null;
   stage_style?: string;

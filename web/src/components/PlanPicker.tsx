@@ -82,7 +82,7 @@ export function PlanPicker({
                 <li>
                   <b className="text-ink">{p.stagingPerMonth} staged photos</b> a month
                 </li>
-                <li>Full Reel pack, clip redos, your branding</li>
+                <li>Full Reel pack, 5 clip redos per video, your branding</li>
                 <li>{per.months === 1 ? "Cancel anytime" : "Unused videos last the whole term"}</li>
               </ul>
               <p className="text-xs text-muted">{p.blurb}</p>

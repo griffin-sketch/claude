@@ -38,7 +38,7 @@ CLIP_SECONDS = 5
 # The renderer's subtle digital drift goes the same way as the AI camera move, so they never fight.
 DRIFT_FOR = {"push": "push", "pull": "pull", "pan_left": "pan_l", "pan_right": "pan_r", "glide": "pan_r",
              "orbit_left": "pan_l", "orbit_right": "pan_r", "rise": "push", "descend": "push", "tilt_up": "rise"}
-STATIC_BELOW = 2.5        # motion score under this = the AI camera barely moved: remake it once, pushing harder
+STATIC_BELOW = 2.5        # motion score under this = the AI camera barely moved (logged only; no automatic remake)
 BOOST = (" IMPORTANT: the camera must move clearly and continuously for the entire clip, a steady and noticeable"
          " dolly forward through the space with strong parallax. Never hold still.")
 VERTICAL_SHOTS = 8      # photos that also get a true 9:16 clip (the Reels use these)
@@ -184,7 +184,7 @@ def step_queued():
 
 def step_redo():
     for s in db_get("shots", clip_status="eq.redo"):
-        if (s.get("clip_attempts") or 0) >= MAX_ATTEMPTS + 2:
+        if (s.get("clip_attempts") or 0) >= MAX_ATTEMPTS + 6:   # 5 customer redos per listing + retries after errors
             db_patch("shots", {"id": s["id"]}, {"clip_status": "ready", "error": "Redo limit reached"})
             continue
         l = db_get("listings", id=f"eq.{s['listing_id']}")
@@ -241,9 +241,7 @@ def step_poll():
                     score = motion_score(dest)
                 upd = {status_f: "ready", path_f: path}
                 if orient == "h": upd["error"] = None
-                if (orient == "h" and score < STATIC_BELOW and (s.get("effect") or "none") not in TRANSFORMS
-                        and (s.get("clip_attempts") or 1) < MAX_ATTEMPTS and not (s.get("error") or "").startswith("static")):
-                    upd.update(clip_status="redo", error=f"static take (motion {score:.1f}), remaking with a stronger move")
+                # No automatic remakes for clips that barely move: customers redo clips themselves (5 per listing).
                 db_patch("shots", {"id": s["id"]}, upd)
                 log(f"  shot {s['position'] + 1} [{orient}] of {s['listing_id'][:8]}: {upd[status_f]} · motion {score:.1f}")
             except Exception as e:

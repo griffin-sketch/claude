@@ -53,7 +53,7 @@ export default function TermsPage() {
 
       <Section id="refunds" title="4. Redos and refunds">
         <p>
-          AI results vary. Before your final videos are made, you can review each clip and ask for a new version of any clip you don&apos;t like. If
+          AI results vary. Before your final videos are made, you can review each clip and ask for a new version of clips you don&apos;t like, up to 5 redos per listing; a clip that fails to generate is remade free. If
           something we deliver is broken, fails to generate, or is clearly not what the Service describes, email us within 14 days and we&apos;ll
           remake it or refund that purchase.
         </p>

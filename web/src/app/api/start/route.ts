@@ -1,6 +1,6 @@
 import { activePlan, admin, fail, HttpError, isAdmin, planCheckout, requireUser, siteUrl } from "@/lib/server";
 import { isInterval, isPlan } from "@/lib/plans";
-import { MIN_PHOTOS } from "@/lib/config";
+import { MAX_PHOTOS, MIN_PHOTOS } from "@/lib/config";
 
 /**
  * Start making a listing's clips.
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     if (!listing.address?.trim() || (count ?? 0) < MIN_PHOTOS) {
       throw new HttpError(400, `Add the street address and at least ${MIN_PHOTOS} photos first.`);
     }
+    if ((count ?? 0) > MAX_PHOTOS) throw new HttpError(400, `A video can have up to ${MAX_PHOTOS} photos. Remove ${(count ?? 0) - MAX_PHOTOS} to continue.`);
 
     const queue = async (paid_via: string) => {
       const { error } = await db

@@ -2,7 +2,8 @@
 export const APP_NAME = "Tourvo";
 export const APP_TAGLINE = "Turn listing photos into a cinematic walkthrough video, branded for you, in about 15 minutes.";
 
-export const MAX_PHOTOS = 20;
+export const MAX_PHOTOS = 15;
+export const REDO_LIMIT = 5; // clip redos a customer can ask for, per listing (must match 0011_redo_limit.sql)
 export const MIN_PHOTOS = 3;
 
 export const TEMPLATES = [

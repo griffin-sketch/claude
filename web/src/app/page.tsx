@@ -40,7 +40,7 @@ const STEPS = [
     img: "/home/kitchen.jpg",
     alt: "Kitchen listing photo",
     title: "Review, then download",
-    body: "Watch every clip. Redo any shot you don't love at no charge. Then download your Reel pack: the full walkthrough plus short cuts for Reels, TikTok and Shorts.",
+    body: "Watch every clip. Redo up to 5 shots you don't love on every listing. Then download your Reel pack: the full walkthrough plus short cuts for Reels, TikTok and Shorts.",
   },
 ];
 

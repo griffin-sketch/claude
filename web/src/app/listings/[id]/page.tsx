@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { packPlan, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
@@ -66,6 +66,7 @@ function defaultStep(l: Listing, photos: number): StepId {
 function Editor({ id, user }: { id: string; user: User }) {
   const [listing, setListing] = useState<Listing | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
+  const redosLeft = Math.max(0, REDO_LIMIT - shots.reduce((a, s) => a + (s.user_redos ?? 0), 0));
   const [renders, setRenders] = useState<Render[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [clips, setClips] = useState<Record<string, string>>({});
@@ -210,9 +211,19 @@ function Editor({ id, user }: { id: string; user: User }) {
   }
 
   async function saveShot(shot: Shot, patch: Partial<Shot>) {
-    setShots((prev) => prev.map((s) => (s.id === shot.id ? { ...s, ...patch } : s)));
+    // A new take the customer asks for uses one of the listing's redos (remaking a failed clip is free).
+    const counts = patch.clip_status === "redo" && !["redo", "failed"].includes(shot.clip_status);
+    if (counts && redosLeft <= 0) {
+      setError(`You've used all ${REDO_LIMIT} redos for this listing.`);
+      return;
+    }
+    const local = counts ? { ...patch, user_redos: (shot.user_redos ?? 0) + 1 } : patch;
+    setShots((prev) => prev.map((s) => (s.id === shot.id ? { ...s, ...local } : s)));
     const { error } = await sb.from("shots").update(patch).eq("id", shot.id);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      load();
+    }
   }
 
   async function addPhotos(files: FileList) {
@@ -288,6 +299,7 @@ function Editor({ id, user }: { id: string; user: User }) {
     if (!listing) return m;
     if (!listing.address.trim()) m.push("the street address");
     if (shots.length < MIN_PHOTOS) m.push(`at least ${MIN_PHOTOS} photos`);
+    if (shots.length > MAX_PHOTOS) m.push(`no more than ${MAX_PHOTOS} photos (remove ${shots.length - MAX_PHOTOS})`);
     if (!listing.formats.length) m.push("a video format");
     return m;
   }, [listing, shots.length]);
@@ -854,7 +866,7 @@ function Editor({ id, user }: { id: string; user: User }) {
               <div>
                 <h2 className="font-display text-2xl">Approve your clips</h2>
                 <p className="text-sm text-ink-soft">
-                  Each photo is now a short moving clip. Watch them, and if one looks off, tap Redo for a free new
+                  Each photo is now a short moving clip. Watch them, and if one looks off, tap Redo for a new
                   version. Happy with them? Tap the button to make your videos.
                 </p>
               </div>
@@ -862,6 +874,9 @@ function Editor({ id, user }: { id: string; user: User }) {
                 {stillWorking ? "Finishing your redos…" : "Make my videos →"}
               </button>
             </div>
+            <p className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${redosLeft > 0 ? "bg-gold-soft text-ink" : "bg-danger/10 text-danger"}`}>
+              {redosLeft > 0 ? `${redosLeft} of ${REDO_LIMIT} redos left for this listing` : `All ${REDO_LIMIT} redos used`}
+            </p>
             <ol className="mt-5 space-y-3">
               {shots.map((sh, i) => (
                 <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
@@ -870,7 +885,10 @@ function Editor({ id, user }: { id: string; user: User }) {
                     <div className="flex items-center justify-between gap-2 sm:col-span-2">
                       <p className="text-sm font-semibold">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
                       {sh.clip_status === "ready" && (
-                        <button className="btn-ghost py-1.5" onClick={() => redo(sh)}>Redo</button>
+                        <button className="btn-ghost py-1.5" disabled={redosLeft <= 0} onClick={() => redo(sh)}>Redo</button>
+                      )}
+                      {sh.clip_status === "failed" && (
+                        <button className="btn-ghost py-1.5" onClick={() => redo(sh)}>Try again (free)</button>
                       )}
                     </div>
                     {motionControls(sh, i)}
