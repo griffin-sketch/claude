@@ -8,7 +8,7 @@ language plpgsql as $$
 declare
   v_used int;
 begin
-  if auth.role() = 'service_role' then
+  if coalesce(auth.role(), 'service_role') = 'service_role' then -- the worker, or the SQL editor
     return new;
   end if;
   if tg_op = 'INSERT' then
@@ -25,7 +25,8 @@ begin
     if old.clip_status = 'failed' then
       return new; -- remaking a failed clip is on us
     end if;
-    select coalesce(sum(user_redos), 0) into v_used from public.shots where listing_id = new.listing_id for update;
+    perform 1 from public.listings where id = new.listing_id for update; -- one redo at a time per listing
+    select coalesce(sum(user_redos), 0) into v_used from public.shots where listing_id = new.listing_id;
     if v_used >= 5 then
       raise exception 'You''ve used all 5 redos for this listing.';
     end if;
