@@ -2,7 +2,8 @@ import { admin, customerFor, fail, HttpError, isAdmin, PRICES, requireUser, site
 
 /**
  * Staged photos.
- * body: { action: "checkout", ids: string[] }  -> pay $5 per photo (returns a Stripe Checkout URL); admins get them free
+ * body: { action: "checkout", ids: string[] }  -> unlock: photos included in the plan first, then $5 each
+ *                                                (returns a Stripe Checkout URL for the rest); admins get them free
  *       { action: "download", id: string }      -> a short-lived link to the clean full-size photo (paid only)
  */
 export async function POST(request: Request) {
@@ -27,13 +28,20 @@ export async function POST(request: Request) {
       const ids = [...new Set(body.ids ?? [])].slice(0, 12);
       if (!ids.length) throw new HttpError(400, "Pick at least one photo.");
       const { data: rows } = await db.from("stagings").select("id, status, paid").eq("user_id", user.id).in("id", ids);
-      const todo = (rows ?? []).filter((r) => !r.paid && r.status === "ready").map((r) => r.id);
+      let todo = (rows ?? []).filter((r) => !r.paid && r.status === "ready").map((r) => r.id);
       if (!todo.length) throw new HttpError(400, "Those photos are already unlocked or still being staged.");
 
       if (isAdmin(user)) {
         await db.from("stagings").update({ paid: true, paid_via: "comp" }).in("id", todo).eq("user_id", user.id);
         return Response.json({ ok: true, comp: true });
       }
+
+      // Photos included in the plan come first; only the rest go to checkout.
+      const { data: covered, error: rpcError } = await db.rpc("use_staging_credits", { p_user: user.id, p_ids: todo });
+      if (rpcError) throw rpcError;
+      const included = new Set((covered as string[] | null) ?? []);
+      todo = todo.filter((id) => !included.has(id));
+      if (!todo.length) return Response.json({ ok: true, included: included.size });
 
       const back = `${siteUrl(request)}/staging`;
       const session = await stripe().checkout.sessions.create({

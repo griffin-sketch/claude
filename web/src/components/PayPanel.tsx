@@ -1,13 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import { PlanPicker } from "@/components/PlanPicker";
+import type { IntervalId, PlanId } from "@/lib/plans";
 
-type Billing = { plan: string; plan_status: string | null; credits: number };
+type Billing = { plan: string; plan_status: string | null; credits: number; bonus_credits: number; credits_period_end: string | null };
 
-/** Step 4 of a listing: pay (or use a monthly video) and start the clips. */
+/** Last step before clips: use one of your videos, or pick a plan. */
 export function PayPanel({
   user,
   listingId,
@@ -30,20 +33,24 @@ export function PayPanel({
   useEffect(() => {
     supabase()
       .from("profiles")
-      .select("plan, plan_status, credits")
+      .select("plan, plan_status, credits, bonus_credits, credits_period_end")
       .eq("id", user.id)
       .single()
-      .then(({ data }) => setBilling((data as Billing) ?? { plan: "none", plan_status: null, credits: 0 }));
+      .then(({ data }) =>
+        setBilling((data as Billing) ?? { plan: "none", plan_status: null, credits: 0, bonus_credits: 0, credits_period_end: null }),
+      );
   }, [user.id]);
 
-  const subscribed = billing?.plan === "monthly" && ["active", "trialing"].includes(billing.plan_status ?? "");
+  const subscribed = !!billing && billing.plan !== "none" && ["active", "trialing"].includes(billing.plan_status ?? "");
+  const left = (subscribed ? billing?.credits ?? 0 : 0) + (billing?.bonus_credits ?? 0);
   const blocked = missing.length > 0 || !!busy;
+  const refill = billing?.credits_period_end ? new Date(billing.credits_period_end).toLocaleDateString() : null;
 
-  async function start(method: "credit" | "single" | "subscribe") {
-    setBusy(method);
+  async function start(body: Record<string, string>, key: string) {
+    setBusy(key);
     setError("");
     try {
-      const res = await api("/api/start", { listingId, method });
+      const res = await api("/api/start", { listingId, ...body });
       if (res.url) {
         window.location.href = res.url; // Stripe Checkout
         return;
@@ -56,63 +63,44 @@ export function PayPanel({
   }
 
   return (
-    <section className="card p-6">
+    <section className="card p-4 sm:p-6">
       <h2 className="font-display text-2xl">Ready? Let&apos;s make it</h2>
       <p className="text-sm text-ink-soft">
         {missing.length
           ? `Still needed: ${missing.join(", ")}.`
-          : `We'll make ${clipCount} clips. You review them, redo any you don't like, then we build your 16:9 and 9:16 videos.`}
+          : `We'll make ${clipCount} clips. You review them, redo any you don't like, then we build your videos.`}
       </p>
 
-      {paid ? (
-        <button className="btn-gold mt-5 px-6 py-3" disabled={blocked} onClick={() => start("single")}>
+      {!billing ? null : paid ? (
+        <button className="btn-gold mt-5 px-6 py-3" disabled={blocked} onClick={() => start({ method: "credit" }, "credit")}>
           {busy ? "Starting…" : "Generate clips (paid)"}
         </button>
-      ) : subscribed ? (
+      ) : left > 0 ? (
         <div className="mt-5 flex flex-wrap items-center gap-4">
-          <button
-            className="btn-gold px-6 py-3"
-            disabled={blocked || (billing?.credits ?? 0) < 1}
-            onClick={() => start("credit")}
-          >
-            {busy === "credit" ? "Starting…" : "Use 1 of my monthly videos"}
+          <button className="btn-gold min-h-12 px-6" disabled={blocked} onClick={() => start({ method: "credit" }, "credit")}>
+            {busy === "credit" ? "Starting…" : "Use 1 of my videos"}
           </button>
           <span className="text-sm text-ink-soft">
-            {billing?.credits ?? 0} of 3 left this month.
-            {(billing?.credits ?? 0) < 1 && (
-              <>
-                {" "}
-                <button className="underline" disabled={blocked} onClick={() => start("single")}>
-                  Pay $49 for this one
-                </button>
-              </>
-            )}
+            {left} video{left === 1 ? "" : "s"} left
+            {billing.bonus_credits > 0 && ` (${billing.bonus_credits} free from referrals)`}.
           </span>
         </div>
+      ) : subscribed ? (
+        <div className="mt-5 rounded-xl bg-gold-soft p-4 text-sm">
+          <p className="font-semibold">You&apos;ve used all your videos for now.</p>
+          <p className="mt-1 text-ink-soft">
+            {refill ? `They refill on ${refill}.` : "They refill when your plan renews."} Need one sooner?{" "}
+            <Link href="/refer" className="underline">Refer a friend</Link> and you both get a free video.
+          </p>
+        </div>
       ) : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <button
-            className="rounded-xl border-2 border-line p-4 text-left transition hover:border-gold disabled:opacity-50"
-            disabled={blocked}
-            onClick={() => start("single")}
-          >
-            <span className="block text-2xl font-bold">$49</span>
-            <span className="block font-semibold">This video</span>
-            <span className="mt-1 block text-sm text-ink-soft">One-time payment for this listing.</span>
-            <span className="btn-primary mt-3 w-full">{busy === "single" ? "Opening checkout…" : "Pay $49"}</span>
-          </button>
-          <button
-            className="rounded-xl border-2 border-gold p-4 text-left transition hover:brightness-105 disabled:opacity-50"
-            disabled={blocked}
-            onClick={() => start("subscribe")}
-          >
-            <span className="block text-2xl font-bold">
-              $80<span className="text-base font-semibold text-ink-soft">/month</span>
-            </span>
-            <span className="block font-semibold">3 videos every month</span>
-            <span className="mt-1 block text-sm text-ink-soft">This listing uses your first one. Cancel anytime.</span>
-            <span className="btn-gold mt-3 w-full">{busy === "subscribe" ? "Opening checkout…" : "Subscribe"}</span>
-          </button>
+        <div className="mt-6">
+          <p className="mb-4 text-sm font-semibold">Pick a plan. This listing uses your first video.</p>
+          <PlanPicker
+            busy={busy}
+            cta="Start"
+            onPick={(plan: PlanId, interval: IntervalId) => !blocked && start({ method: "subscribe", plan, interval }, `${plan}-${interval}`)}
+          />
         </div>
       )}
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}

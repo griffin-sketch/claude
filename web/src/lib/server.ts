@@ -1,15 +1,14 @@
 import "server-only";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import { grant, INTERVALS, PLANS, type IntervalId, type PlanId } from "@/lib/plans";
 
 /** Pricing. Amounts are in cents. */
 // Shown after the account's name on customers' card statements, e.g. "KGB MARKETING* TOURVO".
 export const STATEMENT_SUFFIX = "TOURVO";
 
 export const PRICES = {
-  single: { amount: 4900, name: "Listing video", description: "One listing: AI camera moves, 16:9 + 9:16 videos" },
   staging: { amount: 500, name: "Virtually staged photo", description: "Full-size, unwatermarked staged photo" },
-  monthly: { amount: 8000, name: "Listing videos: monthly", description: "3 listing videos every month", credits: 3 },
 } as const;
 
 function env(name: string) {
@@ -84,4 +83,51 @@ export async function customerFor(user: User): Promise<string> {
   });
   await db.from("profiles").update({ stripe_customer_id: c.id }).eq("id", user.id);
   return c.id;
+}
+
+/** Is this person on a paid plan right now? */
+export async function activePlan(userId: string) {
+  const { data } = await admin().from("profiles").select("plan, plan_status").eq("id", userId).single();
+  return !!data && data.plan !== "none" && ["active", "trialing", "past_due"].includes(data.plan_status ?? "");
+}
+
+/** A Stripe Checkout page for a plan. listingId: spend the first video on that listing once paid. */
+export async function planCheckout(opts: {
+  user: User;
+  plan: PlanId;
+  interval: IntervalId;
+  successUrl: string;
+  cancelUrl: string;
+  listingId?: string;
+}) {
+  const { user, plan, interval } = opts;
+  const p = PLANS[plan];
+  const g = grant(plan, interval);
+  const per = INTERVALS[interval];
+  const meta: Record<string, string> = { kind: "subscribe", user_id: user.id, plan, interval };
+  if (opts.listingId) meta.listing_id = opts.listingId;
+  const session = await stripe().checkout.sessions.create({
+    mode: "subscription",
+    customer: await customerFor(user),
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: p.price[interval] * 100,
+          recurring: per.stripe,
+          product_data: {
+            name: `Tourvo ${p.name} · ${per.label}`,
+            description: `${g.videos} listing video${g.videos === 1 ? "" : "s"} and ${g.staging} staged photos every ${per.months === 1 ? "month" : per.months === 3 ? "3 months" : "year"}`,
+          },
+        },
+      },
+    ],
+    allow_promotion_codes: true,
+    metadata: meta,
+    subscription_data: { metadata: { user_id: user.id, plan, interval } },
+    success_url: opts.successUrl,
+    cancel_url: opts.cancelUrl,
+  });
+  return session.url;
 }

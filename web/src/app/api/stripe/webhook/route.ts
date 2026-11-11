@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
-import { admin, PRICES, stripe } from "@/lib/server";
+import { admin, stripe } from "@/lib/server";
+import { grant, isInterval, isPlan, LEGACY_MONTHLY } from "@/lib/plans";
 
 /**
  * Stripe → app. Set up in Stripe → Developers → Webhooks with this URL:
@@ -79,45 +80,62 @@ async function onCheckout(session: Stripe.Checkout.Session) {
   if (kind === "subscribe" && session.subscription) {
     const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
     const sub = await stripe().subscriptions.retrieve(subId);
-    const end = periodEnd(sub);
-    const { data: prof } = await db.from("profiles").select("plan, credits_period_end").eq("id", userId).single();
-    // Stripe can deliver an event twice: only grant this period's videos once.
-    const alreadyGranted = prof?.plan === "monthly" && prof.credits_period_end === end;
-    await db
-      .from("profiles")
-      .update({
-        stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
-        plan: "monthly",
-        plan_status: sub.status,
-        ...(alreadyGranted ? {} : { credits: PRICES.monthly.credits, credits_period_end: end }),
-      })
-      .eq("id", userId);
+    await applyPlan(userId, sub, typeof session.customer === "string" ? session.customer : session.customer?.id);
+    // A referred friend's first plan payment: both of them get a free video (once).
+    await db.rpc("reward_referral", { p_referred: userId });
     if (listingId) await db.rpc("use_credit", { p_listing: listingId, p_user: userId });
   }
 }
 
+/** Which plan a subscription is, from the metadata we set at checkout. Old $80/month subscriptions have none. */
+function planOf(sub: Stripe.Subscription) {
+  const plan = sub.metadata?.plan;
+  const interval = sub.metadata?.interval;
+  if (isPlan(plan) && isInterval(interval)) return { plan, interval, ...grant(plan, interval) };
+  return { plan: "monthly" as const, interval: "month" as const, ...LEGACY_MONTHLY };
+}
+
+/** Fill this billing period's videos and staged photos. Unused ones from the last period expire. */
+async function applyPlan(userId: string, sub: Stripe.Subscription, customer?: string) {
+  const db = admin();
+  const end = periodEnd(sub);
+  const p = planOf(sub);
+  const { data: prof } = await db.from("profiles").select("plan, credits_period_end").eq("id", userId).single();
+  // Stripe can deliver an event twice: only fill each period once.
+  const alreadyGranted = prof?.plan === p.plan && !!end && prof.credits_period_end === end;
+  await db
+    .from("profiles")
+    .update({
+      ...(customer ? { stripe_customer_id: customer } : {}),
+      plan: p.plan,
+      plan_interval: p.interval,
+      plan_status: sub.status,
+      ...(alreadyGranted ? {} : { credits: p.videos, staging_credits: p.staging, credits_period_end: end }),
+    })
+    .eq("id", userId);
+}
+
 async function onInvoicePaid(invoice: Stripe.Invoice) {
-  // Renewals only; the first month is handled at checkout.
+  // Renewals only; the first period is handled at checkout.
   if (invoice.billing_reason !== "subscription_cycle") return;
   const customer = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
   if (!customer) return;
   const subs = await stripe().subscriptions.list({ customer, status: "all", limit: 1 });
   const sub = subs.data[0];
-  const end = sub ? periodEnd(sub) : null;
-  const db = admin();
-  const { data: prof } = await db.from("profiles").select("id, credits_period_end").eq("stripe_customer_id", customer).single();
-  if (!prof || (end && prof.credits_period_end === end)) return;
-  await db
-    .from("profiles")
-    .update({ plan: "monthly", plan_status: sub?.status ?? "active", credits: PRICES.monthly.credits, credits_period_end: end })
-    .eq("id", prof.id);
+  if (!sub) return;
+  const { data: prof } = await admin().from("profiles").select("id").eq("stripe_customer_id", customer).single();
+  if (prof) await applyPlan(prof.id, sub);
 }
 
 async function onSubscriptionChange(sub: Stripe.Subscription, type: string) {
   const customer = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
   const db = admin();
   if (type === "customer.subscription.deleted") {
-    await db.from("profiles").update({ plan: "none", plan_status: "canceled", credits: 0 }).eq("stripe_customer_id", customer);
+    // Plan videos and staged photos end with the plan; free referral videos stay.
+    await db
+      .from("profiles")
+      .update({ plan: "none", plan_interval: null, plan_status: "canceled", credits: 0, staging_credits: 0 })
+      .eq("stripe_customer_id", customer);
   } else {
     await db.from("profiles").update({ plan_status: sub.status }).eq("stripe_customer_id", customer);
   }

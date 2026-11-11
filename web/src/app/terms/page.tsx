@@ -35,17 +35,19 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="3. Pricing and payment">
+      <Section title="3. Plans and payment">
         <ul>
-          <li><strong>Single listing video:</strong> a one-time payment per listing, as shown at checkout.</li>
-          <li><strong>Monthly plan:</strong> a recurring monthly charge that includes a set number of listing videos (credits) each billing period. Credits reset at the start of each period and don&apos;t roll over. If you cancel, your plan stays active until the end of the period you&apos;ve paid for, then credits end.</li>
-          <li><strong>Staged photos:</strong> previews are free and watermarked; you pay per photo to download the full-size version.</li>
+          <li><strong>Plans:</strong> listing videos are made with a subscription plan (such as Starter or Growth), billed monthly, every 3 months or yearly. Each billing period includes a set number of listing videos and staged photos. A quarterly or yearly plan includes the whole period&apos;s videos and photos up front.</li>
+          <li><strong>Unused videos and photos</strong> last until the end of the billing period, then expire; they don&apos;t carry into the next period and have no cash value.</li>
+          <li><strong>Renewal and cancelling:</strong> your plan renews automatically at the end of each period and your payment method is charged, until you cancel. You can cancel at any time in Billing; your plan stays active until the end of the period you&apos;ve paid for, then its videos and photos end.</li>
+          <li><strong>Staged photos without a plan:</strong> previews are free and watermarked; you pay per photo to download the full-size version.</li>
+          <li><strong>Free videos:</strong> free videos earned through referrals (section 4A) don&apos;t expire while your account is open and have no cash value.</li>
         </ul>
         <p>
-          Prices are shown on our website and at checkout, in U.S. dollars, and may change. A price change won&apos;t affect anything you&apos;ve
-          already paid for, and we&apos;ll tell you before a new price applies to your monthly plan. Payments are processed by Stripe; by paying, you
-          authorize us to charge your payment method, including automatically each month for a monthly plan until you cancel. You&apos;re responsible
-          for any taxes that apply. You can cancel your monthly plan at any time in Billing.
+          Prices are shown on our website and at checkout, in U.S. dollars, and may change. A price change won&apos;t affect a period you&apos;ve
+          already paid for, and we&apos;ll tell you before a new price applies to your plan&apos;s renewal. Payments are processed by Stripe; by
+          subscribing, you authorize us to charge your payment method at the start of each billing period until you cancel. You&apos;re responsible
+          for any taxes that apply.
         </p>
       </Section>
 
@@ -57,8 +59,17 @@ export default function TermsPage() {
         </p>
         <p>
           Because each order uses paid computing as soon as it starts, purchases are otherwise non-refundable once your clips or staged photos have been
-          generated, and monthly plan charges aren&apos;t refunded for partial months or unused credits. This doesn&apos;t limit any rights you have
+          generated, and plan charges aren&apos;t refunded for the unused part of a billing period or for unused videos or photos. This doesn&apos;t limit any rights you have
           under the law.
+        </p>
+      </Section>
+
+      <Section id="referrals" title="4A. Referrals">
+        <p>
+          You can share your personal referral link. When someone new signs up through it and pays for their first plan, you and they each get one
+          free listing video. Referral links are only for new accounts: you can&apos;t refer yourself, a second account of your own, or anyone who
+          has already paid for Tourvo. Don&apos;t send spam or post your link where it isn&apos;t allowed. We may withhold or take back free videos
+          gained by abuse, and we may change or end the referral program at any time; free videos already earned stay yours.
         </p>
       </Section>
 
@@ -135,7 +146,7 @@ export default function TermsPage() {
         <p>
           You can stop using the Service and ask us to delete your account at any time. We may suspend or close your account if you break these terms,
           don&apos;t pay, or if we&apos;re required to by law. If we close the Service entirely, we&apos;ll give you reasonable notice to download your
-          files and will refund any prepaid, unused monthly plan time. Sections 5 through 15 continue to apply after your account ends.
+          files and will refund any prepaid, unused plan time. Sections 5 through 15 continue to apply after your account ends.
         </p>
       </Section>
 

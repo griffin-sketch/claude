@@ -13,10 +13,14 @@ export type Profile = {
   account_type: "agent" | "photographer";
   company: string | null;
   stripe_customer_id: string | null;
-  plan: "none" | "monthly";
+  plan: "none" | "monthly" | "starter" | "growth";
+  plan_interval: "month" | "quarter" | "year" | null;
   plan_status: string | null;
   credits: number;
   credits_period_end: string | null;
+  staging_credits: number;
+  bonus_credits: number;
+  referral_code: string | null;
 };
 
 export type Listing = {

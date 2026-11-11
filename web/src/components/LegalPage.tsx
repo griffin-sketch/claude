@@ -7,7 +7,7 @@ export const LEGAL = {
   product: "Tourvo",
   site: "www.gettourvo.com",
   email: "info@gettourvo.com",
-  updated: "November 10, 2026",
+  updated: "November 11, 2026",
 };
 
 /** Plain, readable frame for the privacy policy and terms of service. */

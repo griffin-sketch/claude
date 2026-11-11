@@ -187,7 +187,7 @@ export default function LoginPage() {
             <LoginForm />
           </Suspense>
         </div>
-        <p className="text-center text-xs text-muted">Sign up free. You only pay when you make a video.</p>
+        <p className="text-center text-xs text-muted">Sign up free. Pick a plan when you make your first video.</p>
       </main>
     </div>
   );

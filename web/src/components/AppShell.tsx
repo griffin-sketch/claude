@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { APP_NAME } from "@/lib/config";
 import { Logo } from "@/components/Logo";
 import { api } from "@/lib/api";
+import { REF_KEY } from "@/components/RefCapture";
 
 /** Signed-in frame: header + nav. Sends signed-out visitors to /login. */
 export function AppShell({ children }: { children: (user: User) => ReactNode }) {
@@ -33,12 +34,32 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
     if (!user) return;
     api("/api/admin", { ping: true }).then(() => setIsOwner(true)).catch(() => {});
   }, [user]);
+  // a friend's referral link, remembered from before sign-in
+  const [refNote, setRefNote] = useState("");
+  useEffect(() => {
+    if (!user) return;
+    let code: string | null = null;
+    try {
+      code = localStorage.getItem(REF_KEY);
+    } catch {}
+    if (!code) return;
+    api<{ ok: boolean; reason?: string }>("/api/referral", { action: "claim", code })
+      .then((r) => {
+        try {
+          localStorage.removeItem(REF_KEY);
+        } catch {}
+        if (r.ok) setRefNote("You were invited by a friend: when you start a plan, you both get a free listing video.");
+      })
+      .catch(() => {});
+  }, [user]);
+
   const [menu, setMenu] = useState(false);
   const nav = [
     { href: "/dashboard", label: "Listings" },
     { href: "/staging", label: "Staging" },
     { href: "/settings", label: "Branding" },
     { href: "/billing", label: "Billing" },
+    { href: "/refer", label: "Refer a friend" },
     ...(isOwner ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
@@ -49,7 +70,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
           <Link href="/dashboard" aria-label={`${APP_NAME} dashboard`}>
             <Logo size={30} />
           </Link>
-          <nav className="-mr-2 hidden items-center gap-1 text-sm md:flex">
+          <nav className="-mr-2 hidden items-center gap-1 text-sm lg:flex">
             {nav.map((n) => (
               <Link
                 key={n.href}
@@ -74,7 +95,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
             aria-expanded={menu}
             aria-controls="phone-menu"
             onClick={() => setMenu((m) => !m)}
-            className="flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold md:hidden"
+            className="flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold lg:hidden"
           >
             {menu ? "Close" : "Menu"}
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -87,7 +108,7 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
           </button>
         </div>
         {menu && (
-          <nav id="phone-menu" className="border-t border-line px-4 pb-4 pt-2 md:hidden">
+          <nav id="phone-menu" className="border-t border-line px-4 pb-4 pt-2 lg:hidden">
             {nav.map((n) => (
               <Link
                 key={n.href}
@@ -110,6 +131,12 @@ export function AppShell({ children }: { children: (user: User) => ReactNode }) 
         )}
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        {refNote && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-xl bg-gold-soft p-4 text-sm">
+            <span>🎁 {refNote}</span>
+            <button type="button" aria-label="Dismiss" className="text-muted hover:text-ink" onClick={() => setRefNote("")}>✕</button>
+          </div>
+        )}
         {user ? children(user) : <p className="text-sm text-ink-soft">Loading…</p>}
       </main>
     </div>

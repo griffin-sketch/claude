@@ -1,4 +1,12 @@
-import { admin, fail, HttpError, isAdmin, PRICES, requireUser } from "@/lib/server";
+import { admin, fail, HttpError, isAdmin, requireUser } from "@/lib/server";
+import { grant, isInterval, isPlan, perMonth, PLANS } from "@/lib/plans";
+
+/** Rough value of one plan video, and a plan's monthly revenue, for the owner's dashboard. */
+function planValue(plan?: string | null, interval?: string | null) {
+  if (isPlan(plan) && isInterval(interval)) return { perVideo: PLANS[plan].price[interval] / grant(plan, interval).videos, monthly: perMonth(plan, interval) };
+  if (plan === "monthly") return { perVideo: 80 / 3, monthly: 80 };
+  return { perVideo: 0, monthly: 0 };
+}
 
 const CLIP = 0.35;   // Kling 2.5 Turbo Pro, 5 s
 const EDIT = 0.04;   // AI photo edit / expansion
@@ -16,7 +24,7 @@ export async function POST(request: Request) {
       db.from("listings").select("id, user_id, address, city_line, status, paid, paid_via, error, created_at, updated_at, outro").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),
       db.from("renders").select("listing_id"),
-      db.from("profiles").select("id, full_name, company, account_type, plan, plan_status, credits"),
+      db.from("profiles").select("id, full_name, company, account_type, plan, plan_interval, plan_status, credits"),
       db.auth.admin.listUsers({ perPage: 1000 }),
     ]);
     const email = new Map((users.data?.users ?? []).map((u) => [u.id, u.email ?? ""]));
@@ -38,8 +46,8 @@ export async function POST(request: Request) {
     const rows = (listings ?? []).map((l) => {
       const m = perListing.get(l.id) ?? { photos: 0, ready: 0, failed: 0, attempts: 0, vertical: 0, effects: 0 };
       const aiCost = (m.attempts + m.vertical) * CLIP + (m.vertical + m.effects * 2) * EDIT;
-      const revenue = l.paid_via === "single" ? PRICES.single.amount / 100 : l.paid_via === "credit" ? PRICES.monthly.amount / 100 / PRICES.monthly.credits : 0;
       const p = prof.get(l.user_id);
+      const revenue = l.paid_via === "single" ? 49 : l.paid_via === "credit" ? planValue(p?.plan, p?.plan_interval).perVideo : 0;
       return {
         id: l.id, address: l.address || "Untitled", city: l.city_line, status: l.status, paid_via: l.paid_via, error: l.error,
         created_at: l.created_at, updated_at: l.updated_at, email: email.get(l.user_id) ?? "", name: p?.company || p?.full_name || "",
@@ -52,11 +60,11 @@ export async function POST(request: Request) {
     const totals = {
       users: users.data?.users.length ?? 0,
       photographers: (profiles ?? []).filter((p) => p.account_type === "photographer").length,
-      subscribers: (profiles ?? []).filter((p) => p.plan === "monthly" && p.plan_status === "active").length,
+      subscribers: (profiles ?? []).filter((p) => p.plan !== "none" && p.plan_status === "active").length,
       listings: rows.length,
       revenue: Math.round(rows.reduce((a, r) => a + r.revenue, 0) * 100) / 100,
       ai_cost: Math.round(rows.reduce((a, r) => a + r.ai_cost, 0) * 100) / 100,
-      mrr: (profiles ?? []).filter((p) => p.plan === "monthly" && p.plan_status === "active").length * (PRICES.monthly.amount / 100),
+      mrr: Math.round((profiles ?? []).filter((p) => p.plan !== "none" && p.plan_status === "active").reduce((a, p) => a + planValue(p.plan, p.plan_interval).monthly, 0)),
       problems: rows.filter((r) => r.status === "failed" || r.failed > 0).length,
       byStatus,
     };

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
+import { RefCapture } from "@/components/RefCapture";
 
 // Coastal modern: Figtree for text, Fraunces (serif, with optical sizes) for headlines.
 const figtree = localFont({
@@ -27,7 +28,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${figtree.variable} ${fraunces.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        <RefCapture />
+        {children}
+      </body>
     </html>
   );
 }

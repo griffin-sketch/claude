@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { BeforeAfter, LoopVideo } from "@/components/Showcase";
+import { PlanPicker } from "@/components/PlanPicker";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -44,7 +45,7 @@ const STEPS = [
 ];
 
 const FAQ = [
-  ["Can I get staged photos too?", "Yes. Stage any empty room in one of eight furniture styles and see a free preview. Download the full-size photo for $5."],
+  ["Can I get staged photos too?", "Yes. Stage any empty room in one of eight furniture styles and see a free preview. Every plan includes 10 to 40 full-size staged photos a month; without a plan they're $5 each."],
   ["Will it change how the home looks?", "No. The camera moves, the room stays as photographed. If a clip ever looks off, redo it before your video is made."],
   ["What photos work best?", "Your professional listing photos, wide and well lit. Phone photos work too, though bright, level shots give the smoothest moves."],
   ["How long does it take?", "About 5 to 10 minutes for the clips, then a few minutes to build the finished videos. You can close the page while it works."],
@@ -209,8 +210,8 @@ export default function Home() {
               <h2 className={h2}>Same photo. A whole new <span className="italic text-gold">first impression.</span></h2>
             </div>
             <p className="max-w-[400px] leading-relaxed text-ink-soft">
-              Stage a vacant room or turn a daytime shot into twilight, right inside your video. Need stills too? Staged
-              photos are $5 each.
+              Stage a vacant room or turn a daytime shot into twilight, right inside your video. Need stills too? Every plan
+              includes staged photos.
             </p>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(420px,100%),1fr))] gap-6">
@@ -338,40 +339,14 @@ export default function Home() {
         <div className="mx-auto flex max-w-[1000px] flex-col gap-10">
           <div className="flex flex-col items-center gap-4 text-center">
             <span className="eyebrow">Pricing</span>
-            <h2 className={h2}>Simple pricing</h2>
-            <p className="text-lg text-ink-soft">Less than one hour of a videographer&apos;s time.</p>
+            <h2 className={h2}>Simple plans</h2>
+            <p className="text-lg text-ink-soft">Listing videos from $24 a month. Less than one hour of a videographer&apos;s time.</p>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-5">
-            <div className="flex flex-col gap-4 rounded-[28px] border border-line bg-white p-8 sm:p-10">
-              <h3 className="text-xl font-semibold">One video</h3>
-              <p className="flex items-baseline gap-2">
-                <span className="font-display text-[64px] leading-none">$49</span>
-                <span className="text-[15px] text-muted">per listing</span>
-              </p>
-              <p className="text-[15px] leading-relaxed text-ink-soft">Pay for the listing in front of you. The full Reel pack and clip redos included.</p>
-              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full border border-ink text-base font-semibold text-ink hover:bg-ink hover:text-white">
-                Make one video
-              </Link>
-            </div>
-            <div className="flex flex-col gap-4 rounded-[28px] bg-gold p-8 text-white sm:p-10">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-xl font-semibold">Monthly</h3>
-                <span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white">Best value</span>
-              </div>
-              <p className="flex items-baseline gap-2">
-                <span className="font-display text-[64px] leading-none">$80</span>
-                <span className="text-[15px] text-white/75">per month</span>
-              </p>
-              <p className="text-[15px] leading-relaxed text-white/80">Three listing videos every month, about $27 each. Cancel anytime.</p>
-              <Link href="/login" className="mt-auto inline-flex min-h-[52px] items-center justify-center rounded-full bg-accent text-base font-semibold text-ink hover:bg-accent-deep">
-                Start the monthly plan
-              </Link>
-            </div>
-          </div>
+          <PlanPicker href="/login" cta="Start" />
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] bg-white px-7 py-5">
             <p className="text-[15px]">
               <strong className="font-semibold">Virtual staging</strong>{" "}
-              <span className="text-ink-soft">· free previews, $5 per full-size staged photo</span>
+              <span className="text-ink-soft">· free previews, included in every plan, or $5 per photo without one</span>
             </p>
             <Link href="/login" className="text-[15px] font-semibold text-ink underline underline-offset-4">Stage a photo</Link>
           </div>
@@ -402,7 +377,7 @@ export default function Home() {
           <h2 className="max-w-[820px] font-display text-[clamp(38px,4.8vw,64px)] font-normal leading-[1.06] text-balance">
             Your next listing deserves a <span className="italic text-gold">walkthrough.</span>
           </h2>
-          <p className="text-lg text-ink-soft">Sign up free. You only pay when you make a video.</p>
+          <p className="text-lg text-ink-soft">Sign up free. Pick a plan when you make your first video.</p>
           <div className="flex flex-wrap justify-center gap-3.5">
             <Link href="/login" className={btnCta}>
               <span className="grid h-7 w-7 place-items-center rounded-full bg-white"><GoogleIcon /></span>

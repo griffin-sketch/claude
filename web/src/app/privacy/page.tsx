@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           <li>To create your account and sign you in.</li>
           <li>To make your videos and staged photos, including sending your photos and instructions to the AI providers listed below.</li>
           <li>To put your branding on your videos and to show your videos on share pages you create.</li>
-          <li>To process payments, manage your plan and credits, and prevent fraud.</li>
+          <li>To process payments, manage your plan, credits and referral rewards, and prevent fraud.</li>
           <li>To email you about your account and orders, for example when your video is ready.</li>
           <li>To answer your questions, fix problems, and improve the Service.</li>
           <li>To meet legal obligations and enforce our <Link href="/terms">Terms of Service</Link>.</li>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
           <li>You can update your branding details at any time in Branding.</li>
           <li>You can remove photos you&apos;ve uploaded, and ask us to delete a listing.</li>
           <li>You can ask us for a copy of your information, to correct it, or to delete your account by emailing <a href={`mailto:${LEGAL.email}`}>{LEGAL.email}</a>.</li>
-          <li>You can cancel a monthly plan at any time in Billing.</li>
+          <li>You can cancel your plan at any time in Billing.</li>
         </ul>
         <p>
           Depending on where you live, including Texas, California and other states with privacy laws, you may have additional rights, such as the

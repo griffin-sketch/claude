@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
@@ -18,6 +19,7 @@ function StagingStudio({ user }: { user: User }) {
   const [style, setStyle] = useState("modern");
   const [room, setRoom] = useState("auto");
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [planPhotos, setPlanPhotos] = useState<number | null>(null); // staged photos left in the plan; null = no plan
   const [uploading, setUploading] = useState(0);
   const [dropping, setDropping] = useState(false);
   const [busy, setBusy] = useState("");
@@ -35,7 +37,10 @@ function StagingStudio({ user }: { user: User }) {
     const { data, error } = await sb.from("stagings").select("*").order("created_at", { ascending: false });
     if (error) return setError(error.message);
     setRows((data as Staging[]) ?? []);
-  }, [sb]);
+    const { data: prof } = await sb.from("profiles").select("plan, plan_status, staging_credits").eq("id", user.id).single();
+    const onPlan = !!prof && prof.plan !== "none" && ["active", "trialing"].includes(prof.plan_status ?? "");
+    setPlanPhotos(onPlan ? prof.staging_credits ?? 0 : null);
+  }, [sb, user.id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
@@ -120,10 +125,11 @@ function StagingStudio({ user }: { user: User }) {
     setBusy("unlock");
     setError("");
     try {
-      const res = await api<{ url?: string; comp?: boolean }>("/api/staging", { action: "checkout", ids: [...picked] });
+      const res = await api<{ url?: string; comp?: boolean; included?: number }>("/api/staging", { action: "checkout", ids: [...picked] });
       if (res.url) window.location.href = res.url;
       else {
         if (res.comp) setNote("Unlocked free because this is an admin account. Use a different email to test the real checkout.");
+        else if (res.included) setNote(`Unlocked ${res.included} photo${res.included === 1 ? "" : "s"} with your plan.`);
         setPicked(new Set());
         await load();
       }
@@ -147,6 +153,8 @@ function StagingStudio({ user }: { user: User }) {
   }
 
   const pickable = (rows ?? []).filter((r) => r.status === "ready" && !r.paid);
+  const covered = Math.min(picked.size, planPhotos ?? 0);
+  const toPay = picked.size - covered;
 
   return (
     <div className="space-y-8 pb-24">
@@ -155,7 +163,9 @@ function StagingStudio({ user }: { user: User }) {
         <h1 className="font-display text-4xl">Furnish empty rooms in seconds</h1>
         <p className="mt-2 max-w-2xl text-ink-soft">
           Upload a photo of an empty room, pick a style and get a photoreal staged version. Previews are free;
-          unlock the full-size photo for ${STAGING_PRICE} each.
+          {planPhotos !== null
+            ? <> your plan has <b>{planPhotos}</b> full-size photo{planPhotos === 1 ? "" : "s"} left, then ${STAGING_PRICE} each.</>
+            : <> unlock the full-size photo for ${STAGING_PRICE} each, or get 10–40 a month <Link href="/billing" className="underline">with a plan</Link>.</>}
         </p>
       </div>
 
@@ -302,7 +312,7 @@ function StagingStudio({ user }: { user: User }) {
                             if (e.target.checked) next.add(r.id); else next.delete(r.id);
                             setPicked(next);
                           }} />
-                        Unlock this photo · ${STAGING_PRICE}
+                        Unlock this photo{planPhotos ? " · included" : ` · $${STAGING_PRICE}`}
                       </label>
                     ) : (
                       <span className="text-sm text-muted">{r.status === "failed" ? r.error : "Working on it…"}</span>
@@ -323,10 +333,12 @@ function StagingStudio({ user }: { user: User }) {
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <span className="text-sm">
-              <b>{picked.size}</b> photo{picked.size === 1 ? "" : "s"} selected · <b>${picked.size * STAGING_PRICE}</b>
+              <b>{picked.size}</b> photo{picked.size === 1 ? "" : "s"} selected ·{" "}
+              {covered > 0 && <>{covered} included in your plan{toPay > 0 ? " + " : ""}</>}
+              {toPay > 0 && <b>${toPay * STAGING_PRICE}</b>}
             </span>
             <button type="button" className="btn-gold" disabled={busy === "unlock"} onClick={unlock}>
-              {busy === "unlock" ? "Opening checkout…" : "Unlock and download"}
+              {busy === "unlock" ? (toPay > 0 ? "Opening checkout…" : "Unlocking…") : "Unlock and download"}
             </button>
           </div>
         </div>
