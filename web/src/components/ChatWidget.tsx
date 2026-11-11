@@ -74,7 +74,8 @@ export function ChatWidget() {
     return () => window.removeEventListener("keydown", esc);
   }, [open]);
 
-  if (path.startsWith("/share")) return null;
+  // hidden until the Claude API key is added in Vercel (then set NEXT_PUBLIC_CHAT_ENABLED=1)
+  if (process.env.NEXT_PUBLIC_CHAT_ENABLED !== "1" || path.startsWith("/share")) return null;
   const lifted = path.startsWith("/listings/"); // clear the sticky Back/Next bar on phones
 
   async function send(text: string) {
