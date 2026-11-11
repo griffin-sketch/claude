@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
-/* Tourvo color rule: two base colors do 90% of the work (navy + cream), one bold accent (coral) does the
-   last 10%, and only on the button we want pressed. The logo keeps Tourvo blue.
-   ("champagne"/"gold" = the navy structure color; "accent" = coral, for the main call to action only.) */
+/* Tourvo color rule: warm cream + warm charcoal do most of the work; Clay (terracotta) is the brand color:
+   the logo, italic accents, eyebrows, and the one button per screen we want pressed.
+   ("champagne"/"gold" = the Clay brand family; "accent" = Clay, for the main call to action.) */
 :root {
-  --bg: #fbf8f3;
+  --bg: #fbf6f1;
   --surface: #ffffff;
-  --ink: #0b1b2e;
-  --ink-soft: #46505f;
-  --muted: #5e6776;
-  --line: #e6dfd3;
-  --night: #0b1b2e;
-  --champagne: #0b1b2e;
-  --champagne-deep: #22344d;
-  --champagne-light: #c7cedb;
-  --champagne-soft: #f1ebe1;
-  --accent: #ff7452;
-  --accent-deep: #ff5a33;
-  --sand: #f1ebe1;
+  --ink: #2b201c;
+  --ink-soft: #5b4b44;
+  --muted: #76655d;
+  --line: #ebe0d7;
+  --night: #2b201c;
+  --champagne: #c4553a;
+  --champagne-deep: #a8432b;
+  --champagne-light: #e9b9a9;
+  --champagne-soft: #f8e7e0;
+  --accent: #c4553a;
+  --accent-deep: #a8432b;
+  --sand: #f4eae2;
   --danger: #b42318;
   --ok: #1f7a4d;
 }
@@ -65,7 +65,7 @@ body {
 }
 /* the one button per screen we want pressed */
 @utility btn-gold {
-  @apply btn bg-accent text-ink hover:bg-accent-deep;
+  @apply btn bg-accent text-white hover:bg-accent-deep;
 }
 @utility btn-ghost {
   @apply btn border border-line bg-surface text-ink hover:border-ink;
@@ -77,5 +77,5 @@ body {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-muted;
 }
 @utility card {
-  @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(11,27,46,0.05)];
+  @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(43,32,28,0.05)];
 }

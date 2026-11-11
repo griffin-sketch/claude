@@ -57,7 +57,7 @@ const wrap = "mx-auto w-full max-w-[1240px]";
 const h2 = "font-display text-[clamp(34px,4.2vw,56px)] font-normal leading-[1.08] text-balance";
 const lead = "text-[17px] leading-[1.7] text-ink-soft sm:text-lg";
 const swipe = "text-xs font-semibold text-muted sm:hidden";
-const btnCta = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full bg-accent px-7 text-base font-semibold text-ink hover:bg-accent-deep";
+const btnCta = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full bg-accent px-7 text-base font-semibold text-white hover:bg-accent-deep";
 const btnWhite = "inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full border border-line bg-white px-7 text-base font-semibold text-ink hover:border-ink";
 const rail = "-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0";
 const STEP_TILE = ["bg-ink text-white", "bg-ink text-white", "bg-ink text-white"];
@@ -87,7 +87,7 @@ export default function Home() {
     <div className="bg-bg text-ink">
       {/* Nav: a floating white pill */}
       <header className={`sticky top-0 z-50 pt-3 sm:pt-5 ${pad}`}>
-        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2 pl-4 pr-2 sm:py-2.5 sm:pl-6 sm:pr-2.5 shadow-[0_8px_30px_rgba(11,27,46,0.10)] backdrop-blur`}>
+        <div className={`${wrap} flex items-center justify-between gap-4 rounded-full border border-line/60 bg-white/95 py-2 pl-4 pr-2 sm:py-2.5 sm:pl-6 sm:pr-2.5 shadow-[0_8px_30px_rgba(43,32,28,0.10)] backdrop-blur`}>
           <Link href="/" aria-label="Tourvo home" className="shrink-0">
             <span className="sm:hidden"><Logo size={24} /></span>
             <span className="hidden sm:inline"><Logo size={30} /></span>
@@ -98,7 +98,7 @@ export default function Home() {
             <a href="#photographers" className="hidden hover:text-gold lg:inline">Photographers</a>
             <a href="#pricing" className="hidden hover:text-gold sm:inline">Pricing</a>
             <Link href="/login" className="hover:text-gold">Sign in</Link>
-            <Link href="/login" className="inline-flex min-h-10 items-center rounded-full bg-accent px-3.5 text-sm font-semibold text-ink hover:bg-accent-deep sm:min-h-11 sm:px-5 sm:text-[15px]">
+            <Link href="/login" className="inline-flex min-h-10 items-center rounded-full bg-accent px-3.5 text-sm font-semibold text-white hover:bg-accent-deep sm:min-h-11 sm:px-5 sm:text-[15px]">
               Make a video
             </Link>
           </nav>
@@ -133,7 +133,7 @@ export default function Home() {
           <div className="relative min-w-0 flex-[1_1_520px]">
             <LoopVideo src="/fx/build_hero.mp4" poster="/fx/build.jpg" label="A house building itself, from framing to finished"
               className="aspect-[5/4] w-full rounded-[32px] bg-line object-cover" />
-            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(11,27,46,0.15)] sm:bottom-5 sm:left-5">
+            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(43,32,28,0.15)] sm:bottom-5 sm:left-5">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-gold text-white">
                 <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
               </span>
@@ -283,7 +283,7 @@ export default function Home() {
             <img
               src="/home/pool_v.jpg"
               alt="The same shot as a vertical 9:16 video"
-              className="absolute bottom-0 right-3 aspect-[9/16] w-[26%] rounded-[20px] border-[5px] border-bg object-cover shadow-[0_10px_30px_rgba(11,27,46,0.15)]"
+              className="absolute bottom-0 right-3 aspect-[9/16] w-[26%] rounded-[20px] border-[5px] border-bg object-cover shadow-[0_10px_30px_rgba(43,32,28,0.15)]"
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
