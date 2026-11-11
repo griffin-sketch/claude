@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 import { RefCapture } from "@/components/RefCapture";
+import { ChatWidget } from "@/components/ChatWidget";
 
 // Coastal modern: Figtree for text, Fraunces (serif, with optical sizes) for headlines.
 const figtree = localFont({
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <RefCapture />
         {children}
+        <ChatWidget />
       </body>
     </html>
   );
