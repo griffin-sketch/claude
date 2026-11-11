@@ -55,6 +55,16 @@ function Listings({ user }: { user: User }) {
           {creating ? "Creating…" : "+ New listing video"}
         </button>
       </div>
+      <Link
+        href="/refer"
+        className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-gold-soft px-4 py-3 text-sm transition hover:brightness-95 sm:px-5"
+      >
+        <span>
+          🎁 <b>Give a free video, get a free video.</b>{" "}
+          <span className="text-ink-soft">Refer another agent and you both get one when they start a plan.</span>
+        </span>
+        <span className="shrink-0 font-semibold underline underline-offset-4">Get your link</span>
+      </Link>
       {error && <p className="mb-4 text-sm text-danger">{error}</p>}
       {rows === null ? (
         <p className="text-sm text-ink-soft">Loading…</p>
