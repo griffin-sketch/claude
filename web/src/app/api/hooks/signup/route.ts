@@ -56,7 +56,7 @@ async function push(message: string, click: string) {
   await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
     method: "POST",
     body: message,
-    headers: { Title: "New Tourvo signup", Tags: "tada", Click: click },
+    headers: { Title: "New Tourvo signup", Tags: "tada", Priority: "high", Click: click },
   });
 }
 
