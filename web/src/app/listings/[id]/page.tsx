@@ -179,7 +179,6 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   const editable = listing?.status === "draft" || listing?.status === "failed";
   const reorderable = editable || listing?.status === "review";
-  const cropEditable = editable || listing?.status === "review"; // in review, a new crop remakes that clip
   const [dragOver, setDragOver] = useState<number | null>(null);
   const labelsEditable = editable || listing?.status === "review" || listing?.status === "done";
   const [dropping, setDropping] = useState(false);
@@ -317,7 +316,7 @@ function Editor({ id, user }: { id: string; user: User }) {
     const prev = i ? acc[i - 1] + (shots[i - 1].effect && ["build", "staging", "dusk"].includes(shots[i - 1].effect) ? 5 : 4.6) - 0.6 : 0;
     return [...acc, prev];
   }, []);
-  const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status));
+  const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status) || s.vclip_status === "redo");
 
   const status = listing.status;
   const cropShot = cropFor ? shots.find((x) => x.id === cropFor) : undefined;
@@ -414,6 +413,24 @@ function Editor({ id, user }: { id: string; user: User }) {
   );
 
   const reelEditable = editable || status === "review";
+  // After clips are made, a new crop on a photo that has its own Reels clip remakes that clip (one redo).
+  const reelRemake = (sh: Shot) => status === "review" && ["ready", "generating", "failed"].includes(sh.vclip_status ?? "none");
+  async function saveCrop(sh: Shot, c: Shot["crop"]) {
+    if (JSON.stringify(c ?? null) === JSON.stringify(sh.crop ?? null)) return;
+    const remake = reelRemake(sh);
+    const counts = remake && sh.vclip_status !== "failed";
+    if (counts && redosLeft <= 0) {
+      setError(`You've used all ${REDO_LIMIT} redos for this listing.`);
+      return;
+    }
+    const patch: Partial<Shot> = remake ? { crop: c, vclip_status: "redo" } : { crop: c };
+    setShots((prev) => prev.map((x) => (x.id === sh.id ? { ...x, ...patch, user_redos: (x.user_redos ?? 0) + (counts ? 1 : 0) } : x)));
+    const { error } = await sb.from("shots").update(patch).eq("id", sh.id);
+    if (error) {
+      setError(error.message);
+      load();
+    }
+  }
   const objPos = (sh: Shot) => (sh.crop ? `${(sh.crop.x + sh.crop.w / 2) * 100}% ${(sh.crop.y + sh.crop.h / 2) * 100}%` : undefined);
   function saveReel(kind: string, ids: string[] | null) {
     const next = { ...(listing?.reel_shots ?? {}) };
@@ -427,7 +444,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       <h2 className="font-display text-2xl">The videos you&apos;ll get</h2>
       <p className="mb-5 mt-1 text-sm text-ink-soft">
         {plan.length} videos from one listing, each with its own style, ready to post. The numbers match your photo order.
-        {reelEditable && " We pick the photos for each short video; tap Change photos to choose them and their order yourself."}
+        {reelEditable && " We pick the photos for each short video. Tap Change photos to choose them and their order yourself, or Crop on any photo to choose what the tall videos show."}
       </p>
       <ol className="space-y-4">
         {plan.map((pl) => {
@@ -462,8 +479,16 @@ function Editor({ id, user }: { id: string; user: User }) {
               <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
                 {picked.map((sh, k) => (
                   <div key={sh.id + k} className="relative w-20 shrink-0 sm:w-24">
-                    <div className={`overflow-hidden rounded-md bg-line ${pl.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
-                      {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" style={{ objectPosition: objPos(sh) }} />}
+                    <div className={`relative overflow-hidden rounded-md bg-line ${pl.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
+                      {pl.format === "9:16"
+                        ? <CroppedImg src={thumbs[sh.photo_path]} crop={sh.crop} />
+                        : thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />}
+                      {pl.format === "9:16" && reelEditable && !editing && thumbs[sh.photo_path] && (
+                        <button type="button" onClick={() => setCropFor(sh.id)} aria-label={`Crop photo ${shots.indexOf(sh) + 1} for Reels`}
+                          className="absolute bottom-1 left-1 right-1 rounded-full bg-white/95 py-1 text-[10px] font-semibold text-ink shadow hover:bg-white">
+                          {sh.crop ? "Cropped" : "Crop"}
+                        </button>
+                      )}
                     </div>
                     <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
                       #{shots.indexOf(sh) + 1}
@@ -659,7 +684,7 @@ function Editor({ id, user }: { id: string; user: User }) {
             <div className="max-w-xl">
               <h2 className="font-display text-2xl">Put your photos in order</h2>
               <p className="mt-1 text-sm text-ink-soft">
-                Your video plays them in this order. Drag a photo to move it, tap Crop to choose what each shot shows, then type the room name under each one.
+                Your video plays them in this order. Drag a photo to move it, then type the room name under each one.
               </p>
             </div>
             {reorderable && shots.length > 2 && (
@@ -686,14 +711,10 @@ function Editor({ id, user }: { id: string; user: User }) {
                 onDrop={(e) => { e.preventDefault(); setDragOver(null); moveTo(Number(e.dataTransfer.getData("text/plain")), i); }}
                 className="group flex min-w-0 flex-col gap-2"
               >
-                <div className={`relative aspect-video overflow-hidden rounded-xl bg-line ring-2 transition ${
+                <div className={`relative aspect-[4/3] overflow-hidden rounded-xl bg-line ring-2 transition ${
                   dragOver === i ? "ring-ink" : "ring-transparent"} ${reorderable ? "cursor-grab active:cursor-grabbing" : ""}`}>
-                  <CroppedImg src={thumbs[sh.photo_path]} crop={sh.crop} alt={sh.label || `Photo ${i + 1}`} />
-                  {cropEditable && thumbs[sh.photo_path] && (
-                    <button type="button" onClick={() => setCropFor(sh.id)}
-                      className="absolute bottom-2 left-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow transition hover:bg-champagne-soft">
-                      {sh.crop ? "Cropped · edit" : "Crop"}
-                    </button>
+                  {thumbs[sh.photo_path] && (
+                    <img src={thumbs[sh.photo_path]} alt={sh.label || `Photo ${i + 1}`} draggable={false} className="h-full w-full object-cover" />
                   )}
                   <span className="absolute left-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-sm font-bold text-ink shadow">
                     {i + 1}
@@ -1065,16 +1086,13 @@ function Editor({ id, user }: { id: string; user: User }) {
         <CropEditor
           src={thumbs[cropShot.photo_path]}
           crop={cropShot.crop}
-          note={status === "review" && cropShot.clip_status !== "failed"
-            ? `Saving a new crop remakes this clip from the new frame and uses 1 of your ${redosLeft} redos left.`
+          note={status === "review" && reelRemake(cropShot) && cropShot.vclip_status !== "failed"
+            ? `This photo already has its Reels clip, so saving a new crop remakes it from the new frame and uses 1 of your ${redosLeft} redos left.`
             : undefined}
           onCancel={() => setCropFor(null)}
           onSave={(c) => {
-            const shot = cropShot;
             setCropFor(null);
-            const same = JSON.stringify(c ?? null) === JSON.stringify(shot.crop ?? null);
-            if (same) return;
-            saveShot(shot, status === "review" ? { crop: c, clip_status: "redo", approved: false } : { crop: c });
+            saveCrop(cropShot, c);
           }}
         />
       )}

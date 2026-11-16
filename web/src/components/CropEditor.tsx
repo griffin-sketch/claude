@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Crop } from "@/lib/types";
 
-const ASPECT = 16 / 9; // the wide video frame
+const ASPECT = 9 / 16; // the tall Reels frame
 
-/** The widest 16:9 frame that fits a photo of this shape, centered. */
+/** The biggest 9:16 frame that fits a photo of this shape, centered. */
 export function fullFrame(natW: number, natH: number): Crop {
   const photo = natW / natH;
   if (photo >= ASPECT) {
@@ -16,7 +16,7 @@ export function fullFrame(natW: number, natH: number): Crop {
   return { x: 0, y: (1 - h) / 2, w: 1, h };
 }
 
-/** A photo shown the way the video frames it: the chosen crop fills a 16:9 box. */
+/** A photo shown the way the Reels frame it: the chosen crop fills a 9:16 box. */
 export function CroppedImg({ src, crop, alt = "", className = "" }: { src?: string; crop?: Crop | null; alt?: string; className?: string }) {
   if (!src) return null;
   if (!crop) return <img src={src} alt={alt} draggable={false} className={`h-full w-full object-cover ${className}`} />;
@@ -37,8 +37,8 @@ export function CroppedImg({ src, crop, alt = "", className = "" }: { src?: stri
 }
 
 /**
- * Full-screen crop tool: drag the frame to move it, use the slider (or pinch on a trackpad / scroll) to zoom.
- * The frame is always 16:9, the shape of the video, so what's inside it is exactly what the clip shows.
+ * Full-screen crop tool for the Reels: drag the tall frame to move it, use the slider (or scroll) to zoom.
+ * The frame is always 9:16, the shape of a Reel, so what's inside it is exactly what the tall videos show.
  */
 export function CropEditor({
   src,
@@ -111,11 +111,11 @@ export function CropEditor({
   const same = (a: Crop, b: Crop) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) < 0.002;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Crop photo">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Crop for Reels">
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 text-white">
         <div>
-          <h2 className="font-display text-xl sm:text-2xl">Crop this photo</h2>
-          <p className="text-sm text-white/70">Drag the frame to choose what the video shows. Zoom in to get closer.</p>
+          <h2 className="font-display text-xl sm:text-2xl">Crop for Reels</h2>
+          <p className="text-sm text-white/70">Drag the tall frame to choose what your Reels, TikToks and Shorts show. Zoom in to get closer. Your wide video still shows the whole photo.</p>
         </div>
         <button type="button" onClick={onCancel} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-lg hover:bg-white/20">
           ✕
@@ -176,7 +176,7 @@ export function CropEditor({
         {note && <p className="text-xs text-white/70">{note}</p>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button type="button" className="text-sm font-semibold text-white/80 underline-offset-4 hover:underline" onClick={() => setFrame(null)}>
-            Reset to the whole photo
+            Reset to centered
           </button>
           <div className="flex gap-2">
             <button type="button" className="btn rounded-full bg-white/10 px-5 py-2.5 text-white hover:bg-white/20" onClick={onCancel}>

@@ -958,8 +958,15 @@ def probe_duration(path):
     except Exception:
         return 0.0
 
-def prep_photo(path):
-    """Return an RGB image a bit larger than the frame, ready for pan/zoom."""
+def _focus(focus):
+    """(x, y) fractions of where to center a crop, from a shot's "focus" (None = the middle)."""
+    try:
+        return (min(1.0, max(0.0, float(focus[0]))), min(1.0, max(0.0, float(focus[1]))))
+    except (TypeError, ValueError, IndexError):
+        return (0.5, 0.5)
+
+def prep_photo(path, focus=None):
+    """Return an RGB image a bit larger than the frame, ready for pan/zoom. focus: where to center the crop."""
     im = ImageOps.exif_transpose(Image.open(path)).convert("RGB")
     ar = im.width / im.height
     big = (int(W * 1.18), int(H * 1.18))
@@ -969,13 +976,13 @@ def prep_photo(path):
         fg = im.copy(); fg.thumbnail((big[0], int(big[1] * 0.96)), Image.LANCZOS)
         bg.paste(fg, ((big[0] - fg.width) // 2, (big[1] - fg.height) // 2))
         return bg
-    return ImageOps.fit(im, big, Image.LANCZOS, centering=(0.5, 0.5))
+    return ImageOps.fit(im, big, Image.LANCZOS, centering=_focus(focus))
 
 MOVES = ["push", "pan_r", "pull", "pan_l", "push_up"]
 
 class PhotoSource:
-    def __init__(self, path, nframes, move, curve=None):
-        self.img = prep_photo(path); self.n = nframes; self.move = move
+    def __init__(self, path, nframes, move, curve=None, focus=None):
+        self.img = prep_photo(path, focus); self.n = nframes; self.move = move
         self.curve = curve  # optional: source position per output frame (speed ramp)
     def frame(self, k):
         if self.curve:
@@ -1004,12 +1011,14 @@ DRIFTS = ["push", "pan_r", "pull", "pan_l", "rise"]
 class ClipSource:
     """Decodes an AI clip. Every clip also gets a slow digital camera drift (a push, pull or pan of a few
     percent), so even a take where the AI camera barely moved never looks like a still photo."""
-    def __init__(self, path, start, nframes, curve=None, move="push", drift=0.07):
+    def __init__(self, path, start, nframes, curve=None, move="push", drift=0.07, focus=None):
         self.n = nframes; self.curve = curve; self.move = move; self.drift = max(0.0, float(drift or 0))
         z = 1 + self.drift
         self.cw, self.ch = int(round(W * z / 2)) * 2, int(round(H * z / 2)) * 2
         need = int(curve[-1]) + 2 if curve else nframes
-        vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,crop={self.cw}:{self.ch},fps={FPS}")
+        fx, fy = _focus(focus)   # where to cut from when the clip is wider (or taller) than the frame
+        vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,"
+              f"crop={self.cw}:{self.ch}:(in_w-{self.cw})*{fx:.4f}:(in_h-{self.ch})*{fy:.4f},fps={FPS}")
         self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1", "-ss", f"{start:.3f}", "-i", path, "-an",
                                    "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
                                   stdout=subprocess.PIPE)
@@ -1160,10 +1169,11 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             sp = sg.get("speed", 1.0)
             if sp != 1.0:
                 curve = [v * sp for v in (curve or range(sg["n"] + 1))]
-            if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)], curve)
+            focus = (sg.get("shot") or {}).get("focus")
+            if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)], curve, focus)
             else:
                 mv = sg["shot"].get("drift_move") or DRIFTS[(i + int(job.get("drift_offset", 0))) % len(DRIFTS)]
-                sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve, mv, drift)
+                sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve, mv, drift, focus)
         return sources[i]
 
     frames_to_do = range(total_f) if preview is None else preview

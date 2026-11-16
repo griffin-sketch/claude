@@ -116,7 +116,8 @@ def fal_call(url, body=None):
 
 
 def apply_crop(src, crop, dest):
-    """Cut the photo down to the frame the realtor chose ({x, y, w, h} as fractions). No crop: the photo as is."""
+    """Cut the photo down to the tall frame the realtor chose for the Reels ({x, y, w, h} as fractions, 9:16).
+    No crop: the photo as is."""
     if not isinstance(crop, dict):
         return src
     try:
@@ -129,8 +130,8 @@ def apply_crop(src, crop, dest):
             return src
         box = (round(x * W), round(y * H), round((x + w) * W), round((y + h) * H))
         im = im.crop(box)
-        if im.width < 1280:   # keep enough detail for the AI clip
-            im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
+        if im.width < 1080:   # keep enough detail for the AI clip
+            im = im.resize((1080, round(im.height * 1080 / im.width)), Image.LANCZOS)
         im.save(dest, quality=95)
         return dest
     except Exception as e:
@@ -138,14 +139,25 @@ def apply_crop(src, crop, dest):
         return src
 
 
+def focus_of(s):
+    """Center of the realtor's tall crop, as fractions: where 9:16 cuts of the wide clip should look."""
+    c = s.get("crop")
+    if not isinstance(c, dict):
+        return None
+    try:
+        return [round(float(c["x"]) + float(c["w"]) / 2, 4), round(float(c["y"]) + float(c["h"]) / 2, 4)]
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def submit_clip(shot, index, user_id, orient="h"):
     """Download the photo, apply its effect, send it to fal.ai, and mark that orientation as generating.
     orient "h" = the 16:9 clip (review + MLS tour); "v" = a centered 9:16 clip for the vertical videos."""
     with tempfile.TemporaryDirectory() as tmp:
         src = storage_get("photos", shot["photo_path"], os.path.join(tmp, "photo" + os.path.splitext(shot["photo_path"])[1]))
-        src = apply_crop(src, shot.get("crop"), os.path.join(tmp, "cropped.jpg"))
         kind = effects.kind_of(shot, index)
-        if orient == "v":
+        if orient == "v":   # the Reels clip: the realtor's tall crop if they set one, else a centered vertical
+            src = apply_crop(src, shot.get("crop"), os.path.join(tmp, "cropped.jpg"))
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
         end_src = None
         if (shot.get("effect") == "frames") and shot.get("end_photo_path"):
@@ -226,6 +238,20 @@ def step_redo():
                     db_patch("shots", {"id": s["id"]}, {"vclip_status": "failed"})
         except Exception as e:
             db_patch("shots", {"id": s["id"]}, {"clip_status": "failed", "error": str(e)[:400]})
+
+
+def step_vredo():
+    """A new Reel crop on a photo that already has its vertical clip: remake just that clip."""
+    for s in db_get("shots", vclip_status="eq.redo"):
+        l = db_get("listings", id=f"eq.{s['listing_id']}")
+        if not l:
+            continue
+        log(f"listing {s['listing_id'][:8]} new reel crop, shot {s['position'] + 1}")
+        try:
+            submit_clip(s, s["position"], l[0]["user_id"], "v")
+        except Exception as e:
+            log(f"  vertical redo failed: {e}")
+            db_patch("shots", {"id": s["id"]}, {"vclip_status": "failed"})
 
 
 def _download(url, dest):
@@ -322,7 +348,7 @@ def render_listing(l):
             if s["clip_status"] == "ready" and s.get("clip_path"):
                 p = storage_get("clips", s["clip_path"], os.path.join(media, f"{s['id']}.mp4"))
                 rel = os.path.relpath(p, tmp)
-                shot = {"id": s["id"], "path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
+                shot = {"id": s["id"], "path": rel, "label": s["label"], "sub": s["sub"], "effect": fx, "focus": focus_of(s),
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
                 cv = am.parse_custom(s.get("move"))   # digital drift follows the AI camera
@@ -337,8 +363,8 @@ def render_listing(l):
             else:  # clip failed: fall back to classic pan/zoom on the photo
                 ext = os.path.splitext(s["photo_path"])[1] or ".jpg"
                 p = storage_get("photos", s["photo_path"], os.path.join(media, f"{s['id']}{ext}"))
-                p = apply_crop(p, s.get("crop"), os.path.join(media, f"{s['id']}-crop.jpg"))
-                job_shots.append({"id": s["id"], "path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "effect": "none"})
+                job_shots.append({"id": s["id"], "path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "effect": "none",
+                                  "focus": focus_of(s)})
         if job_shots:
             job_shots[0]["label"] = ""; job_shots[0]["sub"] = ""   # title card sits over the first shot
         agent = {"name": prof.get("full_name") or "", "title": prof.get("title") or "",
@@ -388,8 +414,10 @@ def render_listing(l):
         for n, item in enumerate(pack, 1):
             kind, fmt = item["kind"], item["fmt"]
             j = item["job"]
-            if fmt == "9:16" and vpath:   # use the true vertical clips where we have them
-                j = dict(j, shots=[dict(sh, path=vpath.get(sh["path"], sh["path"])) for sh in j["shots"]])
+            if fmt == "9:16":   # true vertical clips where we have them; elsewhere crop the wide clip around the realtor's frame
+                j = dict(j, shots=[dict(sh, path=vpath[sh["path"]], focus=None) if sh["path"] in vpath else sh for sh in j["shots"]])
+            else:               # the wide videos always show the whole frame
+                j = dict(j, shots=[dict(sh, focus=None) for sh in j["shots"]])
             job_path = os.path.join(tmp, f"job-{kind}.json")
             json.dump(j, open(job_path, "w"))
             name = f"{kind}-{fmt.replace(':', 'x')}"
@@ -435,7 +463,7 @@ def main():
         sys.exit("Missing environment variables: " + ", ".join(missing))
     log(f"worker up · model {MODEL} · polling every {POLL}s")
     while True:
-        for step in (step_queued, step_redo, step_poll, step_to_review, step_stagings, step_render):
+        for step in (step_queued, step_redo, step_vredo, step_poll, step_to_review, step_stagings, step_render):
             try:
                 step()
             except Exception as e:

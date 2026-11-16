@@ -81,10 +81,11 @@ export type Shot = {
   stage_style?: string;
   stage_room?: string;
   end_photo_path?: string | null;
+  /** What the tall Reels (9:16) videos show of this photo. Empty = centered. The wide videos use the whole photo. */
   crop?: Crop | null;
 };
 
-/** The part of a photo the video shows, as fractions (0-1) of the photo. Always a 16:9 frame. */
+/** A frame on a photo, as fractions (0-1) of the photo. The Reel crop is always 9:16. */
 export type Crop = { x: number; y: number; w: number; h: number };
 
 export type Staging = {
