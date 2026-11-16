@@ -15,7 +15,7 @@ Environment variables (set in Railway -> Variables):
   FAL_KEY                     secret; fal.ai API key
   POLL_SECONDS                optional, default 10
 """
-import json, os, sys, tempfile, time, traceback, urllib.parse
+import json, os, subprocess, sys, tempfile, time, traceback, urllib.parse
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -100,11 +100,36 @@ def storage_get(bucket, path, dest):
     return dest
 
 
+MAX_UPLOAD = 45 * 1024 * 1024   # Supabase rejects files over 50 MB on this plan; stay well under
+
+
+def fit_size(src):
+    """Re-encode a video that came out too big for storage at a bitrate that fits. Returns the path to upload."""
+    if os.path.getsize(src) <= MAX_UPLOAD:
+        return src
+    try:
+        dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+                                    "default=nw=1:nk=1", src], capture_output=True, text=True).stdout.strip())
+        kbps = max(1500, int(MAX_UPLOAD * 8 / 1000 / dur * 0.92) - 200)   # leave room for the audio
+        out = src[:-4] + "-fit.mp4"
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src, "-c:v", "libx264", "-preset", "medium",
+                        "-b:v", f"{kbps}k", "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k", "-c:a", "aac",
+                        "-b:a", "160k", "-movflags", "+faststart", out], check=True)
+        log(f"  shrank {os.path.getsize(src) >> 20} MB -> {os.path.getsize(out) >> 20} MB")
+        return out
+    except Exception as e:
+        log(f"  shrink failed: {e}")
+        return src
+
+
 def storage_put(bucket, path, src, content_type="video/mp4"):
+    if content_type.startswith("video/"):
+        src = fit_size(src)
     url = f"{SB}/storage/v1/object/{bucket}/{urllib.parse.quote(path)}"
     with open(src, "rb") as f:
         r = S.post(url, data=f, headers={"Content-Type": content_type, "x-upsert": "true"}, timeout=600)
-    r.raise_for_status()
+    if not r.ok:   # say why, not just the status code
+        raise RuntimeError(f"upload of {path} failed ({r.status_code}): {r.text[:200]}")
 
 
 # ------------------------------------------------------------------ fal.ai helpers
@@ -332,7 +357,8 @@ def step_render():
             log(f"listing {l['id'][:8]} -> done")
         except Exception as e:
             traceback.print_exc()
-            db_patch("listings", {"id": l["id"]}, {"status": "failed", "error": f"Video build failed: {e}"[:400]})
+            # back to review: the clips are fine, so the realtor can just press "Make my videos" again
+            db_patch("listings", {"id": l["id"]}, {"status": "review", "error": f"Video build failed: {e}"[:400]})
             notify.failed(user_email(l["user_id"]), l, "the final video could not be built")
 
 

@@ -627,6 +627,11 @@ function Editor({ id, user }: { id: string; user: User }) {
       {status === "failed" && listing.error && (
         <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">Something went wrong: {listing.error}</p>
       )}
+      {status === "review" && listing.error?.startsWith("Video build failed") && (
+        <p className="rounded-lg bg-danger/10 p-3 text-sm text-danger">
+          Your last video build didn&apos;t finish. Your clips are safe; press Make my videos to try again. Nothing extra is charged.
+        </p>
+      )}
 
       {/* ---------------- 1. photos */}
       {step === "photos" && (
