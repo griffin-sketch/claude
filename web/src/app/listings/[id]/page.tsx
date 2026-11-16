@@ -8,7 +8,8 @@ import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
 import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
-import { packPlan, walkthroughOrder } from "@/lib/pack";
+import { CropEditor, CroppedImg } from "@/components/CropEditor";
+import { packPlan, REEL_MAX, REEL_MIN, walkthroughOrder } from "@/lib/pack";
 import { describeMove } from "@/lib/camera";
 import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
@@ -178,10 +179,13 @@ function Editor({ id, user }: { id: string; user: User }) {
 
   const editable = listing?.status === "draft" || listing?.status === "failed";
   const reorderable = editable || listing?.status === "review";
+  const cropEditable = editable || listing?.status === "review"; // in review, a new crop remakes that clip
   const [dragOver, setDragOver] = useState<number | null>(null);
   const labelsEditable = editable || listing?.status === "review" || listing?.status === "done";
   const [dropping, setDropping] = useState(false);
   const [fxFor, setFxFor] = useState<string | null>(null); // the photo whose effects sheet is open
+  const [cropFor, setCropFor] = useState<string | null>(null); // the photo whose crop tool is open
+  const [reelEdit, setReelEdit] = useState<{ kind: string; ids: string[] } | null>(null); // a short video's photo picker
   useEffect(() => {
     if (!fxFor) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setFxFor(null);
@@ -316,6 +320,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status));
 
   const status = listing.status;
+  const cropShot = cropFor ? shots.find((x) => x.id === cropFor) : undefined;
   const ok = (st: StepId) => stepAllowed(st, status, shots.length);
   const idx = STEPS.findIndex((x) => x.id === step);
   const prevStep = STEPS.slice(0, idx).reverse().find((x) => ok(x.id));
@@ -408,40 +413,121 @@ function Editor({ id, user }: { id: string; user: User }) {
     </>
   );
 
+  const reelEditable = editable || status === "review";
+  const objPos = (sh: Shot) => (sh.crop ? `${(sh.crop.x + sh.crop.w / 2) * 100}% ${(sh.crop.y + sh.crop.h / 2) * 100}%` : undefined);
+  function saveReel(kind: string, ids: string[] | null) {
+    const next = { ...(listing?.reel_shots ?? {}) };
+    if (ids) next[kind] = ids;
+    else delete next[kind];
+    saveListing({ reel_shots: next });
+    setReelEdit(null);
+  }
   const packSection = shots.length >= 3 && (
     <section className="card p-4 sm:p-6">
       <h2 className="font-display text-2xl">The videos you&apos;ll get</h2>
       <p className="mb-5 mt-1 text-sm text-ink-soft">
         {plan.length} videos from one listing, each with its own style, ready to post. The numbers match your photo order.
+        {reelEditable && " We pick the photos for each short video; tap Change photos to choose them and their order yourself."}
       </p>
       <ol className="space-y-4">
-        {plan.map((pl) => (
-          <li key={pl.kind + pl.format} className="rounded-xl border border-line p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <span className="font-semibold">{pl.name}</span>
-              <span className="text-xs text-muted">
-                {pl.format === "9:16" ? "Tall" : "Wide"} · about {pl.seconds} seconds
-              </span>
-            </div>
-            <p className="mt-0.5 text-sm text-ink-soft">{pl.style}</p>
-            <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
-              {pl.shots.map((sh, k) => (
-                <div key={sh.id + k} className="relative w-20 shrink-0 sm:w-24">
-                  <div className={`overflow-hidden rounded-md bg-line ${pl.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
-                    {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />}
+        {plan.map((pl) => {
+          const editing = reelEdit?.kind === pl.kind && pl.kind !== "tour";
+          const max = REEL_MAX[pl.kind] ?? 15;
+          const pool = shots.filter((x) => (pl.kind === "build_up" ? x.effect === "build" : pl.kind === "staged" ? x.effect === "staging" : true));
+          const picked = editing ? reelEdit!.ids.map((i) => shots.find((x) => x.id === i)).filter((x): x is Shot => !!x) : pl.shots;
+          const move = (from: number, to: number) => {
+            if (!reelEdit || to < 0 || to >= reelEdit.ids.length) return;
+            const ids = [...reelEdit.ids];
+            const [it] = ids.splice(from, 1);
+            ids.splice(to, 0, it);
+            setReelEdit({ ...reelEdit, ids });
+          };
+          return (
+            <li key={pl.kind + pl.format} className={`rounded-xl border p-4 ${editing ? "border-ink" : "border-line"}`}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="font-semibold">
+                  {pl.name}
+                  {pl.custom && !editing && <span className="ml-2 rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold">Your picks</span>}
+                </span>
+                <span className="text-xs text-muted">
+                  {pl.format === "9:16" ? "Tall" : "Wide"} · about {pl.seconds} seconds
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm text-ink-soft">{pl.style}</p>
+              {editing && (
+                <p className="mt-2 text-xs text-muted">
+                  Plays left to right. Use the arrows to reorder, ✕ to take a photo out, and tap a photo below to add it. {REEL_MIN} to {max} photos.
+                </p>
+              )}
+              <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+                {picked.map((sh, k) => (
+                  <div key={sh.id + k} className="relative w-20 shrink-0 sm:w-24">
+                    <div className={`overflow-hidden rounded-md bg-line ${pl.format === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}>
+                      {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" style={{ objectPosition: objPos(sh) }} />}
+                    </div>
+                    <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
+                      #{shots.indexOf(sh) + 1}
+                    </span>
+                    {editing && (
+                      <>
+                        <button type="button" aria-label="Take out" onClick={() => setReelEdit({ ...reelEdit!, ids: reelEdit!.ids.filter((_, j) => j !== k) })}
+                          className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-[11px] text-white hover:bg-black">✕</button>
+                        <span className="absolute bottom-7 left-0 right-0 flex justify-center gap-1">
+                          <button type="button" aria-label="Earlier" disabled={k === 0} onClick={() => move(k, k - 1)}
+                            className="grid h-7 w-7 place-items-center rounded-full bg-white text-ink shadow disabled:opacity-40">‹</button>
+                          <button type="button" aria-label="Later" disabled={k === picked.length - 1} onClick={() => move(k, k + 1)}
+                            className="grid h-7 w-7 place-items-center rounded-full bg-white text-ink shadow disabled:opacity-40">›</button>
+                        </span>
+                      </>
+                    )}
+                    <span className="mt-1 block truncate text-[11px] text-ink-soft">
+                      {k === 0 ? "Opening" : sh.label || "Photo"}
+                    </span>
                   </div>
-                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">
-                    #{shots.indexOf(sh) + 1}
-                  </span>
-                  <span className="mt-1 block truncate text-[11px] text-ink-soft">
-                    {k === 0 ? "Opening" : sh.label || "Photo"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </li>
-        ))}
+                ))}
+                {editing && !picked.length && <p className="py-6 text-sm text-muted">Tap photos below to add them.</p>}
+              </div>
+
+              {editing && (
+                <>
+                  <p className="mt-4 text-xs font-semibold text-ink-soft">Add a photo</p>
+                  <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
+                    {pool.filter((x) => !reelEdit!.ids.includes(x.id)).map((sh) => (
+                      <button key={sh.id} type="button" disabled={reelEdit!.ids.length >= max}
+                        onClick={() => setReelEdit({ ...reelEdit!, ids: [...reelEdit!.ids, sh.id] })}
+                        className="relative w-16 shrink-0 overflow-hidden rounded-md ring-1 ring-line transition hover:ring-ink disabled:opacity-40 sm:w-20">
+                        <span className="block aspect-square bg-line">
+                          {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" style={{ objectPosition: objPos(sh) }} />}
+                        </span>
+                        <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[10px] font-semibold text-white">#{shots.indexOf(sh) + 1}</span>
+                        <span className="absolute bottom-1 right-1 grid h-5 w-5 place-items-center rounded-full bg-white text-xs font-bold text-ink shadow">+</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline" onClick={() => saveReel(pl.kind, null)}>
+                      Let Tourvo pick
+                    </button>
+                    <span className="flex gap-2">
+                      <button type="button" className="btn-ghost py-2" onClick={() => setReelEdit(null)}>Cancel</button>
+                      <button type="button" className="btn-gold py-2" disabled={reelEdit!.ids.length < REEL_MIN || (pl.kind === "top_features" && reelEdit!.ids.length < 3)}
+                        onClick={() => saveReel(pl.kind, reelEdit!.ids)}>
+                        Save photos
+                      </button>
+                    </span>
+                  </div>
+                </>
+              )}
+              {!editing && pl.kind !== "tour" && reelEditable && (
+                <button type="button" className="btn-ghost mt-3 py-1.5 text-sm" onClick={() => setReelEdit({ kind: pl.kind, ids: pl.shots.map((x) => x.id) })}>
+                  Change photos
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ol>
+      {status === "review" && <p className="mt-4 text-xs text-muted">Changing which photos a video uses is free; your clips stay as they are.</p>}
     </section>
   );
 
@@ -573,7 +659,7 @@ function Editor({ id, user }: { id: string; user: User }) {
             <div className="max-w-xl">
               <h2 className="font-display text-2xl">Put your photos in order</h2>
               <p className="mt-1 text-sm text-ink-soft">
-                Your video plays them in this order. Drag a photo to move it, then type the room name under each one.
+                Your video plays them in this order. Drag a photo to move it, tap Crop to choose what each shot shows, then type the room name under each one.
               </p>
             </div>
             {reorderable && shots.length > 2 && (
@@ -600,10 +686,14 @@ function Editor({ id, user }: { id: string; user: User }) {
                 onDrop={(e) => { e.preventDefault(); setDragOver(null); moveTo(Number(e.dataTransfer.getData("text/plain")), i); }}
                 className="group flex min-w-0 flex-col gap-2"
               >
-                <div className={`relative aspect-[4/3] overflow-hidden rounded-xl bg-line ring-2 transition ${
+                <div className={`relative aspect-video overflow-hidden rounded-xl bg-line ring-2 transition ${
                   dragOver === i ? "ring-ink" : "ring-transparent"} ${reorderable ? "cursor-grab active:cursor-grabbing" : ""}`}>
-                  {thumbs[sh.photo_path] && (
-                    <img src={thumbs[sh.photo_path]} alt={sh.label || `Photo ${i + 1}`} draggable={false} className="h-full w-full object-cover" />
+                  <CroppedImg src={thumbs[sh.photo_path]} crop={sh.crop} alt={sh.label || `Photo ${i + 1}`} />
+                  {cropEditable && thumbs[sh.photo_path] && (
+                    <button type="button" onClick={() => setCropFor(sh.id)}
+                      className="absolute bottom-2 left-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow transition hover:bg-champagne-soft">
+                      {sh.crop ? "Cropped · edit" : "Crop"}
+                    </button>
                   )}
                   <span className="absolute left-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-sm font-bold text-ink shadow">
                     {i + 1}
@@ -969,6 +1059,24 @@ function Editor({ id, user }: { id: string; user: User }) {
             </span>
           )}
         </div>
+      )}
+
+      {cropShot && thumbs[cropShot.photo_path] && (
+        <CropEditor
+          src={thumbs[cropShot.photo_path]}
+          crop={cropShot.crop}
+          note={status === "review" && cropShot.clip_status !== "failed"
+            ? `Saving a new crop remakes this clip from the new frame and uses 1 of your ${redosLeft} redos left.`
+            : undefined}
+          onCancel={() => setCropFor(null)}
+          onSave={(c) => {
+            const shot = cropShot;
+            setCropFor(null);
+            const same = JSON.stringify(c ?? null) === JSON.stringify(shot.crop ?? null);
+            if (same) return;
+            saveShot(shot, status === "review" ? { crop: c, clip_status: "redo", approved: false } : { crop: c });
+          }}
+        />
       )}
     </div>
   );

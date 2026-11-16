@@ -115,11 +115,35 @@ def fal_call(url, body=None):
     return r.json()
 
 
+def apply_crop(src, crop, dest):
+    """Cut the photo down to the frame the realtor chose ({x, y, w, h} as fractions). No crop: the photo as is."""
+    if not isinstance(crop, dict):
+        return src
+    try:
+        from PIL import Image, ImageOps
+        im = ImageOps.exif_transpose(Image.open(src)).convert("RGB")
+        W, H = im.size
+        x, y = max(0.0, float(crop["x"])), max(0.0, float(crop["y"]))
+        w, h = min(1.0 - x, float(crop["w"])), min(1.0 - y, float(crop["h"]))
+        if w < 0.05 or h < 0.05:
+            return src
+        box = (round(x * W), round(y * H), round((x + w) * W), round((y + h) * H))
+        im = im.crop(box)
+        if im.width < 1280:   # keep enough detail for the AI clip
+            im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
+        im.save(dest, quality=95)
+        return dest
+    except Exception as e:
+        log(f"  crop skipped: {e}")
+        return src
+
+
 def submit_clip(shot, index, user_id, orient="h"):
     """Download the photo, apply its effect, send it to fal.ai, and mark that orientation as generating.
     orient "h" = the 16:9 clip (review + MLS tour); "v" = a centered 9:16 clip for the vertical videos."""
     with tempfile.TemporaryDirectory() as tmp:
         src = storage_get("photos", shot["photo_path"], os.path.join(tmp, "photo" + os.path.splitext(shot["photo_path"])[1]))
+        src = apply_crop(src, shot.get("crop"), os.path.join(tmp, "cropped.jpg"))
         kind = effects.kind_of(shot, index)
         if orient == "v":
             src = effects.make_vertical(src, kind, os.path.join(tmp, "vertical.jpg"))
@@ -298,7 +322,7 @@ def render_listing(l):
             if s["clip_status"] == "ready" and s.get("clip_path"):
                 p = storage_get("clips", s["clip_path"], os.path.join(media, f"{s['id']}.mp4"))
                 rel = os.path.relpath(p, tmp)
-                shot = {"path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
+                shot = {"id": s["id"], "path": rel, "label": s["label"], "sub": s["sub"], "effect": fx,
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
                 cv = am.parse_custom(s.get("move"))   # digital drift follows the AI camera
@@ -313,7 +337,8 @@ def render_listing(l):
             else:  # clip failed: fall back to classic pan/zoom on the photo
                 ext = os.path.splitext(s["photo_path"])[1] or ".jpg"
                 p = storage_get("photos", s["photo_path"], os.path.join(media, f"{s['id']}{ext}"))
-                job_shots.append({"path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "effect": "none"})
+                p = apply_crop(p, s.get("crop"), os.path.join(media, f"{s['id']}-crop.jpg"))
+                job_shots.append({"id": s["id"], "path": os.path.relpath(p, tmp), "label": s["label"], "sub": s["sub"], "effect": "none"})
         if job_shots:
             job_shots[0]["label"] = ""; job_shots[0]["sub"] = ""   # title card sits over the first shot
         agent = {"name": prof.get("full_name") or "", "title": prof.get("title") or "",

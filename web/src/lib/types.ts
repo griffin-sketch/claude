@@ -49,6 +49,8 @@ export type Listing = {
   open_house: string | null;
   transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   formats: string[];
+  /** Photos each short video uses, in order (shot ids). A video not listed picks its own. */
+  reel_shots?: Record<string, string[]> | null;
   outro: "branded" | "client" | "simple" | "none";
   paid: boolean;
   paid_via: "single" | "credit" | "comp" | null;
@@ -79,7 +81,11 @@ export type Shot = {
   stage_style?: string;
   stage_room?: string;
   end_photo_path?: string | null;
+  crop?: Crop | null;
 };
+
+/** The part of a photo the video shows, as fractions (0-1) of the photo. Always a 16:9 frame. */
+export type Crop = { x: number; y: number; w: number; h: number };
 
 export type Staging = {
   id: string;

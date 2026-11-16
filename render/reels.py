@@ -140,6 +140,17 @@ STYLES = {
 }
 ALT_TEMPLATES = [1, 2, 9, 3, 4, 6, 8, 10, 5, 7]
 
+# The most photos each short video can hold. Keep in sync with REEL_MAX in web/src/lib/pack.ts.
+REEL_MAX = {"teaser": 8, "just_listed": 7, "price_reveal": 8, "top_features": 7, "open_house": 8,
+            "build_up": 15, "staged": 15}
+REEL_MIN = 2
+
+
+def price_durations(n):
+    """Guess the price speeds up shot by shot and holds the last one (the reveal). Same as pack.ts."""
+    ramp = [3.0, 2.5, 2.1, 1.8, 1.6, 1.5, 1.4]
+    return [2.6 if i == n - 1 else ramp[min(i, len(ramp) - 1)] for i in range(n)]
+
 
 def build_pack(job, listing):
     shots = job["shots"]
@@ -152,6 +163,13 @@ def build_pack(job, listing):
     mine = int(job.get("template") or 1)
     used = {mine}
     pack = []
+    by_id = {sh.get("id"): sh for sh in shots if sh.get("id")}
+    picks = listing.get("reel_shots") or {}
+
+    def chosen(kind, auto):
+        """The realtor's own photos for this video, in their order, if they picked enough of them."""
+        mine_ = [by_id[i] for i in (picks.get(kind) or []) if i in by_id][:REEL_MAX.get(kind, 15)]
+        return mine_ if len(mine_) >= REEL_MIN else auto
 
     # 1. The full walkthrough: the realtor's own look, every photo in their order.
     for fmt in listing.get("formats") or ["16:9"]:
@@ -175,14 +193,14 @@ def build_pack(job, listing):
 
     # 2. Teaser: fast, punchy, speed ramps, no room labels. Hook line up top, ends on "see the full tour".
     pack.append({"kind": "teaser", "fmt": "9:16", "job": variant("teaser", 1,
-        shots=cut(lead(pick(shots, 6), ["kitchen", "living", "outdoor"]), 2.0, labels=False, trim=0.5, speed=1.3),
+        shots=cut(chosen("teaser", lead(pick(shots, 6), ["kitchen", "living", "outdoor"])), 2.0, labels=False, trim=0.5, speed=1.3),
         kicker=hook_text(listing.get("hook"), job), headline=head,
         outro="simple", outro_kicker="See the full tour", outro_headline=where,
     )})
 
     # 3. Just Listed: cinematic slow motion with letterbox bars. Front, living, kitchen, suite, outdoors.
     pack.append({"kind": "just_listed", "fmt": "9:16", "job": variant("just_listed", 2,
-        shots=cut(by_roles(shots, ["living", "kitchen", "bed", "outdoor"], 5), 3.8, speed=0.8),
+        shots=cut(chosen("just_listed", by_roles(shots, ["living", "kitchen", "bed", "outdoor"], 5)), 3.8, speed=0.8),
         kicker="Just listed", headline=job.get("headline", ""),
     )})
 
@@ -192,41 +210,44 @@ def build_pack(job, listing):
         inside = [s for s in shots[1:] if role(s) != "exterior"]
         seq = pick([shots[0]] + inside, 6)
         seq = seq[1:] + seq[:1] if len(seq) > 2 else seq     # save the front of the home for the reveal
+        seq = chosen("price_reveal", seq)
         pack.append({"kind": "price_reveal", "fmt": "9:16", "job": variant("price_reveal", 3,
-            shots=cut(seq, [3.0, 2.5, 2.1, 1.8, 1.6, 2.6]), stats=stats,
+            shots=cut(seq, price_durations(len(seq))), stats=stats,
             kicker="Guess the price", headline=head,
             outro="simple", outro_kicker="Listed at", outro_headline=price,
         )})
 
     # 5. Top features: a numbered list of the rooms the realtor labeled, slow and bright.
     labeled = [s for s in shots[1:] if (s.get("label") or "").strip()]
-    if len(labeled) >= 3:
+    if len(labeled) >= 3 or picks.get("top_features"):
         feats = labeled[:5]
         opener = shots[-1] if shots[-1] not in feats else shots[0]   # open on the last photo (often the backyard or aerial)
-        pack.append({"kind": "top_features", "fmt": "9:16", "job": variant("top_features", 4,
-            shots=cut([opener] + feats, 3.6, speed=0.85),
-            kicker=f"{len(feats)} things we love", headline=head,
-        )})
+        seq = chosen("top_features", [opener] + feats)
+        if len(seq) >= 3:
+            pack.append({"kind": "top_features", "fmt": "9:16", "job": variant("top_features", 4,
+                shots=cut(seq, 3.6, speed=0.85),
+                kicker=f"{len(seq) - 1} things we love", headline=head,
+            )})
 
     # 6. Built from the ground up: every construction shot, each played through in full.
     built = [s for s in shots if s.get("effect") == "build"]
     if len(built) >= 2:
         pack.append({"kind": "build_up", "fmt": "9:16", "job": variant("build_up", 0,
-            shots=cut(built, 5.0), kicker="From the ground up", headline=head,
+            shots=cut(chosen("build_up", built), 5.0), kicker="From the ground up", headline=head,
         )})
 
     # 7. Virtually staged: the empty rooms furnishing themselves.
     staged = [s for s in shots if s.get("effect") == "staging"]
     if len(staged) >= 2:
         pack.append({"kind": "staged", "fmt": "9:16", "job": variant("staged", 1,
-            shots=cut(staged, 5.0), kicker="Imagine living here", headline=head,
+            shots=cut(chosen("staged", staged), 5.0), kicker="Imagine living here", headline=head,
         )})
 
     # 8. Open house: warm, light-flash cuts, the outdoor spaces first. Only when a date is entered.
     oh = (listing.get("open_house") or "").strip()
     if oh:
         pack.append({"kind": "open_house", "fmt": "9:16", "job": variant("open_house", 2,
-            shots=cut(lead(by_roles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), ["outdoor", "kitchen"]), 2.8),
+            shots=cut(chosen("open_house", lead(by_roles(shots, ["outdoor", "kitchen", "living", "bed", "bath"], 6), ["outdoor", "kitchen"])), 2.8),
             kicker="Open house", headline=oh,
             outro="simple", outro_kicker="Open house", outro_headline=oh,
         )})
