@@ -63,7 +63,10 @@ def _sheet(frames):
 
 def keep_until(path, dur, label="", session=None):
     """Seconds of the clip worth showing, or None to keep it all (also on any error)."""
-    if not KEY or dur <= MIN_KEEP + 0.3:
+    if not KEY:
+        print("  trim check off: no ANTHROPIC_API_KEY on the worker", flush=True)
+        return None
+    if dur <= MIN_KEEP + 0.3:
         return None
     try:
         import requests
@@ -78,7 +81,9 @@ def keep_until(path, dur, label="", session=None):
         r.raise_for_status()
         text = "".join(c.get("text", "") for c in r.json().get("content", []))
         m = re.search(r"\{.*\}", text, re.S)
-        k = json.loads(m.group(0)).get("keep_until") if m else None
+        ans = json.loads(m.group(0)) if m else {}
+        k = ans.get("keep_until")
+        print(f"  trim check {label or 'clip'}: keep_until={k} ({ans.get('why', '')})", flush=True)
         if k is None:
             return None
         k = float(k)
