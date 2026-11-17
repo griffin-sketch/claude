@@ -1,5 +1,5 @@
 """Auto-trim: find where an AI clip stops showing the room and starts pushing into dead space
-(a closet door, a blank wall, a close-up of a toilet), so the edit cuts the clip there instead of
+(a closet door, a blank wall, a close-up of a toilet) or starts showing surroundings the AI made up, so the edit cuts the clip there instead of
 playing it out. Griffin's rule, from his own edit of 516 W Main St: keep the start, cut the end
 once the camera has zoomed into something with nothing to show.
 
@@ -25,7 +25,12 @@ Examples of how the editor cut real clips:
 - Bedroom, camera drifted toward a bare corner: cut at 2.7 s.
 - Living rooms, kitchens and baths where the camera kept showing furniture, windows and finishes to the end: not cut.
 
-Only cut when the end really is dead space. A shot that ends closer but still on something worth seeing (a fireplace,
+Also cut when the camera starts showing made-up surroundings: the first frame is the real listing photo, so anything
+the camera reveals later that was not in it (new houses, trees, streets, rooms or furniture the AI invented, warped
+or melting shapes) looks fake. Cut at the last moment before the invented part becomes noticeable.
+- Front exterior, camera moved and revealed surroundings that do not match the real street: cut at 3.1 s.
+
+Only cut when the end really is dead space or invented. A shot that ends closer but still on something worth seeing (a fireplace,
 a vanity, a view, a kitchen island) is not cut. Text over the picture is not part of the room; ignore it.
 
 Answer with JSON only: {"keep_until": <seconds, or null to keep the whole clip>, "why": "<a few words>"}"""
