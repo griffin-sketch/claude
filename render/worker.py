@@ -41,7 +41,7 @@ DRIFT_FOR = {"push": "push", "pull": "pull", "pan_left": "pan_l", "pan_right": "
 STATIC_BELOW = 2.5        # motion score under this = the AI camera barely moved (logged only; no automatic remake)
 BOOST = (" IMPORTANT: the camera must move clearly and continuously for the entire clip, a steady and noticeable"
          " dolly forward through the space with strong parallax. Never hold still.")
-VERTICAL_SHOTS = 8      # photos that also get a true 9:16 clip (the Reels use these)
+VERTICAL_SHOTS = int(os.environ.get("VERTICAL_SHOTS", "0"))   # photos that also get their own AI 9:16 clip; 0 = the Reels crop the wide clips (saves ~$3 a listing)
 TRANSFORMS = {"build", "staging", "dusk"}   # effects whose room changes on screen: labels wait for the change
 
 S = requests.Session()
@@ -377,6 +377,7 @@ def render_listing(l):
                 p = storage_get("clips", s["clip_path"], os.path.join(media, f"{s['id']}.mp4"))
                 rel = os.path.relpath(p, tmp)
                 shot = {"id": s["id"], "path": rel, "label": s["label"], "sub": s["sub"], "effect": fx, "focus": focus_of(s),
+                        "crop": s.get("crop") if isinstance(s.get("crop"), dict) else None,
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
                 cv = am.parse_custom(s.get("move"))   # digital drift follows the AI camera
@@ -443,9 +444,9 @@ def render_listing(l):
             kind, fmt = item["kind"], item["fmt"]
             j = item["job"]
             if fmt == "9:16":   # true vertical clips where we have them; elsewhere crop the wide clip around the realtor's frame
-                j = dict(j, shots=[dict(sh, path=vpath[sh["path"]], focus=None) if sh["path"] in vpath else sh for sh in j["shots"]])
+                j = dict(j, shots=[dict(sh, path=vpath[sh["path"]], focus=None, crop=None) if sh["path"] in vpath else sh for sh in j["shots"]])
             else:               # the wide videos always show the whole frame
-                j = dict(j, shots=[dict(sh, focus=None) for sh in j["shots"]])
+                j = dict(j, shots=[dict(sh, focus=None, crop=None) for sh in j["shots"]])
             job_path = os.path.join(tmp, f"job-{kind}.json")
             json.dump(j, open(job_path, "w"))
             name = f"{kind}-{fmt.replace(':', 'x')}"

@@ -958,6 +958,25 @@ def probe_duration(path):
     except Exception:
         return 0.0
 
+def _crop_box(path, crop, aspect):
+    """The realtor's crop ({x,y,w,h} fractions of the photo) as a pixel box on a clip, reshaped to `aspect`
+    (out width / height) around the same center and height, kept inside the clip. None if unusable."""
+    try:
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                            "-of", "csv=p=0", path], capture_output=True, text=True, check=True)
+        iw, ih = (int(v) for v in r.stdout.strip().split(",")[:2])
+        cx = (float(crop["x"]) + float(crop["w"]) / 2) * iw
+        cy = (float(crop["y"]) + float(crop["h"]) / 2) * ih
+        bh = min(ih, max(64.0, float(crop["h"]) * ih))
+        bw = bh * aspect
+        if bw > iw:
+            bw = iw; bh = bw / aspect
+        x0 = min(max(0.0, cx - bw / 2), iw - bw); y0 = min(max(0.0, cy - bh / 2), ih - bh)
+        bw, bh = int(bw) // 2 * 2, int(bh) // 2 * 2
+        return int(x0), int(y0), bw, bh
+    except Exception:
+        return None
+
 def _focus(focus):
     """(x, y) fractions of where to center a crop, from a shot's "focus" (None = the middle)."""
     try:
@@ -1011,14 +1030,20 @@ DRIFTS = ["push", "pan_r", "pull", "pan_l", "rise"]
 class ClipSource:
     """Decodes an AI clip. Every clip also gets a slow digital camera drift (a push, pull or pan of a few
     percent), so even a take where the AI camera barely moved never looks like a still photo."""
-    def __init__(self, path, start, nframes, curve=None, move="push", drift=0.07, focus=None):
+    def __init__(self, path, start, nframes, curve=None, move="push", drift=0.07, focus=None, crop=None):
         self.n = nframes; self.curve = curve; self.move = move; self.drift = max(0.0, float(drift or 0))
         z = 1 + self.drift
         self.cw, self.ch = int(round(W * z / 2)) * 2, int(round(H * z / 2)) * 2
         need = int(curve[-1]) + 2 if curve else nframes
         fx, fy = _focus(focus)   # where to cut from when the clip is wider (or taller) than the frame
-        vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,"
-              f"crop={self.cw}:{self.ch}:(in_w-{self.cw})*{fx:.4f}:(in_h-{self.ch})*{fy:.4f},fps={FPS}")
+        box = _crop_box(path, crop, self.cw / self.ch) if crop else None
+        if box:   # the realtor's frame from the crop tool, cut straight out of the wide clip
+            bx, by, bw, bh = box
+            sharp = ",unsharp=5:5:0.7:5:5:0.0" if self.cw > bw * 1.4 else ""
+            vf = f"crop={bw}:{bh}:{bx}:{by},scale={self.cw}:{self.ch}:flags=lanczos{sharp},fps={FPS}"
+        else:
+            vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,"
+                  f"crop={self.cw}:{self.ch}:(in_w-{self.cw})*{fx:.4f}:(in_h-{self.ch})*{fy:.4f},fps={FPS}")
         self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1", "-ss", f"{start:.3f}", "-i", path, "-an",
                                    "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
                                   stdout=subprocess.PIPE)
@@ -1173,7 +1198,8 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             if sg["kind"] == "photo": sources[i] = PhotoSource(sg["path"], sg["n"], MOVES[i % len(MOVES)], curve, focus)
             else:
                 mv = sg["shot"].get("drift_move") or DRIFTS[(i + int(job.get("drift_offset", 0))) % len(DRIFTS)]
-                sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve, mv, drift, focus)
+                sources[i] = ClipSource(sg["path"], sg["start"], sg["n"], curve, mv, drift, focus,
+                                        (sg.get("shot") or {}).get("crop"))
         return sources[i]
 
     frames_to_do = range(total_f) if preview is None else preview
