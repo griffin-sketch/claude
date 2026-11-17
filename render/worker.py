@@ -256,7 +256,8 @@ def step_redo():
         try:
             static = (s.get("error") or "").startswith("static")
             submit_clip(s, idx, l[0]["user_id"])
-            if wants_vertical(l[0], idx) and not static:
+            # a plain redo leaves the tall clip the realtor already saw; it's only made here if it never was
+            if wants_vertical(l[0], idx) and not static and (s.get("vclip_status") or "none") in ("none", "failed"):
                 try:
                     submit_clip(s, idx, l[0]["user_id"], "v")
                 except Exception as e:

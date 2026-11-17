@@ -127,11 +127,12 @@ function Editor({ id, user }: { id: string; user: User }) {
   }, [awaitingPayment, listing, load]);
 
   // Poll while the worker is busy.
+  const remaking = shots.some((s) => ["redo", "generating"].includes(s.clip_status) || ["redo", "generating"].includes(s.vclip_status ?? ""));
   useEffect(() => {
-    if (!listing || !ACTIVE.has(listing.status)) return;
+    if (!listing || !(ACTIVE.has(listing.status) || (listing.status === "review" && remaking))) return;
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
-  }, [listing, load]);
+  }, [listing, load, remaking]);
 
   // Signed URLs for photo thumbnails, clips and finished videos.
   useEffect(() => {
@@ -149,7 +150,9 @@ function Editor({ id, user }: { id: string; user: User }) {
           });
         });
     }
-    const needClips = shots.filter((s) => s.clip_path && !clips[s.clip_path]).map((s) => s.clip_path!) ;
+    const needClips = shots
+      .flatMap((s) => [s.clip_path, s.vclip_status === "ready" ? s.vclip_path : null])
+      .filter((p): p is string => !!p && !clips[p]);
     if (needClips.length) {
       sb.storage
         .from("clips")
@@ -184,6 +187,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [dropping, setDropping] = useState(false);
   const [fxFor, setFxFor] = useState<string | null>(null); // the photo whose effects sheet is open
   const [cropFor, setCropFor] = useState<string | null>(null); // the photo whose crop tool is open
+  const [preview, setPreview] = useState<"wide" | "tall">("wide"); // which clips the review shows
   const [reelEdit, setReelEdit] = useState<{ kind: string; ids: string[] } | null>(null); // a short video's photo picker
   useEffect(() => {
     if (!fxFor) return;
@@ -214,6 +218,12 @@ function Editor({ id, user }: { id: string; user: User }) {
   }
 
   async function saveShot(shot: Shot, patch: Partial<Shot>) {
+    // Changing a setting (effect, camera move, staging...) remakes the tall clip too, so both match. A plain Redo
+    // only remakes the wide clip; the tall one has its own Redo in the Tall preview.
+    const settingChange = Object.keys(patch).some((k) => !["clip_status", "approved"].includes(k));
+    if (patch.clip_status === "redo" && settingChange && ["ready", "generating", "failed"].includes(shot.vclip_status ?? "")) {
+      patch = { ...patch, vclip_status: "redo" };
+    }
     // A new take the customer asks for uses one of the listing's redos (remaking a failed clip is free).
     const counts = patch.clip_status === "redo" && !["redo", "failed"].includes(shot.clip_status);
     if (counts && redosLeft <= 0) {
@@ -293,6 +303,18 @@ function Editor({ id, user }: { id: string; user: User }) {
     else load();
   }
 
+  // A new take of just the tall (Reels) clip. Uses one redo unless the tall clip had failed.
+  async function redoTall(shot: Shot) {
+    const counts = shot.vclip_status !== "failed";
+    if (counts && redosLeft <= 0) return setError(`You've used all ${REDO_LIMIT} redos for this listing.`);
+    setShots((prev) => prev.map((x) => (x.id === shot.id ? { ...x, vclip_status: "redo", user_redos: (x.user_redos ?? 0) + (counts ? 1 : 0) } : x)));
+    const { error } = await sb.from("shots").update({ vclip_status: "redo" }).eq("id", shot.id);
+    if (error) {
+      setError(error.message);
+      load();
+    }
+  }
+
   async function redo(shot: Shot) {
     await saveShot(shot, { clip_status: "redo", approved: false });
   }
@@ -316,7 +338,7 @@ function Editor({ id, user }: { id: string; user: User }) {
     const prev = i ? acc[i - 1] + (shots[i - 1].effect && ["build", "staging", "dusk"].includes(shots[i - 1].effect) ? 5 : 4.6) - 0.6 : 0;
     return [...acc, prev];
   }, []);
-  const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status) || s.vclip_status === "redo");
+  const stillWorking = shots.some((s) => ["queued", "generating", "redo"].includes(s.clip_status) || ["redo", "generating"].includes(s.vclip_status ?? ""));
 
   const status = listing.status;
   const cropShot = cropFor ? shots.find((x) => x.id === cropFor) : undefined;
@@ -358,6 +380,28 @@ function Editor({ id, user }: { id: string; user: User }) {
       )}
     </div>
   );
+
+  // What the tall videos show for this photo: its own tall clip, or (photos past the first 8) the wide clip cut to 9:16.
+  const tallThumb = (sh: Shot, i: number) => {
+    const own = sh.vclip_status && sh.vclip_status !== "none";
+    const focus = sh.crop ? `${(sh.crop.x + sh.crop.w / 2) * 100}% ${(sh.crop.y + sh.crop.h / 2) * 100}%` : undefined;
+    const src = own ? (sh.vclip_status === "ready" && sh.vclip_path ? clips[sh.vclip_path] : undefined) : sh.clip_path ? clips[sh.clip_path] : undefined;
+    return (
+      <div className="relative aspect-[9/16] w-32 shrink-0 overflow-hidden rounded-lg bg-line sm:w-36">
+        {src ? (
+          <video key={src} src={src} muted loop autoPlay playsInline className="h-full w-full object-cover" style={own ? undefined : { objectPosition: focus }} />
+        ) : (
+          <CroppedImg src={thumbs[sh.photo_path]} crop={sh.crop} />
+        )}
+        <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">#{i + 1}</span>
+        {own && sh.vclip_status !== "ready" && (
+          <span className="absolute inset-x-2 bottom-2 rounded-full bg-black/75 px-2 py-1 text-center text-[11px] font-semibold text-white">
+            {sh.vclip_status === "failed" ? "Tall clip failed" : "Making tall clip…"}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const motionControls = (sh: Shot, i: number, inline = false) => (
     <>
@@ -990,27 +1034,60 @@ function Editor({ id, user }: { id: string; user: User }) {
                 {stillWorking ? "Finishing your redos…" : "Make my videos →"}
               </button>
             </div>
-            <p className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${redosLeft > 0 ? "bg-gold-soft text-ink" : "bg-danger/10 text-danger"}`}>
-              {redosLeft > 0 ? `${redosLeft} of ${REDO_LIMIT} redos left for this listing` : `All ${REDO_LIMIT} redos used`}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${redosLeft > 0 ? "bg-gold-soft text-ink" : "bg-danger/10 text-danger"}`}>
+                {redosLeft > 0 ? `${redosLeft} of ${REDO_LIMIT} redos left for this listing` : `All ${REDO_LIMIT} redos used`}
+              </p>
+              <div role="tablist" aria-label="Preview" className="inline-flex rounded-full border border-line p-1 text-sm font-semibold">
+                {(["wide", "tall"] as const).map((m) => (
+                  <button key={m} role="tab" aria-selected={preview === m} type="button" onClick={() => setPreview(m)}
+                    className={`rounded-full px-3 py-1 transition ${preview === m ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
+                    {m === "wide" ? "Wide video" : "Tall videos (Reels)"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {preview === "tall" && (
+              <p className="mt-2 text-xs text-muted">
+                Your Reels, TikToks and the tall walkthrough use these. Photos 1 to 8 get their own tall clip; the rest are cut from the wide clip.
+              </p>
+            )}
             <ol className="mt-5 space-y-3">
-              {shots.map((sh, i) => (
-                <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
-                  {thumb(sh, i, true)}
-                  <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                    <div className="flex items-center justify-between gap-2 sm:col-span-2">
-                      <p className="text-sm font-semibold">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
-                      {sh.clip_status === "ready" && (
-                        <button className="btn-ghost py-1.5" disabled={redosLeft <= 0} onClick={() => redo(sh)}>Redo</button>
-                      )}
-                      {sh.clip_status === "failed" && (
-                        <button className="btn-ghost py-1.5" onClick={() => redo(sh)}>Try again (free)</button>
+              {shots.map((sh, i) => {
+                const ownTall = sh.vclip_status && sh.vclip_status !== "none";
+                return (
+                  <li key={sh.id} className="flex flex-col gap-3 rounded-xl border border-line p-3 sm:flex-row sm:items-start">
+                    {preview === "tall" ? tallThumb(sh, i) : thumb(sh, i, true)}
+                    <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                      <div className="flex items-center justify-between gap-2 sm:col-span-2">
+                        <p className="text-sm font-semibold">{i === 0 ? "Opening shot" : sh.label || `Photo ${i + 1}`}</p>
+                        {preview === "wide" && sh.clip_status === "ready" && (
+                          <button className="btn-ghost py-1.5" disabled={redosLeft <= 0} onClick={() => redo(sh)}>Redo</button>
+                        )}
+                        {preview === "wide" && sh.clip_status === "failed" && (
+                          <button className="btn-ghost py-1.5" onClick={() => redo(sh)}>Try again (free)</button>
+                        )}
+                        {preview === "tall" && ownTall && sh.vclip_status === "ready" && (
+                          <button className="btn-ghost py-1.5" disabled={redosLeft <= 0} onClick={() => redoTall(sh)}>Redo tall clip</button>
+                        )}
+                        {preview === "tall" && sh.vclip_status === "failed" && (
+                          <button className="btn-ghost py-1.5" onClick={() => redoTall(sh)}>Try again (free)</button>
+                        )}
+                        {preview === "tall" && !ownTall && sh.clip_status === "ready" && (
+                          <button className="btn-ghost py-1.5" onClick={() => setCropFor(sh.id)}>{sh.crop ? "Cropped" : "Crop"}</button>
+                        )}
+                      </div>
+                      {preview === "wide" ? motionControls(sh, i) : (
+                        <p className="text-xs text-muted sm:col-span-2">
+                          {ownTall
+                            ? "Redo makes a new tall clip only; your wide clip stays the same."
+                            : "Cut from the wide clip. Use Crop to choose which part of the frame the tall videos show."}
+                        </p>
                       )}
                     </div>
-                    {motionControls(sh, i)}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ol>
           </section>
           {packSection}
