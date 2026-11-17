@@ -9,7 +9,7 @@ import base64, io, json, os, re, subprocess
 
 from PIL import Image, ImageDraw
 
-KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+KEY = os.environ.get("ANTHROPIC_API_KEY") or next((v for k, v in os.environ.items() if k.upper() == "ANTHROPIC_API_KEY"), "")
 MODEL = os.environ.get("TRIM_MODEL", "claude-haiku-5-5")
 STEP = 0.5          # seconds between sampled frames
 MIN_KEEP = 1.5      # never cut a clip shorter than this

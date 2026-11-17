@@ -42,7 +42,8 @@ async function accountSummary(userId: string, email?: string) {
 }
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) return json(503, "Chat isn't set up yet. Email info@gettourvo.com and we'll help.");
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? Object.entries(process.env).find(([k]) => k.toUpperCase() === "ANTHROPIC_API_KEY")?.[1];
+  if (!apiKey) return json(503, "Chat isn't set up yet. Email info@gettourvo.com and we'll help.");
 
   let body: { conversationId?: string; messages?: Msg[]; page?: string };
   try {
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
   const question = messages[messages.length - 1].content;
   const page = String(body.page ?? "").slice(0, 200);
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   const stream = client.messages.stream({
     model: MODEL,
     max_tokens: 700,
