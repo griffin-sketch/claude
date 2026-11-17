@@ -312,7 +312,8 @@ def step_poll():
                     dest = os.path.join(tmp, "clip.mp4")
                     _download(url, dest)
                     suffix = "-v" if orient == "v" else ""
-                    path = f"{user_id}/{s['listing_id']}/{s['id']}-{s.get('clip_attempts') or 1}{suffix}.mp4"
+                    # a new name for every take, so the page (and any cache) never shows the old clip under the new one
+                    path = f"{user_id}/{s['listing_id']}/{s['id']}-{s.get('clip_attempts') or 1}{suffix}-{int(time.time())}.mp4"
                     storage_put("clips", path, dest)
                     score = motion_score(dest)
                 upd = {status_f: "ready", path_f: path}
