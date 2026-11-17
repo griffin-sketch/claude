@@ -22,7 +22,12 @@ const REEL: Record<string, string> = {
 };
 const ORDER = Object.keys(REEL);
 
+type Account = {
+  id: string; email: string; name: string; company: string; phone: string; account_type: string; provider: string;
+  plan: string; credits: number; created_at: string; last_sign_in_at: string | null; listings: number; finished: number;
+};
 type Data = {
+  accounts?: Account[];
   totals: { users: number; photographers: number; subscribers: number; mrr: number; listings: number; revenue: number; ai_cost: number; problems: number; byStatus: Record<string, number> };
   rows: Row[];
 };
@@ -40,6 +45,7 @@ function Admin() {
   const [filter, setFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [tab, setTab] = useState<"listings" | "accounts">("listings");
   const close = useCallback(() => setOpen(null), []);
 
   const load = () => api<Data>("/api/admin").then(setData).catch((e) => setError(e.message));
@@ -86,6 +92,15 @@ function Admin() {
           </div>
         ))}
       </div>
+      <div className="flex gap-2" role="tablist">
+        {(["listings", "accounts"] as const).map((k) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-ink text-white" : "bg-surface text-ink-soft ring-1 ring-line hover:text-ink"}`}>
+            {k === "listings" ? `Listings · ${t.listings}` : `Accounts · ${t.users}`}
+          </button>
+        ))}
+      </div>
+      {tab === "accounts" ? <Accounts list={data.accounts ?? []} /> : <>
       <div className="flex flex-wrap items-center gap-2">
         {chips.map((c) => (
           <button key={c} onClick={() => setFilter(c)}
@@ -147,6 +162,7 @@ function Admin() {
       </div>
       {open && <Viewer listingId={open} onClose={close} />}
       <p className="text-xs text-muted">Costs are estimates from clip counts (about $0.35 per Kling clip). Check fal.ai billing for exact numbers.</p>
+      </>}
     </div>
   );
 }
@@ -209,6 +225,56 @@ function Viewer({ listingId, onClose }: { listingId: string; onClose: () => void
         )}
       </div>
     </div>
+  );
+}
+
+/** Every account that has signed up, newest first: who they are, how they signed in, and how far they've gotten. */
+function Accounts({ list }: { list: Account[] }) {
+  const [q, setQ] = useState("");
+  const term = q.trim().toLowerCase();
+  const shown = list.filter((a) => !term || `${a.name} ${a.email} ${a.company} ${a.phone}`.toLowerCase().includes(term));
+  const day = (s: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Never");
+  return (
+    <>
+      <label className="w-full sm:w-64">
+        <span className="sr-only">Search accounts</span>
+        <input className="input" placeholder="Search name, email or company" value={q} onChange={(e) => setQ(e.target.value)} />
+      </label>
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[860px] text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-muted">
+            <tr>
+              {["Account", "Company", "Signed up", "Last sign-in", "Listings", "Plan"].map((h) => (
+                <th key={h} className="px-4 py-3 font-semibold">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((a) => (
+              <tr key={a.id} className="border-b border-line align-top last:border-0">
+                <td className="px-4 py-3">
+                  <span className="block font-semibold">{a.name || "No name yet"}</span>
+                  <span className="block text-xs text-muted">
+                    {a.email}{a.provider === "google" ? " · Google" : ""}{a.account_type === "photographer" ? " · photographer" : ""}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="block">{a.company || "—"}</span>
+                  {a.phone && <span className="block text-xs text-muted">{a.phone}</span>}
+                </td>
+                <td className="px-4 py-3 text-xs">{day(a.created_at)}</td>
+                <td className="px-4 py-3 text-xs text-muted">{day(a.last_sign_in_at)}</td>
+                <td className="px-4 py-3 text-xs">{a.listings ? `${a.listings} · ${a.finished} finished` : <span className="text-muted">None yet</span>}</td>
+                <td className="px-4 py-3 text-xs">{a.plan || <span className="text-muted">No plan</span>}{a.credits ? ` · ${a.credits} credits` : ""}</td>
+              </tr>
+            ))}
+            {shown.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-ink-soft">No accounts match.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

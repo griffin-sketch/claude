@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       db.from("listings").select("id, user_id, address, city_line, status, paid, paid_via, error, created_at, updated_at, outro").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),
       db.from("renders").select("listing_id"),
-      db.from("profiles").select("id, full_name, company, account_type, plan, plan_interval, plan_status, credits"),
+      db.from("profiles").select("id, full_name, company, brokerage, phone, account_type, plan, plan_interval, plan_status, credits"),
       db.auth.admin.listUsers({ perPage: 1000 }),
     ]);
     const email = new Map((users.data?.users ?? []).map((u) => [u.id, u.email ?? ""]));
@@ -68,7 +68,29 @@ export async function POST(request: Request) {
       problems: rows.filter((r) => r.status === "failed" || r.failed > 0).length,
       byStatus,
     };
-    return Response.json({ totals, rows });
+    // every account, newest first, with how far each one has gotten
+    const listingsBy = new Map<string, { total: number; done: number }>();
+    for (const l of listings ?? []) {
+      const m = listingsBy.get(l.user_id) ?? { total: 0, done: 0 };
+      m.total++; if (l.status === "done") m.done++;
+      listingsBy.set(l.user_id, m);
+    }
+    const accounts = (users.data?.users ?? [])
+      .map((u) => {
+        const p = prof.get(u.id);
+        const m = listingsBy.get(u.id) ?? { total: 0, done: 0 };
+        return {
+          id: u.id, email: u.email ?? "", name: p?.full_name || "", company: p?.company || p?.brokerage || "",
+          phone: p?.phone || "", account_type: p?.account_type ?? "agent",
+          provider: (u.app_metadata?.provider as string) || "email",
+          plan: p?.plan && p.plan !== "none" ? `${p.plan}${p.plan_interval ? ` · ${p.plan_interval}` : ""}${p.plan_status && p.plan_status !== "active" ? ` (${p.plan_status})` : ""}` : "",
+          credits: p?.credits ?? 0,
+          created_at: u.created_at, last_sign_in_at: u.last_sign_in_at ?? null,
+          listings: m.total, finished: m.done,
+        };
+      })
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return Response.json({ totals, rows, accounts });
   } catch (e) {
     return fail(e);
   }
