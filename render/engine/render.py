@@ -1136,6 +1136,8 @@ def build_timeline(job, base):
             start = float(s.get("trim_start", 0))
             speed = max(0.5, min(2.5, float(s.get("speed") or 1.0)))   # 0.8 = slow motion, 1.8 = fast forward
             d = float(s.get("duration") or min(max(dur_src - start, 1.0), 6.0))
+            if s.get("keep"):   # auto-trim: stop before the camera pushes into dead space
+                d = min(d, max(1.2, (float(s["keep"]) - start) / speed))
             avail = max(dur_src - start, 1.0) * FPS - 2          # source frames we can use
             n = int(min(d * FPS, avail / speed - (ramp_extra(r_in, r_out) if ramped else 0)))
             d = max(1.2, n / FPS)

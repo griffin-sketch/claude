@@ -26,6 +26,7 @@ import reels             # the Reel pack: several cuts per listing
 import effects           # per-photo effects + centered vertical framing
 import notify            # customer emails (Resend)
 from motion import motion_score
+import trim                # auto-trim: cut clips before they push into dead space
 import staging
 
 SB = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -380,6 +381,11 @@ def render_listing(l):
                         "crop": s.get("crop") if isinstance(s.get("crop"), dict) else None,
                         "duration": 5.0 if fx in TRANSFORMS else 4.6}
                 if fx in TRANSFORMS: shot["label_delay"] = 0.6   # show the label once the room has transformed
+                elif fx == "none":
+                    k = trim.keep_until(p, engine.probe_duration(p), s.get("label") or "", S)
+                    if k:
+                        shot["keep"] = round(k, 2)
+                        log(f"  shot {s['position'] + 1} ({s.get('label') or 'untitled'}): trimmed to {k:.1f}s, the rest is dead space")
                 cv = am.parse_custom(s.get("move"))   # digital drift follows the AI camera
                 shot["drift_move"] = am.custom_drift(cv) if cv else DRIFT_FOR.get(am.pick_move(s, s["position"]), "push")
                 job_shots.append(shot)
