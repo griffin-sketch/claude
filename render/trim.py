@@ -33,7 +33,7 @@ or melting shapes) looks fake. Cut at the last moment before the invented part b
 Only cut when the end really is dead space or invented. A shot that ends closer but still on something worth seeing (a fireplace,
 a vanity, a view, a kitchen island) is not cut. Text over the picture is not part of the room; ignore it.
 
-Answer with JSON only: {"keep_until": <seconds, or null to keep the whole clip>, "why": "<a few words>"}"""
+Reply with nothing but one line of JSON, no other words: {"keep_until": <seconds, or null to keep the whole clip>, "why": "<a few words>"}"""
 
 
 def _frames(path, dur):
@@ -73,7 +73,7 @@ def keep_until(path, dur, label="", session=None):
         frames = _frames(path, dur)
         if len(frames) < 3:
             return None
-        body = {"model": MODEL, "max_tokens": 120, "messages": [{"role": "user", "content": [
+        body = {"model": MODEL, "max_tokens": 600, "messages": [{"role": "user", "content": [
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": _sheet(frames)}},
             {"type": "text", "text": (f"Room: {label}\n" if label else "") + PROMPT}]}]}
         r = (session or requests).post("https://api.anthropic.com/v1/messages", json=body, timeout=60, headers={
@@ -81,7 +81,10 @@ def keep_until(path, dur, label="", session=None):
         r.raise_for_status()
         text = "".join(c.get("text", "") for c in r.json().get("content", []))
         m = re.search(r"\{.*\}", text, re.S)
-        ans = json.loads(m.group(0)) if m else {}
+        if not m:
+            print(f"  trim check {label or 'clip'}: no answer ({text[:160]!r})", flush=True)
+            return None
+        ans = json.loads(m.group(0))
         k = ans.get("keep_until")
         print(f"  trim check {label or 'clip'}: keep_until={k} ({ans.get('why', '')})", flush=True)
         if k is None:
