@@ -20,6 +20,25 @@ export async function POST(request: Request) {
     if (body?.ping) return Response.json({ ok: true });
     const db = admin();
     if (typeof body?.listing === "string") return Response.json(await media(db, body.listing));
+
+    // AI photo edit: { edit: { path, prompt } } queues one; { editId } checks on it
+    if (body?.edit) {
+      const path = String(body.edit.path ?? ""), prompt = String(body.edit.prompt ?? "").trim();
+      if (!path.startsWith(`${user.id}/`) || !prompt) throw new HttpError(400, "Upload an image and describe the change.");
+      const { data, error } = await db.from("ai_edits").insert({ user_id: user.id, source_path: path, prompt: prompt.slice(0, 4000) }).select("id").single();
+      if (error || !data) throw new HttpError(500, error?.message.includes("ai_edits") ? "Run migration 0016 in Supabase first." : "Couldn't queue the edit.");
+      return Response.json({ id: data.id });
+    }
+    if (typeof body?.editId === "string") {
+      const { data: ed } = await db.from("ai_edits").select("status, result_path, error").eq("id", body.editId).eq("user_id", user.id).single();
+      if (!ed) throw new HttpError(404, "Edit not found.");
+      let url: string | null = null, download: string | null = null;
+      if (ed.result_path) {
+        url = (await db.storage.from("photos").createSignedUrl(ed.result_path, 3600)).data?.signedUrl ?? null;
+        download = (await db.storage.from("photos").createSignedUrl(ed.result_path, 3600, { download: "tourvo-edit.png" })).data?.signedUrl ?? null;
+      }
+      return Response.json({ status: ed.status, error: ed.error, url, download });
+    }
     const [{ data: listings }, { data: shots }, { data: renders }, { data: profiles }, users] = await Promise.all([
       db.from("listings").select("id, user_id, address, city_line, status, paid, paid_via, error, created_at, updated_at, outro").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),

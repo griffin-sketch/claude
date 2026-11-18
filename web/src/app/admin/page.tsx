@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api";
+import { AiEdit } from "@/components/AiEdit";
+import type { User } from "@supabase/supabase-js";
 import { STATUS_LABEL, type ListingStatus } from "@/lib/types";
 
 type Row = {
@@ -39,13 +41,13 @@ const TONE: Record<string, string> = {
   generating: "bg-gold-soft text-gold-deep", rendering: "bg-gold-soft text-gold-deep", queued: "bg-line text-ink-soft", draft: "bg-line text-muted",
 };
 
-function Admin() {
+function Admin({ user }: { user: User }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
-  const [tab, setTab] = useState<"listings" | "accounts">("listings");
+  const [tab, setTab] = useState<"listings" | "accounts" | "edit">("listings");
   const close = useCallback(() => setOpen(null), []);
 
   const load = () => api<Data>("/api/admin").then(setData).catch((e) => setError(e.message));
@@ -93,14 +95,14 @@ function Admin() {
         ))}
       </div>
       <div className="flex gap-2" role="tablist">
-        {(["listings", "accounts"] as const).map((k) => (
+        {(["listings", "accounts", "edit"] as const).map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-ink text-white" : "bg-surface text-ink-soft ring-1 ring-line hover:text-ink"}`}>
-            {k === "listings" ? `Listings · ${t.listings}` : `Accounts · ${t.users}`}
+            {k === "listings" ? `Listings · ${t.listings}` : k === "accounts" ? `Accounts · ${t.users}` : "AI photo edit"}
           </button>
         ))}
       </div>
-      {tab === "accounts" ? <Accounts list={data.accounts ?? []} /> : <>
+      {tab === "edit" ? <AiEdit user={user} /> : tab === "accounts" ? <Accounts list={data.accounts ?? []} /> : <>
       <div className="flex flex-wrap items-center gap-2">
         {chips.map((c) => (
           <button key={c} onClick={() => setFilter(c)}
@@ -279,5 +281,5 @@ function Accounts({ list }: { list: Account[] }) {
 }
 
 export default function AdminPage() {
-  return <AppShell>{() => <Admin />}</AppShell>;
+  return <AppShell>{(user) => <Admin user={user} />}</AppShell>;
 }

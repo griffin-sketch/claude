@@ -499,13 +499,43 @@ def step_stagings():
             db_patch("stagings", {"id": st["id"]}, {"status": "failed", "error": "Staging didn't work this time. Try again."})
 
 
+EDIT_MODEL = "fal-ai/nano-banana-pro/edit"
+
+def step_ai_edits():
+    """Admin AI photo edits: run the prompt on the uploaded image, save the result next to it."""
+    stale = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 600))
+    try:
+        stuck = db_get("ai_edits", status="eq.processing", updated_at=f"lt.{stale}")
+    except requests.HTTPError:
+        return   # the ai_edits table isn't set up yet (migration 0016)
+    for ed in stuck:
+        db_patch("ai_edits", {"id": ed["id"]}, {"status": "queued"})
+    for ed in db_get("ai_edits", status="eq.queued", order="created_at", limit="2"):
+        n = (ed.get("attempts") or 0) + 1
+        db_patch("ai_edits", {"id": ed["id"]}, {"status": "processing", "attempts": n, "error": None,
+                                               "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+        log(f"ai edit {ed['id'][:8]} (take {n})")
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                src = storage_get("photos", ed["source_path"], os.path.join(tmp, "src"))
+                res = effects.run(EDIT_MODEL, {"prompt": ed["prompt"], "image_urls": [effects.data_uri(src)], "num_images": 1,
+                                               "resolution": "2K", "output_format": "png"}, timeout=300)
+                out = effects.fetch(res["images"][0]["url"], os.path.join(tmp, "out.png"))
+                path = f"{ed['user_id']}/edits/{ed['id']}-{n}.png"
+                storage_put("photos", path, out, "image/png")
+            db_patch("ai_edits", {"id": ed["id"]}, {"status": "ready", "result_path": path})
+        except Exception as e:
+            log(f"  ai edit {ed['id'][:8]} failed: {e}")
+            db_patch("ai_edits", {"id": ed["id"]}, {"status": "failed", "error": str(e)[:300]})
+
+
 def main():
     missing = [n for n, v in (("SUPABASE_URL", SB), ("SUPABASE_SERVICE_ROLE_KEY", KEY), ("FAL_KEY", FAL)) if not v]
     if missing:
         sys.exit("Missing environment variables: " + ", ".join(missing))
     log(f"worker up · model {MODEL} · polling every {POLL}s")
     while True:
-        for step in (step_queued, step_redo, step_vredo, step_poll, step_to_review, step_stagings, step_render):
+        for step in (step_queued, step_redo, step_vredo, step_poll, step_to_review, step_stagings, step_ai_edits, step_render):
             try:
                 step()
             except Exception as e:
