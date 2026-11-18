@@ -81,6 +81,8 @@ export type Shot = {
   stage_style?: string;
   stage_room?: string;
   end_photo_path?: string | null;
+  /** Set when the photo was decorated for the holidays: the undecorated original, to put back. */
+  original_photo_path?: string | null;
   /** What the tall Reels (9:16) videos show of this photo. Empty = centered. The wide videos use the whole photo. */
   crop?: Crop | null;
 };

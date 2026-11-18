@@ -510,7 +510,16 @@ def step_ai_edits():
         return   # the ai_edits table isn't set up yet (migration 0016)
     for ed in stuck:
         db_patch("ai_edits", {"id": ed["id"]}, {"status": "queued"})
-    for ed in db_get("ai_edits", status="eq.queued", order="created_at", limit="2"):
+    todo = db_get("ai_edits", status="eq.queued", order="created_at", limit="8")
+    if not todo:
+        return
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(4) as pool:   # a listing's photos decorate side by side
+        list(pool.map(_ai_edit, todo))
+
+
+def _ai_edit(ed):
+    if True:
         n = (ed.get("attempts") or 0) + 1
         db_patch("ai_edits", {"id": ed["id"]}, {"status": "processing", "attempts": n, "error": None,
                                                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
@@ -524,6 +533,11 @@ def step_ai_edits():
                 path = f"{ed['user_id']}/edits/{ed['id']}-{n}.png"
                 storage_put("photos", path, out, "image/png")
             db_patch("ai_edits", {"id": ed["id"]}, {"status": "ready", "result_path": path})
+            if ed.get("shot_id"):   # "Decorate for the holidays": the decorated photo replaces the listing photo
+                sh = (db_get("shots", id=f"eq.{ed['shot_id']}") or [None])[0]
+                if sh:
+                    db_patch("shots", {"id": sh["id"]}, {"photo_path": path,
+                                                         "original_photo_path": sh.get("original_photo_path") or sh["photo_path"]})
         except Exception as e:
             log(f"  ai edit {ed['id'][:8]} failed: {e}")
             db_patch("ai_edits", {"id": ed["id"]}, {"status": "failed", "error": str(e)[:300]})

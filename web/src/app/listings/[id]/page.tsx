@@ -15,6 +15,7 @@ import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
 import { EndFramePicker } from "@/components/EndFramePicker";
 import { PhotoLinkImport } from "@/components/PhotoLinkImport";
+import { HolidayDecor, undoDecor } from "@/components/HolidayDecor";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
@@ -292,7 +293,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   async function remove(shot: Shot) {
     setShots((prev) => prev.filter((s) => s.id !== shot.id));
     await sb.from("shots").delete().eq("id", shot.id);
-    await sb.storage.from("photos").remove([shot.photo_path]);
+    await sb.storage.from("photos").remove([shot.photo_path, ...(shot.original_photo_path ? [shot.original_photo_path] : [])]);
   }
 
   async function setStatus(status: Listing["status"]) {
@@ -712,11 +713,18 @@ function Editor({ id, user }: { id: string; user: User }) {
           {editable && shots.length < MAX_PHOTOS && !uploading && (
             <PhotoLinkImport listingId={id} room={MAX_PHOTOS - shots.length} onDone={load} />
           )}
+          {editable && !uploading && <HolidayDecor listingId={id} shots={shots} onChange={load} />}
           {shots.length > 0 && (
             <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
               {shots.map((sh) => (
                 <li key={sh.id} className="relative aspect-video overflow-hidden rounded-lg bg-line">
                   {thumbs[sh.photo_path] && <img src={thumbs[sh.photo_path]} alt="" className="h-full w-full object-cover" />}
+                  {sh.original_photo_path && editable && (
+                    <button type="button" onClick={() => undoDecor(id, sh.id).then(load).catch((e) => setError(e.message))}
+                      className="absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-white hover:bg-black">
+                      ✦ Decorated · Undo
+                    </button>
+                  )}
                   {editable && (
                     <button type="button" aria-label="Remove photo" onClick={() => remove(sh)}
                       className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-sm text-white hover:bg-black">
