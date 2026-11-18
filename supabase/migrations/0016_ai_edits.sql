@@ -14,3 +14,4 @@ create table if not exists public.ai_edits (
 );
 create index if not exists ai_edits_queue on public.ai_edits (status) where status in ('queued', 'processing');
 alter table public.ai_edits enable row level security;   -- no policies: only the server (admin page) and the worker touch it
+notify pgrst, 'reload schema';   -- let the API see the new table right away
