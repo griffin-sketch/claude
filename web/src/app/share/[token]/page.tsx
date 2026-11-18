@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { admin } from "@/lib/server";
 import { Logo } from "@/components/Logo";
+import { SaveVideo } from "@/components/SaveVideo";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your listing videos", robots: { index: false, follow: false } };
@@ -44,7 +45,7 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
         db.storage.from("videos").createSignedUrl(r.video_path, 60 * 60 * 24 * 7),
         db.storage.from("videos").createSignedUrl(r.video_path, 60 * 60 * 24 * 7, { download: name }),
       ]);
-      return { ...r, play: play.data?.signedUrl, download: dl.data?.signedUrl };
+      return { ...r, name, play: play.data?.signedUrl, download: dl.data?.signedUrl };
     }),
   );
   const from = prof?.company || prof?.full_name;
@@ -62,7 +63,8 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
         <h1 className="mt-2 font-display text-5xl leading-tight">{l.address || "Listing videos"}</h1>
         {l.city_line && <p className="mt-1 text-ink-soft">{l.city_line}</p>}
         <p className="mt-4 max-w-xl text-sm text-ink-soft">
-          {urls.length} videos, ready to post. Tap Download on each one. These links work for 7 days; ask for a new link any time.
+          {urls.length} videos, ready to post. Tap <b>Save video</b> on each one. On an iPhone, choose <b>Save Video</b> and it goes
+          straight to your Photos. These links work for 7 days; ask for a new link any time.
         </p>
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {urls.map((r) => (
@@ -79,9 +81,7 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
                   <span className="block font-semibold">{LABEL[r.kind ?? "tour"] ?? "Video"}</span>
                   <span className="block text-xs text-muted">{r.format === "9:16" ? "Vertical · Reels, TikTok" : "16:9 · MLS, YouTube"}</span>
                 </span>
-                {r.download && (
-                  <a href={r.download} className="btn-ghost py-1.5">Download</a>
-                )}
+                {r.download && r.play && <SaveVideo play={r.play} download={r.download} name={r.name} />}
               </div>
             </div>
           ))}
