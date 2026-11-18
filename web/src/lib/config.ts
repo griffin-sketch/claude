@@ -17,6 +17,7 @@ export const TEMPLATES = [
   { id: 8, name: "Emerald Sidebar", blurb: "Deep green panel, champagne details." },
   { id: 9, name: "Golden Hour", blurb: "Script lettering with warm gold." },
   { id: 10, name: "Cinema", blurb: "Letterbox bars and wide-tracked caps." },
+  { id: 11, name: "Holiday", blurb: "Red, green and gold, falling snow and a Happy Holidays outro." },
 ] as const;
 
 export const TRANSITIONS = [
@@ -74,6 +75,7 @@ export const MUSIC = [
   { id: "house", name: "Night Drive", mood: "Modern deep house" },
   { id: "ambient", name: "Open Space", mood: "Calm, airy ambient" },
   { id: "drive", name: "Momentum", mood: "Energetic, punchy, social-first" },
+  { id: "holiday", name: "Holiday Cheer", mood: "Sleigh bells and music box Christmas classics" },
 ] as const;
 
 export const ROOM_SUGGESTIONS = [

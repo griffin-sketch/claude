@@ -947,7 +947,108 @@ class T10(Template):
         img, x, y = self.centered_stack(rows, gap=16, shadow=0.55, blur=9)
         return [Element(img, x, y, t0, None, "fade", 0)]
 
-TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10}
+# ---- 11 · Holiday (red, evergreen and gold, script lettering, string lights on the outro, gentle snow)
+def light_string(width, sag=46, bulbs=13, size=15):
+    """A sagging string of glowing Christmas bulbs, as a transparent image."""
+    h = sag + size * 4
+    im = Image.new("RGBA", (width, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    pts = [(x, size + sag * (1 - ((2 * x / width) - 1) ** 2)) for x in range(0, width + 1, 6)]
+    d.line(pts, fill=(34, 60, 40, 255), width=3)
+    colors = [(235, 64, 52), (255, 196, 64), (64, 186, 110), (90, 160, 255), (255, 236, 200)]
+    glow = Image.new("RGBA", im.size, (0, 0, 0, 0)); g = ImageDraw.Draw(glow)
+    for k in range(bulbs):
+        x = width * (k + 0.5) / bulbs
+        y = size + sag * (1 - ((2 * x / width) - 1) ** 2) + size * 0.9
+        c = colors[k % len(colors)]
+        g.ellipse([x - size * 1.6, y - size * 1.6, x + size * 1.6, y + size * 1.6], fill=c + (150,))
+        d.rectangle([x - 3, y - size * 0.9, x + 3, y - size * 0.4], fill=(70, 70, 60, 255))
+        d.ellipse([x - size * 0.45, y - size * 0.5, x + size * 0.45, y + size * 0.7], fill=c + (255,))
+        d.ellipse([x - size * 0.15, y - size * 0.25, x + size * 0.05, y], fill=(255, 255, 255, 200))
+    glow = glow.filter(ImageFilter.GaussianBlur(size * 0.9))
+    glow.alpha_composite(im)
+    return glow
+
+class Snow:
+    """Gentle falling snow, drawn over every frame. Same flakes every render (fixed seed)."""
+    def __init__(self, count=None, seed=7):
+        import random
+        rnd = random.Random(seed)
+        n = count or (150 if not VERTICAL else 170)
+        sc = W / 1920 if not VERTICAL else H / 1920
+        self.f = []
+        for _ in range(n):
+            depth = rnd.random()   # 0 far .. 1 near: near flakes are bigger, faster, brighter
+            self.f.append(dict(x=rnd.uniform(0, W), y=rnd.uniform(0, H), r=sc * (1.6 + 4.2 * depth),
+                               v=sc * (35 + 85 * depth), a=int(110 + 120 * depth), sw=sc * rnd.uniform(8, 26),
+                               fr=rnd.uniform(0.3, 0.9), ph=rnd.uniform(0, 6.28)))
+    def draw(self, frame, t):
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        for f in self.f:
+            y = (f["y"] + f["v"] * t) % (H + 20) - 10
+            x = (f["x"] + f["sw"] * math.sin(t * f["fr"] + f["ph"]) + 12 * t) % W
+            r = f["r"]
+            d.ellipse([x - r * 1.7, y - r * 1.7, x + r * 1.7, y + r * 1.7], fill=(255, 255, 255, f["a"] // 4))
+            d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, f["a"]))
+        frame.alpha_composite(layer)
+
+class T11(Template):
+    name = "Holiday"
+    RED = hexrgb("#C8323C"); GREEN = hexrgb("#1F5A3A"); GOLD = hexrgb("#F2C879"); CREAM = hexrgb("#FFF8EC")
+    def __init__(self, job):
+        super().__init__(job)
+        self.snow = Snow() if job.get("snow", True) else None
+    def kicker(self):
+        k = self.job.get("kicker") or ""
+        return "Home for the Holidays" if not k or k.upper() == "NOW AVAILABLE" else k
+    def outro_kicker(self):
+        k = self.job.get("outro_kicker") or ""
+        return "Happy Holidays from" if not k or k.upper() == "SCHEDULE YOUR SHOWING" else k
+    def title(self, t0, t1):
+        k = self.kicker(); k = k.title() if k.isupper() else k
+        rows = [("text", k, fit_font("greatvibes", 104, k, MW(1500)), self.GOLD, 0), ("gap", 22)]
+        for ln in wrap(self.headline().upper(), font("montserrat-700", 66), MW(1600)):
+            rows.append(("text", ln, fit_font("montserrat-700", 66, ln, MW(1600), 6), self.CREAM, 6))
+        rows.append(("rule", 120, 4, self.RED))
+        st = stats_parts(self.job.get("stats"))
+        if st: rows.append(("text", "  ·  ".join(st), font("montserrat-600", 28), self.GOLD, 6))
+        if self.addr_line(): rows.append(("text", self.addr_line(), font("montserrat-500", 28), self.CREAM, 2))
+        if self.price(): rows.append(("text", self.price(), font("greatvibes", 74), self.GOLD, 0))
+        img, x, y = self.centered_stack(rows, gap=12, shadow=0)
+        return [Element(img, x, y, t0, t1, "rise")]
+    def feature(self, i, n, shot, t0, t1):
+        main = shot.get("label") or ""; sub = (shot.get("sub") or "").upper()
+        fm = fit_font("greatvibes", 92, main, MW(1300)); fs = font("montserrat-600", 22)
+        asc, desc = fm.getmetrics()
+        h = asc + (int(desc * 0.75) + fs.getmetrics()[0] + 6 if sub else desc // 2)
+        sp = Sprite(max(text_w(main, fm), text_w(sub, fs, 6)) + 60, h + 30)
+        sp.rect(0, asc * 0.25, 7, h, self.RED)
+        sp.text(26, 0, main, fm, self.CREAM)
+        if sub: sp.text(40, asc + int(desc * 0.75), sub, fs, self.GOLD, 6)
+        img = sp.finish(0)
+        return [Element(img, 120 - sp.pad, H - BOT(110) - h - sp.pad, t0, t1, "rise", 26)]
+    def outro(self, t0):
+        a = self.agent(); rows = []
+        if self.branded() and self.media("headshot"):
+            rows.append(("img", circle_photo(self.media("headshot"), 200, self.RED, 6)))
+        k = self.outro_kicker()
+        rows.append(("text", k, fit_font("greatvibes", 88, k, MW(1500)), self.GOLD, 0)); rows.append(("gap", 20))
+        if self.branded():
+            if a.get("name"): rows.append(("text", a["name"].upper(), fit_font("montserrat-700", 62, a["name"].upper(), MW(1500), 6), self.CREAM, 6))
+            if a.get("brokerage"): rows.append(("text", a["brokerage"].upper(), font("montserrat-600", 24), self.GOLD, 6))
+            if a.get("phone"): rows.append(("text", a["phone"], font("montserrat-600", 40), self.CREAM, 3))
+            if self.media("logo"): rows += [("gap", 6), ("img", logo_chip(self.media("logo")))]
+        else:
+            rows.append(("text", self.headline().upper(), fit_font("montserrat-700", 58, self.headline().upper(), MW(1500), 6), self.CREAM, 6))
+            if self.addr_line(): rows.append(("text", self.addr_line(), font("montserrat-500", 28), self.CREAM, 2))
+        img, x, y = self.centered_stack(rows, gap=12, shadow=0)
+        lights = light_string(W + 80)
+        return [Element(lights, -40, 0, t0 - 0.3, None, "drop", 40), Element(img, x, y, t0, None, "rise")]
+    def overlay(self, frame, t):
+        if self.snow: self.snow.draw(frame, t)
+
+TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10, 11: T11}
 
 # ---------------------------------------------------------------- footage
 def probe_duration(path):
@@ -1263,6 +1364,8 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             d.rectangle([0, H - tpl.letterbox, W, H], fill=(0, 0, 0, 255))
         for e in els:
             e.draw(frame, t, bg)
+        if hasattr(tpl, "overlay"):
+            tpl.overlay(frame, t)
         # fade to black at the very end only (never fade up at the start)
         tail = total_f - fi
         if tail <= int(0.8 * FPS):

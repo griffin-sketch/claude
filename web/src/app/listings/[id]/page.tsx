@@ -875,7 +875,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <p className="mb-4 mt-1 text-sm text-ink-soft">Choose how the words on your video look. Any of them works; pick the one that feels like you.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {TEMPLATES.map((t) => (
-              <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ template: t.id })}
+              <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing(t.id === 11 && listing.music !== "custom" ? { template: t.id, music: "holiday" } : { template: t.id })}
                 className={`overflow-hidden rounded-xl border-2 text-left transition ${
                   listing.template === t.id ? "border-gold" : "border-transparent hover:border-line"}`}>
                 <img src={`/templates/t${t.id}.jpg`} alt="" className="aspect-video w-full object-cover" />
