@@ -21,6 +21,14 @@ export async function POST(request: Request) {
     const db = admin();
     if (typeof body?.listing === "string") return Response.json(await media(db, body.listing));
 
+    // Tourvo branding switch: { branding: { id, value: true | false | null } }
+    if (body?.branding && typeof body.branding.id === "string") {
+      const v = body.branding.value;
+      const { error } = await db.from("listings").update({ tourvo_branding: v === true || v === false ? v : null }).eq("id", body.branding.id);
+      if (error) throw new HttpError(500, error.message.includes("tourvo_branding") ? "Run migration 0017 in Supabase first." : error.message);
+      return Response.json({ ok: true });
+    }
+
     // AI photo edit: { edit: { path, prompt } } queues one; { editId } checks on it
     if (body?.edit) {
       const path = String(body.edit.path ?? ""), prompt = String(body.edit.prompt ?? "").trim();
@@ -40,7 +48,7 @@ export async function POST(request: Request) {
       return Response.json({ status: ed.status, error: ed.error, url, download });
     }
     const [{ data: listings }, { data: shots }, { data: renders }, { data: profiles }, users] = await Promise.all([
-      db.from("listings").select("id, user_id, address, city_line, status, paid, paid_via, error, created_at, updated_at, outro").order("created_at", { ascending: false }).limit(300),
+      db.from("listings").select("*").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),
       db.from("renders").select("listing_id"),
       db.from("profiles").select("id, full_name, company, brokerage, phone, account_type, plan, plan_interval, plan_status, credits"),
@@ -69,6 +77,7 @@ export async function POST(request: Request) {
       const revenue = l.paid_via === "single" ? 49 : l.paid_via === "credit" ? planValue(p?.plan, p?.plan_interval).perVideo : 0;
       return {
         id: l.id, address: l.address || "Untitled", city: l.city_line, status: l.status, paid_via: l.paid_via, error: l.error,
+        branding: (l.tourvo_branding ?? null) as boolean | null, mine: l.user_id === user.id,
         created_at: l.created_at, updated_at: l.updated_at, email: email.get(l.user_id) ?? "", name: p?.company || p?.full_name || "",
         account_type: p?.account_type ?? "agent", ...m, videos: videos.get(l.id) ?? 0,
         ai_cost: Math.round(aiCost * 100) / 100, revenue: Math.round(revenue * 100) / 100,

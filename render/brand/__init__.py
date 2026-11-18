@@ -13,6 +13,9 @@ BUG_START, BUG_IN = 0.4, 0.6
 
 
 def wanted(listing):
+    """The listing's own switch wins (set on the admin page); otherwise only the owner's promo listings."""
+    if listing.get("tourvo_branding") is not None:
+        return bool(listing["tourvo_branding"])
     return listing.get("user_id") in BRAND_USERS
 
 

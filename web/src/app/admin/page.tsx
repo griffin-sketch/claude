@@ -11,7 +11,7 @@ type Row = {
   id: string; address: string; city: string | null; status: ListingStatus; paid_via: string | null; error: string | null;
   created_at: string; updated_at: string; email: string; name: string; account_type: string;
   photos: number; ready: number; failed: number; attempts: number; vertical: number; effects: number; videos: number;
-  ai_cost: number; revenue: number;
+  ai_cost: number; revenue: number; branding: boolean | null; mine: boolean;
 };
 type Media = {
   address: string;
@@ -51,6 +51,8 @@ function Admin({ user }: { user: User }) {
   const close = useCallback(() => setOpen(null), []);
 
   const load = () => api<Data>("/api/admin").then(setData).catch((e) => setError(e.message));
+  const setBranding = (id: string, value: boolean | null) =>
+    api("/api/admin", { branding: { id, value } }).then(load).catch((e) => setError(e.message));
   useEffect(() => {
     load();
     const t = setInterval(load, 30000);   // refresh every 30 s
@@ -132,6 +134,16 @@ function Admin({ user }: { user: User }) {
                   <span className="block font-semibold">{r.address}</span>
                   <span className="block text-xs text-muted">{r.city}</span>
                   {r.error && <span className="mt-1 block max-w-xs text-xs text-danger">{r.error}</span>}
+                  <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                    Tourvo branding
+                    <select className="rounded border border-line bg-surface px-1 py-0.5 text-xs text-ink"
+                      value={r.branding === null ? "auto" : r.branding ? "on" : "off"}
+                      onChange={(e) => setBranding(r.id, e.target.value === "auto" ? null : e.target.value === "on")}>
+                      <option value="auto">Auto ({r.mine ? "on" : "off"})</option>
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                    </select>
+                  </label>
                 </td>
                 <td className="px-4 py-3">
                   <span className="block">{r.name || "—"}</span>
