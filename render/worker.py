@@ -26,6 +26,7 @@ import reels             # the Reel pack: several cuts per listing
 import effects           # per-photo effects + centered vertical framing
 import notify            # customer emails (Resend)
 from motion import motion_score
+import brand               # Tourvo co-branding on the owner's free promo videos
 import trim                # auto-trim: cut clips before they push into dead space
 import staging
 
@@ -459,6 +460,12 @@ def render_listing(l):
             out = os.path.join(tmp, f"{name}.mp4")
             log(f"  rendering {n}/{len(pack)}: {name}")
             engine.render(job_path, out, fmt=fmt)
+            if brand.wanted(l):
+                try:
+                    out = brand.apply(out, out[:-4] + "-tourvo.mp4", hide_last=5.0 if j.get("outro", "branded") != "none" else 0)
+                    log("    + Tourvo branding")
+                except Exception as e:   # never lose the video over the branding
+                    log(f"    Tourvo branding skipped: {e}")
             path = f"{l['user_id']}/{l['id']}/{name}.mp4"
             storage_put("videos", path, out)
             made.append({"listing_id": l["id"], "format": fmt, "kind": kind, "video_path": path})
