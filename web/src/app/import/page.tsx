@@ -62,10 +62,16 @@ function ImportView({ user }: { user: User }) {
   // real listing photos are big; icons, logos, agent headshots and map tiles are not
   const candidates = useMemo(() => expandNumbered(sent?.i ?? []), [sent]);
   const photos = useMemo(() => candidates.filter((u) => (sizes[u] ?? -1) >= MIN_W), [candidates, sizes]);
-  const checking = candidates.some((u) => sizes[u] === undefined);
+  const [gaveUp, setGaveUp] = useState(false);
+  // stop waiting on photos that never answer (a slow site, or a numbered photo that doesn't exist)
+  useEffect(() => {
+    const t = setTimeout(() => setGaveUp(true), 12000);
+    return () => clearTimeout(t);
+  }, [candidates]);
+  const checking = !gaveUp && candidates.some((u) => sizes[u] === undefined);
   const room = MAX_PHOTOS - (drafts.find((d) => d.id === target)?.count ?? 0);
 
-  const picked = (choice ?? (checking ? [] : photos)).slice(0, Math.max(0, room));
+  const picked = (choice ?? photos).slice(0, Math.max(0, room));   // photos show up as they load
   const setPicked = (f: (p: string[]) => string[]) => setChoice(f(picked));
 
   const seen = (u: string, w: number) => setSizes((s) => (s[u] === undefined ? { ...s, [u]: w } : s));
@@ -119,8 +125,8 @@ function ImportView({ user }: { user: User }) {
         <h1 className="mt-2 font-display text-4xl leading-tight">Pick your photos</h1>
         <p className="mt-2 text-sm text-ink-soft">
           From <b>{sent.t || host}</b>{host && sent.t ? ` · ${host}` : ""}.{" "}
-          {checking ? "Finding the listing photos…" : `${photos.length} photo${photos.length === 1 ? "" : "s"} found. Tap to choose up to ${room}.`}
-          {!checking && picked.length > 0 && (
+          {`${photos.length} photo${photos.length === 1 ? "" : "s"} found${checking ? " so far, still looking…" : "."} Tap to choose up to ${room}.`}
+          {picked.length > 0 && (
             <button type="button" className="ml-2 font-semibold text-ink underline underline-offset-4" onClick={() => setChoice([])}>Clear picks</button>
           )}
         </p>

@@ -54,7 +54,7 @@ export function expandNumbered(urls: string[], max = 300): string[] {
   for (const g of groups.values()) {
     const nums = [...g.have.keys()];
     if (nums.length < 3) continue;           // a couple of numbers isn't a photo gallery
-    const top = Math.min(Math.max(...nums) + 40, 150);
+    const top = Math.min(Math.max(...nums) + 15, 120);
     const run: string[] = [];
     for (let n = Math.min(1, ...nums); n <= top; n++) run.push(g.have.get(n) ?? `${g.pre}${n}${g.suf}${g.q}`);
     seq.set(g.first, run);
