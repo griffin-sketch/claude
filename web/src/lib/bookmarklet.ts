@@ -32,3 +32,40 @@ export function readSent(hash: string): SentPage | null {
     return null;
   }
 }
+
+/**
+ * Listing sites often load only some photos (or only small thumbnails) until you open the gallery, but their full-size
+ * photos are usually numbered: .../img-1.jpg, .../img-2.jpg ... When several addresses share a pattern like that,
+ * fill in the whole numbered run so the realtor sees every photo. Addresses that don't exist just fail to load and drop out.
+ */
+export function expandNumbered(urls: string[], max = 300): string[] {
+  const re = /^(.*?)(\d{1,3})(\D{0,12}\.(?:jpe?g|png|webp))(\?.*)?$/i;
+  const groups = new Map<string, { pre: string; suf: string; q: string; have: Map<number, string>; first: number }>();
+  urls.forEach((u, i) => {
+    const m = u.match(re);
+    if (!m) return;
+    const key = m[1] + "#" + m[3];
+    const g = groups.get(key) ?? { pre: m[1], suf: m[3], q: m[4] ?? "", have: new Map(), first: i };
+    if (!g.have.has(Number(m[2]))) g.have.set(Number(m[2]), u);
+    groups.set(key, g);
+  });
+  const seq = new Map<number, string[]>();   // first position of a numbered run -> the full run, in order
+  const inRun = new Set<string>();
+  for (const g of groups.values()) {
+    const nums = [...g.have.keys()];
+    if (nums.length < 3) continue;           // a couple of numbers isn't a photo gallery
+    const top = Math.min(Math.max(...nums) + 40, 150);
+    const run: string[] = [];
+    for (let n = Math.min(1, ...nums); n <= top; n++) run.push(g.have.get(n) ?? `${g.pre}${n}${g.suf}${g.q}`);
+    seq.set(g.first, run);
+    g.have.forEach((u) => inRun.add(u));
+  }
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (u: string) => { if (!seen.has(u)) { seen.add(u); out.push(u); } };
+  urls.forEach((u, i) => {
+    if (seq.has(i)) seq.get(i)!.forEach(add);
+    else if (!inRun.has(u)) add(u);
+  });
+  return out.slice(0, max);
+}
