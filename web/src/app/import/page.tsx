@@ -8,7 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { MAX_PHOTOS } from "@/lib/config";
-import { readSent, type SentPage } from "@/lib/bookmarklet";
+import { fullSize, readSent, type SentPage } from "@/lib/bookmarklet";
 
 const KEY = "tourvo-sent-photos";
 const MIN_W = 640;
@@ -60,7 +60,7 @@ function ImportView({ user }: { user: User }) {
   }, [user.id]);
 
   // real listing photos are big; icons, logos, agent headshots and map tiles are not
-  const candidates = useMemo(() => sent?.i ?? [], [sent]);
+  const candidates = useMemo(() => fullSize(sent?.i ?? []), [sent]);
   const photos = useMemo(() => candidates.filter((u) => (sizes[u] ?? -1) >= MIN_W), [candidates, sizes]);
   const [gaveUp, setGaveUp] = useState(false);
   // stop waiting on photos that never answer (a slow site, or a numbered photo that doesn't exist)

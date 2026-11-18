@@ -69,3 +69,16 @@ export function expandNumbered(urls: string[], max = 300): string[] {
   });
   return out.slice(0, max);
 }
+
+/**
+ * Swap a listing site's small gallery thumbnails for the full-size photo, where we know how the site names them.
+ * HAR: https://media-<mls>.harstatic.com/<listing>/<size>/<photo>.jpeg, where <size> "hr" is the full-size photo.
+ */
+export function fullSize(urls: string[]): string[] {
+  const out: string[] = [];
+  for (const u of urls) {
+    const big = u.replace(/^(https?:\/\/[^/]*harstatic\.com\/\d+\/)[a-z]{1,6}(\/\d+\.(?:jpe?g|png|webp))(\?.*)?$/i, "$1hr$2");
+    if (!out.includes(big)) out.push(big);
+  }
+  return out;
+}
