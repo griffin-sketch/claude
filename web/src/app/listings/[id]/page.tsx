@@ -14,6 +14,7 @@ import { describeMove } from "@/lib/camera";
 import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
 import { EndFramePicker } from "@/components/EndFramePicker";
+import { PhotoLinkImport } from "@/components/PhotoLinkImport";
 
 const ACTIVE = new Set(["queued", "generating", "rendering"]);
 const REEL_ORDER = ["tour", "teaser", "just_listed", "price_reveal", "top_features", "build_up", "staged", "open_house"];
@@ -707,6 +708,9 @@ function Editor({ id, user }: { id: string; user: User }) {
                 }}
               />
             </label>
+          )}
+          {editable && shots.length < MAX_PHOTOS && !uploading && (
+            <PhotoLinkImport listingId={id} room={MAX_PHOTOS - shots.length} onDone={load} />
           )}
           {shots.length > 0 && (
             <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
