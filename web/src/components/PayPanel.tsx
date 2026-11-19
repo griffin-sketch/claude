@@ -7,8 +7,9 @@ import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { PlanPicker } from "@/components/PlanPicker";
 import { EXTRA_VIDEO_PRICE, type IntervalId, type PlanId } from "@/lib/plans";
+import { TRIAL_PHOTOS } from "@/lib/config";
 
-type Billing = { plan: string; plan_status: string | null; credits: number; bonus_credits: number; credits_period_end: string | null };
+type Billing = { plan: string; plan_status: string | null; credits: number; bonus_credits: number; credits_period_end: string | null; trial_used: boolean };
 
 /** Last step before clips: use one of your videos, or pick a plan. */
 export function PayPanel({
@@ -33,11 +34,11 @@ export function PayPanel({
   useEffect(() => {
     supabase()
       .from("profiles")
-      .select("plan, plan_status, credits, bonus_credits, credits_period_end")
+      .select("plan, plan_status, credits, bonus_credits, credits_period_end, trial_used")
       .eq("id", user.id)
       .single()
       .then(({ data }) =>
-        setBilling((data as Billing) ?? { plan: "none", plan_status: null, credits: 0, bonus_credits: 0, credits_period_end: null }),
+        setBilling((data as Billing) ?? { plan: "none", plan_status: null, credits: 0, bonus_credits: 0, credits_period_end: null, trial_used: true }),
       );
   }, [user.id]);
 
@@ -98,7 +99,24 @@ export function PayPanel({
         </div>
       ) : (
         <div className="mt-6">
-          <p className="mb-4 text-sm font-semibold">Pick a plan. This listing uses your first video.</p>
+          {!billing.trial_used && (
+            <div className="mb-6 rounded-xl border-2 border-ink p-4 sm:p-5">
+              <p className="font-semibold">Your first video is free</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Up to {TRIAL_PHOTOS} photos, the full walkthrough and Reels, with a small Tourvo mark. No card needed.
+              </p>
+              {clipCount > TRIAL_PHOTOS ? (
+                <p className="mt-3 text-sm">
+                  This listing has {clipCount} photos. Remove {clipCount - TRIAL_PHOTOS} to make it free, or pick a plan below.
+                </p>
+              ) : (
+                <button className="btn-gold mt-4 min-h-12 px-6" disabled={blocked} onClick={() => start({ method: "trial" }, "trial")}>
+                  {busy === "trial" ? "Starting…" : "Make my free video"}
+                </button>
+              )}
+            </div>
+          )}
+          <p className="mb-4 text-sm font-semibold">{billing.trial_used ? "Pick a plan." : "Or pick a plan, for up to 15 photos and your own branding."} This listing uses your first video.</p>
           <PlanPicker
             busy={busy}
             cta="Start"

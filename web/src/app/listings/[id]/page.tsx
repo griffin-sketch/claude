@@ -1347,6 +1347,11 @@ function ShareLink({ listing, onSave }: { listing: Listing; onSave: (p: Partial<
         {copied ? "Link copied" : listing.share_token ? "Copy client link" : "Share with client"}
       </button>
       {url && <span className="max-w-full truncate text-xs text-muted">{url}</span>}
+      {listing.share_token && (
+        <span className="w-full text-sm text-ink-soft">
+          <b className="text-ink">{listing.share_views ?? 0}</b> view{listing.share_views === 1 ? "" : "s"} on this link
+        </span>
+      )}
     </div>
   );
 }

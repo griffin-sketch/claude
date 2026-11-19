@@ -47,6 +47,7 @@ const STEPS = [
 
 const FAQ = [
   ["Can I get staged photos too?", "Yes. Stage any empty room in one of eight furniture styles and see a free preview. Every plan includes 10 to 40 full-size staged photos a month; without a plan they're $5 each."],
+  ["Can I try it first?", "Yes. Your first video is free: up to 8 photos, the full walkthrough and Reels, with a small Tourvo mark. No card needed."],
   ["What if I use up my videos?", `Add as many extra videos as you need for $${EXTRA_VIDEO_PRICE} each, right from your listing. Your plan refills on its next renewal.`],
   ["Will it change how the home looks?", "No. The camera moves, the room stays as photographed. If a clip ever looks off, redo it before your video is made."],
   ["What photos work best?", "Your professional listing photos, wide and well lit. Phone photos work too, though bright, level shots give the smoothest moves."],
@@ -323,7 +324,7 @@ export default function Home() {
           <ul className="grid min-w-0 flex-[1_1_480px] grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-4">
             {[
               ["Your client's branding", "Put the agent's name, brokerage, phone, headshot and logo on the closing card."],
-              ["Or fully unbranded", "No Tourvo watermark, ever. Deliver it as your own work."],
+              ["Or fully unbranded", "No Tourvo watermark on any plan. Deliver it as your own work."],
               ["One link to deliver", "Send the agent a private page to watch and download every video."],
               ["A whole Reel pack", "Walkthrough, teaser, Just Listed, price reveal and more from one upload."],
             ].map(([t, d]) => (
@@ -385,7 +386,7 @@ export default function Home() {
           <h2 className="max-w-[820px] font-display text-[clamp(38px,4.8vw,64px)] font-normal leading-[1.06] text-balance">
             Your next listing deserves a <span className="italic text-gold">walkthrough.</span>
           </h2>
-          <p className="text-lg text-ink-soft">Sign up free. Pick a plan when you make your first video.</p>
+          <p className="text-lg text-ink-soft">Your first video is free. No card needed.</p>
           <div className="flex flex-wrap justify-center gap-3.5">
             <Link href="/login" className={btnCta}>
               <span className="grid h-7 w-7 place-items-center rounded-full bg-white"><GoogleIcon /></span>

@@ -22,7 +22,7 @@ function json(status: number, error: string) {
 async function accountSummary(userId: string, email?: string) {
   const db = admin();
   const [{ data: p }, { data: listings }] = await Promise.all([
-    db.from("profiles").select("full_name, plan, plan_interval, plan_status, credits, bonus_credits, staging_credits, credits_period_end").eq("id", userId).single(),
+    db.from("profiles").select("full_name, plan, plan_interval, plan_status, credits, bonus_credits, staging_credits, credits_period_end, trial_used").eq("id", userId).single(),
     db.from("listings").select("address, status, paid, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
   ]);
   if (!p) return `Signed in as ${email ?? "a customer"}.`;
@@ -32,6 +32,7 @@ async function accountSummary(userId: string, email?: string) {
     `Signed in${p.full_name ? ` as ${p.full_name}` : ""}${email ? ` (${email})` : ""}.`,
     active ? `Plan: ${planName} (status: ${p.plan_status}). Plan videos left this period: ${p.credits}. Staged photos left: ${p.staging_credits}.${p.credits_period_end ? ` Renews/refills on ${new Date(p.credits_period_end).toDateString()}.` : ""}` : "No active plan.",
     `Free referral videos: ${p.bonus_credits ?? 0}.`,
+    p.trial_used ? "Free first video: already used." : "Free first video: not used yet (up to 8 photos, Tourvo branded, no card).",
     p.plan_status === "past_due" ? "Their last payment failed; they should update their card in Billing." : "",
     listings?.length
       ? `Recent listings: ${listings.map((l) => `${l.address || "untitled"} (${l.status}${l.paid ? ", paid" : ""})`).join("; ")}.`

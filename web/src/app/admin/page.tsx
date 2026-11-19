@@ -10,7 +10,7 @@ import { STATUS_LABEL, type ListingStatus } from "@/lib/types";
 type Row = {
   id: string; address: string; city: string | null; status: ListingStatus; paid_via: string | null; error: string | null;
   created_at: string; updated_at: string; email: string; name: string; account_type: string;
-  photos: number; ready: number; failed: number; attempts: number; vertical: number; effects: number; videos: number;
+  photos: number; ready: number; failed: number; attempts: number; vertical: number; effects: number; videos: number; views: number;
   ai_cost: number; revenue: number; branding: boolean | null; mine: boolean;
 };
 type Media = {
@@ -162,6 +162,7 @@ function Admin({ user }: { user: User }) {
                       Watch{r.videos ? ` · ${r.videos}` : " clips"}
                     </button>
                   ) : "—"}
+                  {r.views > 0 && <span className="mt-1 block text-xs text-muted">{r.views} link view{r.views === 1 ? "" : "s"}</span>}
                 </td>
                 <td className="px-4 py-3 text-xs">{r.paid_via ? `${r.paid_via}${r.revenue ? ` · ${money(r.revenue)}` : ""}` : "—"}</td>
                 <td className="px-4 py-3">{money(r.ai_cost)}</td>

@@ -20,6 +20,7 @@ export type Profile = {
   credits_period_end: string | null;
   staging_credits: number;
   bonus_credits: number;
+  trial_used: boolean;
   referral_code: string | null;
 };
 
@@ -46,6 +47,7 @@ export type Listing = {
   client_logo_path: string | null;
   client_headshot_path: string | null;
   share_token: string | null;
+  share_views: number;
   open_house: string | null;
   transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   formats: string[];
@@ -53,7 +55,7 @@ export type Listing = {
   reel_shots?: Record<string, string[]> | null;
   outro: "branded" | "client" | "simple" | "none";
   paid: boolean;
-  paid_via: "single" | "credit" | "comp" | null;
+  paid_via: "single" | "credit" | "comp" | "trial" | null;
   error: string | null;
   created_at: string;
   updated_at: string;

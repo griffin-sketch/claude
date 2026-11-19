@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         id: l.id, address: l.address || "Untitled", city: l.city_line, status: l.status, paid_via: l.paid_via, error: l.error,
         branding: (l.tourvo_branding ?? null) as boolean | null, mine: l.user_id === user.id,
         created_at: l.created_at, updated_at: l.updated_at, email: email.get(l.user_id) ?? "", name: p?.company || p?.full_name || "",
-        account_type: p?.account_type ?? "agent", ...m, videos: videos.get(l.id) ?? 0,
+        account_type: p?.account_type ?? "agent", ...m, videos: videos.get(l.id) ?? 0, views: l.share_views ?? 0,
         ai_cost: Math.round(aiCost * 100) / 100, revenue: Math.round(revenue * 100) / 100,
       };
     });

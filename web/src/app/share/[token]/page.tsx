@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { admin, isAdmin } from "@/lib/server";
 import { Logo } from "@/components/Logo";
 import { SaveVideo } from "@/components/SaveVideo";
+import { CountView } from "@/components/CountView";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: PageProps<"/share/[token]">): Promise<Metadata> {
@@ -64,6 +65,7 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
 
   return (
     <div className="min-h-screen bg-bg">
+      <CountView token={token} />
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Logo size={28} />

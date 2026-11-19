@@ -7,6 +7,8 @@ export const MAX_PHOTOS = 15;
 export const OWNER_MAX_PHOTOS = 30;
 export const REDO_LIMIT = 5; // clip redos a customer can ask for, per listing (must match 0011_redo_limit.sql)
 export const MIN_PHOTOS = 5;
+/** The free first video every account gets: up to this many photos, with Tourvo branding. */
+export const TRIAL_PHOTOS = 8;
 
 export const TEMPLATES = [
   { id: 1, name: "Signature Gold", blurb: "Polished classic luxury. Works for any home." },
