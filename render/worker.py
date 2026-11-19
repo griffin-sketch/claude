@@ -128,8 +128,21 @@ def storage_put(bucket, path, src, content_type="video/mp4"):
     if content_type.startswith("video/"):
         src = fit_size(src)
     url = f"{SB}/storage/v1/object/{bucket}/{urllib.parse.quote(path)}"
-    with open(src, "rb") as f:
-        r = S.post(url, data=f, headers={"Content-Type": content_type, "x-upsert": "true"}, timeout=600)
+    # big uploads sometimes get their connection dropped mid-way; try again on a fresh connection
+    for attempt in range(4):
+        try:
+            with open(src, "rb") as f:
+                sess = S if attempt == 0 else requests.Session()
+                if attempt:
+                    sess.headers.update(S.headers)
+                r = sess.post(url, data=f, headers={"Content-Type": content_type, "x-upsert": "true"}, timeout=900)
+            break
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt == 3:
+                raise
+            mb = os.path.getsize(src) / 1e6
+            log(f"    upload of {path} ({mb:.0f} MB) dropped, retrying: {str(e)[:120]}")
+            time.sleep(5 * (attempt + 1))
     if not r.ok:   # say why, not just the status code
         raise RuntimeError(f"upload of {path} failed ({r.status_code}): {r.text[:200]}")
 
