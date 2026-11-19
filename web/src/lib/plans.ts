@@ -22,7 +22,7 @@ export const PLANS: Record<PlanId, { name: string; blurb: string; videosPerMonth
     blurb: "For busy agents, teams and photographers",
     videosPerMonth: 5,
     stagingPerMonth: 40,
-    price: { month: 59, quarter: 159, year: 468 },
+    price: { month: 69, quarter: 189, year: 588 },
   },
 };
 
@@ -59,6 +59,9 @@ export function money(n: number) {
 
 /** The legacy $80/month plan from before tiers, so its subscribers keep working. */
 export const LEGACY_MONTHLY = { videos: 3, staging: 0 };
+
+/** One more video, for a subscriber who has used up this period's videos. Dollars. */
+export const EXTRA_VIDEO_PRICE = 15;
 
 /** Each side of a referral gets this many free videos once the friend pays for a plan. */
 export const REFERRAL_REWARD_VIDEOS = 1;

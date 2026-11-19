@@ -1,7 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { grant, INTERVALS, PLANS, type IntervalId, type PlanId } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, grant, INTERVALS, PLANS, type IntervalId, type PlanId } from "@/lib/plans";
 
 /** Pricing. Amounts are in cents. */
 // Shown after the account's name on customers' card statements, e.g. "KGB MARKETING* TOURVO".
@@ -126,6 +126,28 @@ export async function planCheckout(opts: {
     allow_promotion_codes: true,
     metadata: meta,
     subscription_data: { metadata: { user_id: user.id, plan, interval } },
+    success_url: opts.successUrl,
+    cancel_url: opts.cancelUrl,
+  });
+  return session.url;
+}
+
+/** One extra video on a listing, for a subscriber who has used this period's videos. Paid once; the webhook queues the listing. */
+export async function extraVideoCheckout(opts: { user: User; listingId: string; successUrl: string; cancelUrl: string }) {
+  const session = await stripe().checkout.sessions.create({
+    mode: "payment",
+    customer: await customerFor(opts.user),
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: EXTRA_VIDEO_PRICE * 100,
+          product_data: { name: "Tourvo extra listing video", description: "One more listing video, on top of your plan" },
+        },
+      },
+    ],
+    metadata: { kind: "single", user_id: opts.user.id, listing_id: opts.listingId },
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
   });

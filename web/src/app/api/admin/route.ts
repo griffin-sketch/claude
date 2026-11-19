@@ -1,5 +1,5 @@
 import { admin, fail, HttpError, isAdmin, requireUser } from "@/lib/server";
-import { grant, isInterval, isPlan, perMonth, PLANS } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, grant, isInterval, isPlan, perMonth, PLANS } from "@/lib/plans";
 
 /** Rough value of one plan video, and a plan's monthly revenue, for the owner's dashboard. */
 function planValue(plan?: string | null, interval?: string | null) {
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       const m = perListing.get(l.id) ?? { photos: 0, ready: 0, failed: 0, attempts: 0, vertical: 0, effects: 0 };
       const aiCost = (m.attempts + m.vertical) * CLIP + (m.vertical + m.effects * 2) * EDIT;
       const p = prof.get(l.user_id);
-      const revenue = l.paid_via === "single" ? 49 : l.paid_via === "credit" ? planValue(p?.plan, p?.plan_interval).perVideo : 0;
+      const revenue = l.paid_via === "single" ? EXTRA_VIDEO_PRICE : l.paid_via === "credit" ? planValue(p?.plan, p?.plan_interval).perVideo : 0;
       return {
         id: l.id, address: l.address || "Untitled", city: l.city_line, status: l.status, paid_via: l.paid_via, error: l.error,
         branding: (l.tourvo_branding ?? null) as boolean | null, mine: l.user_id === user.id,

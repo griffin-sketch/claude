@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { PlanPicker } from "@/components/PlanPicker";
-import type { IntervalId, PlanId } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, type IntervalId, type PlanId } from "@/lib/plans";
 
 type Billing = { plan: string; plan_status: string | null; credits: number; bonus_credits: number; credits_period_end: string | null };
 
@@ -89,9 +89,12 @@ export function PayPanel({
         <div className="mt-5 rounded-xl bg-gold-soft p-4 text-sm">
           <p className="font-semibold">You&apos;ve used all your videos for now.</p>
           <p className="mt-1 text-ink-soft">
-            {refill ? `They refill on ${refill}.` : "They refill when your plan renews."} Need one sooner?{" "}
-            <Link href="/refer" className="underline">Refer a friend</Link> and you both get a free video.
+            {refill ? `They refill on ${refill}.` : "They refill when your plan renews."} Need this one now? Add an extra video for ${EXTRA_VIDEO_PRICE},
+            or <Link href="/refer" className="underline">refer a friend</Link> and you both get one free.
           </p>
+          <button className="btn-gold mt-4 min-h-12 px-6" disabled={blocked} onClick={() => start({ method: "extra" }, "extra")}>
+            {busy === "extra" ? "Opening checkout…" : `Buy 1 extra video · $${EXTRA_VIDEO_PRICE}`}
+          </button>
         </div>
       ) : (
         <div className="mt-6">

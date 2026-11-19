@@ -1,4 +1,4 @@
-import { activePlan, admin, fail, HttpError, isAdmin, planCheckout, requireUser, siteUrl } from "@/lib/server";
+import { activePlan, admin, extraVideoCheckout, fail, HttpError, isAdmin, planCheckout, requireUser, siteUrl } from "@/lib/server";
 import { isInterval, isPlan } from "@/lib/plans";
 import { MAX_PHOTOS, MIN_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
 
@@ -6,6 +6,7 @@ import { MAX_PHOTOS, MIN_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
  * Start making a listing's clips.
  * body: { listingId, method: "credit" | "subscribe", plan?, interval? }
  *  - credit:    spend one video: the plan's first, then free referral videos
+ *  - extra:     a subscriber who is out of videos buys one more for this listing (returns a Stripe Checkout URL)
  *  - subscribe: start a plan and use its first video on this listing (returns a Stripe Checkout URL)
  * Admin emails skip payment.
  */
@@ -43,6 +44,13 @@ export async function POST(request: Request) {
       if (error) throw error;
       if (!data) throw new HttpError(402, "You don't have any videos left. They refill when your plan renews.");
       return Response.json({ ok: true });
+    }
+
+    if (method === "extra") {
+      if (!(await activePlan(user.id))) throw new HttpError(409, "Extra videos are for plan members. Pick a plan instead.");
+      const back = `${siteUrl(request)}/listings/${listingId}`;
+      const url = await extraVideoCheckout({ user, listingId, successUrl: `${back}?paid=1`, cancelUrl: back });
+      return Response.json({ url });
     }
 
     if (method === "subscribe") {
