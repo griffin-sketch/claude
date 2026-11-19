@@ -4,7 +4,7 @@ export const APP_TAGLINE = "Turn listing photos into a cinematic walkthrough vid
 
 export const MAX_PHOTOS = 15;
 /** The owner's own account can go bigger, for special jobs. */
-export const OWNER_MAX_PHOTOS = 25;
+export const OWNER_MAX_PHOTOS = 30;
 export const REDO_LIMIT = 5; // clip redos a customer can ask for, per listing (must match 0011_redo_limit.sql)
 export const MIN_PHOTOS = 5;
 
