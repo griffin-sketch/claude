@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { admin } from "@/lib/server";
+import { admin, isAdmin } from "@/lib/server";
 import { Logo } from "@/components/Logo";
 import { SaveVideo } from "@/components/SaveVideo";
 
@@ -57,14 +57,17 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
       return { ...r, name, play: play.data?.signedUrl, download: dl.data?.signedUrl };
     }),
   );
-  const from = prof?.company || prof?.full_name;
+  // Tourvo's own account makes videos for realtors (its profile changes to each client's branding), so its
+  // links say "Presented by Tourvo" instead of whichever realtor the profile was last set to.
+  const owner = await db.auth.admin.getUserById(l.user_id).then((r) => r.data.user).catch(() => null);
+  const from = owner && isAdmin(owner) ? null : prof?.company || prof?.full_name;
 
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Logo size={28} />
-          {from && <span className="text-sm text-ink-soft">Prepared by {from}</span>}
+          <span className="text-sm text-ink-soft">{from ? `Prepared by ${from}` : "Presented by Tourvo"}</span>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

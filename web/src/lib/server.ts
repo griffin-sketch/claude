@@ -44,7 +44,7 @@ export async function requireUser(request: Request): Promise<User> {
 }
 
 /** Emails in ADMIN_EMAILS (comma separated) can generate videos free, for testing and comps. */
-export function isAdmin(user: User) {
+export function isAdmin(user: Pick<User, "email">) {
   const list = (process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   return !!user.email && list.includes(user.email.toLowerCase());
 }
