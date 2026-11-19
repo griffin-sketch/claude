@@ -22,8 +22,11 @@ const fraunces = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.gettourvo.com"),
   title: APP_NAME,
   description: APP_TAGLINE,
+  openGraph: { siteName: APP_NAME, title: `${APP_NAME} · Listing photos into walkthrough videos`, description: APP_TAGLINE, type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

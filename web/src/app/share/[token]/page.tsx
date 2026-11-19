@@ -5,7 +5,16 @@ import { Logo } from "@/components/Logo";
 import { SaveVideo } from "@/components/SaveVideo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Your listing videos", robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: PageProps<"/share/[token]">): Promise<Metadata> {
+  const { token } = await params;
+  let title = "Your listing videos";
+  if (UUID.test(token)) {
+    const { data: l } = await admin().from("listings").select("address").eq("share_token", token).single();
+    if (l?.address) title = `${l.address} · Your listing videos`;
+  }
+  const description = "Walkthrough video and Reels, ready to download and post.";
+  return { title, description, robots: { index: false, follow: false }, openGraph: { title, description, type: "website" }, twitter: { card: "summary_large_image", title, description } };
+}
 
 const LABEL: Record<string, string> = {
   tour: "Full walkthrough",
