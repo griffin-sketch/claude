@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (!apiKey) throw new HttpError(503, "Captions aren't set up yet.");
     const msg = await new Anthropic({ apiKey }).messages.create({
       model: MODEL,
-      max_tokens: 500,
+      max_tokens: 2000,
       system:
         "You write Instagram Reel captions for real estate agents posting a listing walkthrough video. " +
         "Write as the agent, warm and confident, never salesy or hypey. Structure: a short hook line, two or three short lines on what makes the home special " +
@@ -49,7 +49,10 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: facts }],
     });
     const caption = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
-    if (!caption) throw new HttpError(502, "Couldn't write a caption. Try again.");
+    if (!caption) {
+      console.error("caption empty", msg.stop_reason, JSON.stringify(msg.content).slice(0, 500));
+      throw new HttpError(502, `Couldn't write a caption (${msg.stop_reason}). Try again.`);
+    }
     return Response.json({ caption });
   } catch (e) {
     return fail(e);
