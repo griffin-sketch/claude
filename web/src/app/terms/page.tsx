@@ -37,7 +37,7 @@ export default function TermsPage() {
 
       <Section title="3. Plans and payment">
         <ul>
-          <li><strong>Plans:</strong> listing videos are made with a subscription plan (such as Starter or Growth), billed monthly, every 3 months or yearly. Each billing period includes a set number of listing videos and staged photos. A quarterly or yearly plan includes the whole period&apos;s videos and photos up front.</li>
+          <li><strong>Plans:</strong> listing videos are made with a subscription plan (such as Starter or Growth), billed monthly, every 3 months or yearly. Each billing period includes a set number of listing videos and staged photos. A quarterly or yearly plan includes the whole period&apos;s videos and photos up front. Subscribers who use up their videos can buy extra videos, charged once each at the price shown.</li>
           <li><strong>Unused videos and photos</strong> last until the end of the billing period, then expire; they don&apos;t carry into the next period and have no cash value.</li>
           <li><strong>Renewal and cancelling:</strong> your plan renews automatically at the end of each period and your payment method is charged, until you cancel. You can cancel at any time in Billing; your plan stays active until the end of the period you&apos;ve paid for, then its videos and photos end.</li>
           <li><strong>Staged photos without a plan:</strong> previews are free and watermarked; you pay per photo to download the full-size version.</li>

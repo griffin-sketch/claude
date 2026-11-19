@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { grant, INTERVAL_IDS, INTERVALS, money, perMonth, PLAN_IDS, PLANS, savings, type IntervalId, type PlanId } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, grant, INTERVAL_IDS, INTERVALS, money, perMonth, PLAN_IDS, PLANS, savings, type IntervalId, type PlanId } from "@/lib/plans";
 
 /**
  * Starter / Growth with a Monthly · Quarterly · Yearly switch.
@@ -83,6 +83,7 @@ export function PlanPicker({
                   <b className="text-ink">{p.stagingPerMonth} staged photos</b> a month
                 </li>
                 <li>Full Reel pack, 5 clip redos per video, your branding</li>
+                <li>Need more? Extra videos are {money(EXTRA_VIDEO_PRICE)} each</li>
                 <li>{per.months === 1 ? "Cancel anytime" : "Unused videos last the whole term"}</li>
               </ul>
               <p className="text-xs text-muted">{p.blurb}</p>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { BeforeAfter, LoopVideo } from "@/components/Showcase";
 import { PlanPicker } from "@/components/PlanPicker";
+import { EXTRA_VIDEO_PRICE } from "@/lib/plans";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -46,6 +47,7 @@ const STEPS = [
 
 const FAQ = [
   ["Can I get staged photos too?", "Yes. Stage any empty room in one of eight furniture styles and see a free preview. Every plan includes 10 to 40 full-size staged photos a month; without a plan they're $5 each."],
+  ["What if I use up my videos?", `Add as many extra videos as you need for $${EXTRA_VIDEO_PRICE} each, right from your listing. Your plan refills on its next renewal.`],
   ["Will it change how the home looks?", "No. The camera moves, the room stays as photographed. If a clip ever looks off, redo it before your video is made."],
   ["What photos work best?", "Your professional listing photos, wide and well lit. Phone photos work too, though bright, level shots give the smoothest moves."],
   ["How long does it take?", "About 5 to 10 minutes for the clips, then a few minutes to build the finished videos. You can close the page while it works."],
@@ -343,6 +345,12 @@ export default function Home() {
             <p className="text-lg text-ink-soft">Listing videos from $24 a month. Less than one hour of a videographer&apos;s time.</p>
           </div>
           <PlanPicker href="/login" cta="Start" />
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] bg-white px-7 py-5">
+            <p className="text-[15px]">
+              <strong className="font-semibold">Extra videos</strong>{" "}
+              <span className="text-ink-soft">· busy month? Add more listing videos for ${EXTRA_VIDEO_PRICE} each, on any plan</span>
+            </p>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] bg-white px-7 py-5">
             <p className="text-[15px]">
               <strong className="font-semibold">Virtual staging</strong>{" "}
