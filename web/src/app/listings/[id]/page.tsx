@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MAX_PHOTOS as BASE_MAX_PHOTOS, OWNER_MAX_PHOTOS, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { CropEditor, CroppedImg } from "@/components/CropEditor";
 import { packPlan, REEL_MAX, REEL_MIN, walkthroughOrder } from "@/lib/pack";
@@ -15,6 +15,7 @@ import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
 import { EndFramePicker } from "@/components/EndFramePicker";
 import { api } from "@/lib/api";
+import { useMaxPhotos } from "@/lib/useMaxPhotos";
 import { PhotoLinkImport } from "@/components/PhotoLinkImport";
 import { HolidayDecor, undoDecor } from "@/components/HolidayDecor";
 
@@ -71,10 +72,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [listing, setListing] = useState<Listing | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
   // the owner's own account can use more photos (the server checks this too)
-  const [MAX_PHOTOS, setMaxPhotos] = useState(BASE_MAX_PHOTOS);
-  useEffect(() => {
-    api("/api/admin", { ping: true }).then(() => setMaxPhotos(OWNER_MAX_PHOTOS)).catch(() => {});
-  }, []);
+  const MAX_PHOTOS = useMaxPhotos();
   const redosLeft = Math.max(0, REDO_LIMIT - shots.reduce((a, s) => a + (s.user_redos ?? 0), 0));
   const [renders, setRenders] = useState<Render[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});

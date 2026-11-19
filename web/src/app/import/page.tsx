@@ -6,8 +6,9 @@ import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api";
+import { useMaxPhotos } from "@/lib/useMaxPhotos";
 import { supabase } from "@/lib/supabase";
-import { MAX_PHOTOS as BASE_MAX_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
+import { OWNER_MAX_PHOTOS } from "@/lib/config";
 import { fullSize, readSent, type SentPage } from "@/lib/bookmarklet";
 
 const KEY = "tourvo-sent-photos";
@@ -40,10 +41,7 @@ function ImportView({ user }: { user: User }) {
   const [choice, setChoice] = useState<string[] | null>(null);   // null = the first photos, picked for her
   const [drafts, setDrafts] = useState<Draft[]>([]);
   // the owner's own account can use more photos (the server checks this too)
-  const [MAX_PHOTOS, setMaxPhotos] = useState(BASE_MAX_PHOTOS);
-  useEffect(() => {
-    api("/api/admin", { ping: true }).then(() => setMaxPhotos(OWNER_MAX_PHOTOS)).catch(() => {});
-  }, []);
+  const MAX_PHOTOS = useMaxPhotos();
   const [target, setTarget] = useState<string>("new");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
