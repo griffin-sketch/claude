@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
+import { PostToInstagram } from "@/components/PostToInstagram";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
@@ -1150,6 +1151,17 @@ function Editor({ id, user }: { id: string; user: User }) {
             ))}
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            <PostToInstagram
+              listingId={id}
+              videos={sortedRenders.filter((r) => videos[r.video_path]).map((r) => ({
+                id: r.id,
+                label: REEL_LABEL[r.kind ?? "tour"] ?? "Video",
+                tall: r.format === "9:16",
+                play: videos[r.video_path].play,
+                download: videos[r.video_path].download,
+                name: `${(listing.address || "listing").replace(/[^a-z0-9]+/gi, "-")}-${r.kind ?? "tour"}.mp4`,
+              }))}
+            />
             <ShareLink listing={listing} onSave={saveListing} />
             <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
               Make changes
