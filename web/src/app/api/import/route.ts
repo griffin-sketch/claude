@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { admin, fail, HttpError, requireUser } from "@/lib/server";
-import { MAX_PHOTOS } from "@/lib/config";
+import { admin, fail, HttpError, isAdmin, requireUser } from "@/lib/server";
+import { MAX_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
 import { ImportError, photosFromLink, photosFromUrls } from "@/lib/photoImport";
 
 export const maxDuration = 120;
@@ -24,8 +24,9 @@ export async function POST(request: Request) {
     if (!["draft", "failed"].includes(listing.status)) throw new HttpError(409, "Photos can only be added before the videos are made.");
 
     const { data: existing } = await db.from("shots").select("position").eq("listing_id", listing.id);
-    const room = MAX_PHOTOS - (existing?.length ?? 0);
-    if (room <= 0) throw new HttpError(409, `This listing already has ${MAX_PHOTOS} photos. Remove some to import more.`);
+    const max = isAdmin(user) ? OWNER_MAX_PHOTOS : MAX_PHOTOS;
+    const room = max - (existing?.length ?? 0);
+    if (room <= 0) throw new HttpError(409, `This listing already has ${max} photos. Remove some to import more.`);
 
     let photos;
     try {
