@@ -7,7 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { MAX_PHOTOS } from "@/lib/config";
+import { MAX_PHOTOS as BASE_MAX_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
 import { fullSize, readSent, type SentPage } from "@/lib/bookmarklet";
 
 const KEY = "tourvo-sent-photos";
@@ -39,6 +39,11 @@ function ImportView({ user }: { user: User }) {
   const [sizes, setSizes] = useState<Record<string, number>>({});   // url -> width once loaded (0 = failed)
   const [choice, setChoice] = useState<string[] | null>(null);   // null = the first photos, picked for her
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  // the owner's own account can use more photos (the server checks this too)
+  const [MAX_PHOTOS, setMaxPhotos] = useState(BASE_MAX_PHOTOS);
+  useEffect(() => {
+    api("/api/admin", { ping: true }).then(() => setMaxPhotos(OWNER_MAX_PHOTOS)).catch(() => {});
+  }, []);
   const [target, setTarget] = useState<string>("new");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -54,7 +59,7 @@ function ImportView({ user }: { user: User }) {
       .then(({ data }) => {
         const rows = ((data ?? []) as unknown as { id: string; address: string; created_at: string; shots: { count: number }[] }[])
           .map((r) => ({ id: r.id, address: r.address, created_at: r.created_at, count: r.shots?.[0]?.count ?? 0 }))
-          .filter((r) => r.count < MAX_PHOTOS);
+          .filter((r) => r.count < OWNER_MAX_PHOTOS);
         setDrafts(rows);
       });
   }, [user.id]);
