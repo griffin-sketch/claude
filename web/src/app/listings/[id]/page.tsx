@@ -16,7 +16,7 @@ import { CameraControl } from "@/components/CameraControl";
 import { EffectPicker } from "@/components/EffectPicker";
 import { EndFramePicker } from "@/components/EndFramePicker";
 import { api } from "@/lib/api";
-import { useMaxPhotos } from "@/lib/useMaxPhotos";
+import { useMaxPhotos, usePrivateTemplates } from "@/lib/useMaxPhotos";
 import { PhotoLinkImport } from "@/components/PhotoLinkImport";
 import { HolidayDecor, undoDecor } from "@/components/HolidayDecor";
 
@@ -74,6 +74,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [shots, setShots] = useState<Shot[]>([]);
   // the owner's own account can use more photos (the server checks this too)
   const MAX_PHOTOS = useMaxPhotos();
+  const privateTemplates = usePrivateTemplates();
   const redosLeft = Math.max(0, REDO_LIMIT - shots.reduce((a, s) => a + (s.user_redos ?? 0), 0));
   const [renders, setRenders] = useState<Render[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -887,7 +888,7 @@ function Editor({ id, user }: { id: string; user: User }) {
           <h2 className="font-display text-2xl">Pick a look and music</h2>
           <p className="mb-4 mt-1 text-sm text-ink-soft">Choose how the words on your video look. Any of them works; pick the one that feels like you.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {TEMPLATES.map((t) => (
+            {TEMPLATES.filter((t) => !("private" in t) || privateTemplates.includes(t.id) || listing.template === t.id).map((t) => (
               <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing(t.id === 11 && listing.music !== "custom" ? { template: t.id, music: "holiday" } : { template: t.id })}
                 className={`overflow-hidden rounded-xl border-2 text-left transition ${
                   listing.template === t.id ? "border-gold" : "border-transparent hover:border-line"}`}>

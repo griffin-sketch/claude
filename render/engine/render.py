@@ -1048,7 +1048,67 @@ class T11(Template):
     def overlay(self, frame, t):
         if self.snow: self.snow.draw(frame, t)
 
-TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10, 11: T11}
+# ---- 12 · Estate (Cormorant Garamond caps, tracked wide or italic; Montserrat body; gold hairline). No shadow.
+class T12(Template):
+    name = "Estate"
+    GOLD = hexrgb("#D6C08E"); WHITE = hexrgb("#FFFFFF"); SOFT = hexrgb("#FFFFFF", 235)
+    SERIF = "cgaramond-400"; ITAL = "cgaramond-italic"; SANS = "montserrat-500"
+    def _stack(self, rows, gap=18):
+        img, x, _ = self.centered_stack(rows, gap=gap, shadow=0, blur=0)
+        return img, x
+    def title(self, t0, t1):
+        out = []
+        top = (self.kicker() or "").upper()
+        if top:
+            img, x = self._stack([("text", top, fit_font(self.ITAL, 150, top, MW(1500)), self.WHITE, 0)])
+            out.append(Element(img, x, int(H * (0.12 if VERTICAL else 0.07)), t0, t1, "rise", 26))
+        j = self.job
+        street = (j.get("address") or self.headline() or "").upper()
+        city = (j.get("city_line") or "").upper()
+        rows = [("rule", 150, 3, self.GOLD), ("gap", 6)]
+        if street: rows.append(("text", street, fit_font(self.SERIF, 78, street, MW(1500), track=22), self.WHITE, 22))
+        if street and city: rows.append(("gap", 8))
+        if city: rows.append(("text", city, font(self.SANS, 36), self.WHITE, 9))
+        st = stats_parts(j.get("stats"))
+        if self.price(): st = st + [self.price()]
+        if st: rows.append(("text", "   |   ".join(st).upper(), font("montserrat-400", 24), self.SOFT, 6))
+        img, x = self._stack(rows, gap=16)
+        out.append(Element(img, x, H - BOT(80) - img.height, t0, t1, "rise", 26))
+        return out
+    def feature(self, i, n, shot, t0, t1):
+        main = (shot.get("label") or "").upper(); sub = (shot.get("sub") or "").upper()
+        fm = fit_font(self.SERIF, 60, main, MW(1300), track=14); fs = font(self.SANS, 22)
+        wm = text_w(main, fm, 14); ws = text_w(sub, fs, 6)
+        a = fm.getmetrics()[0]
+        h = a + 34 + (fs.getmetrics()[0] if sub else 0)
+        sp = Sprite(max(wm, ws, 130) + 20, h + 10)
+        sp.text(0, 0, main, fm, self.WHITE, 14)
+        sp.rect(2, a + 18, 122, a + 20, self.GOLD)
+        if sub: sp.text(2, a + 36, sub, fs, self.WHITE, 6)
+        img = sp.finish(0)
+        return [Element(img, 120 - sp.pad, H - BOT(120) - h - sp.pad, t0, t1, "rise", 24)]
+    def outro(self, t0):
+        a = self.agent(); rows = []
+        if self.branded() and self.media("headshot"):
+            rows += [("img", circle_photo(self.media("headshot"), 200, self.GOLD, 3)), ("gap", 4)]
+        rows.append(("text", self.outro_kicker().upper(), font(self.SANS, 24), self.SOFT, 9))
+        if self.branded():
+            if a.get("name"):
+                nm = a["name"].upper()
+                rows.append(("text", nm, fit_font(self.ITAL, 104, nm, MW(1500)), self.WHITE, 0))
+            rows.append(("rule", 150, 3, self.GOLD))
+            if a.get("brokerage"): rows.append(("text", a["brokerage"].upper(), font(self.SANS, 24), self.WHITE, 8))
+            if a.get("phone"): rows.append(("text", a["phone"], font(self.SERIF, 54), self.WHITE, 8))
+            if self.media("logo"): rows += [("gap", 10), ("img", logo_image(self.media("logo"), 320, 120))]
+        else:
+            hl = self.headline().upper()
+            rows.append(("text", hl, fit_font(self.ITAL, 96, hl, MW(1500)), self.WHITE, 0))
+            rows.append(("rule", 150, 3, self.GOLD))
+            if self.addr_line(): rows.append(("text", self.addr_line().upper(), font(self.SANS, 26), self.SOFT, 8))
+        img, x = self._stack(rows, gap=20)
+        return [Element(img, x, (H - img.height) // 2, t0, None, "rise", 26)]
+
+TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10, 11: T11, 12: T12}
 
 # ---------------------------------------------------------------- footage
 def probe_duration(path):

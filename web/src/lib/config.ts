@@ -22,7 +22,13 @@ export const TEMPLATES = [
   { id: 9, name: "Golden Hour", blurb: "Script lettering with warm gold." },
   { id: 10, name: "Cinema", blurb: "Letterbox bars and wide-tracked caps." },
   { id: 11, name: "Holiday", blurb: "Red, green and gold, falling snow and a Happy Holidays outro." },
+  { id: 12, name: "Estate", blurb: "Cormorant Garamond caps, tracked wide or italic, with a gold hairline.", private: true },
 ] as const;
+
+/** Templates made for one realtor's brand. Only the owner's account and the emails listed here see them. */
+export const PRIVATE_TEMPLATE_EMAILS: Record<number, string[]> = {
+  12: [],
+};
 
 export const TRANSITIONS = [
   { id: "crossfade", name: "Smooth fade", blurb: "Soft dissolve between rooms. Calm and classic." },
