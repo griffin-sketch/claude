@@ -22,6 +22,33 @@ def wanted(listing):
     return listing.get("user_id") in BRAND_USERS
 
 
+def agent_bug(src, dst, logo, hide_last=0.0):
+    """Put the realtor's own logo where the Tourvo logo would go (no Tourvo end card). For agents who asked for
+    their mark in place of ours. `hide_last`: seconds at the end (the outro card) without it."""
+    from PIL import Image
+    w, h, fps, dur, has_audio = _probe(src)
+    lg = Image.open(logo).convert("RGBA")
+    box_h = int(h * (0.075 if w >= h else 0.042))
+    lg = lg.resize((max(1, int(lg.width * box_h / lg.height)), box_h), Image.LANCZOS)
+    a = lg.split()[-1].point(lambda v: int(v * 0.9)); lg.putalpha(a)
+    ov = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    if w >= h:   # wide: bottom right, where the Tourvo mark sits
+        ov.alpha_composite(lg, (w - 42 - lg.width, h - 34 - lg.height))
+    else:        # tall: top right, clear of the Reels caption and buttons
+        ov.alpha_composite(lg, (w - 46 - lg.width, 232))
+    png = dst[:-4] + "-bug.png"
+    ov.save(png)
+    bug_end = max(BUG_START + BUG_IN, dur - hide_last)
+    fc = [f"[1:v]format=rgba,fade=t=in:st={BUG_START}:d={BUG_IN}:alpha=1[bug]",
+          f"[0:v][bug]overlay=0:0:enable='lt(t,{bug_end:.3f})':format=auto,format=yuv420p[v]"]
+    cmd = ["ffmpeg", "-y", "-v", "error", "-i", src, "-loop", "1", "-t", f"{dur:.3f}", "-i", png,
+           "-filter_complex", ";".join(fc), "-map", "[v]"] + (["-map", "0:a", "-c:a", "copy"] if has_audio else []) + [
+           "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "5M", "-bufsize", "10M",
+           "-profile:v", "high", "-pix_fmt", "yuv420p", "-threads", "2", "-movflags", "+faststart", "-t", f"{dur:.3f}", dst]
+    subprocess.run(cmd, check=True)
+    return dst
+
+
 def _probe(path):
     r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_streams", "-show_format", path],
                        capture_output=True, text=True, check=True)

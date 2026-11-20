@@ -24,7 +24,10 @@ export async function POST(request: Request) {
     // Tourvo branding switch: { branding: { id, value: true | false | null } }
     if (body?.branding && typeof body.branding.id === "string") {
       const v = body.branding.value;
-      const { error } = await db.from("listings").update({ tourvo_branding: v === true || v === false ? v : null }).eq("id", body.branding.id);
+      // "agent": no Tourvo branding, the realtor's own logo in the corner instead
+      const patch = v === "agent" ? { tourvo_branding: false, agent_bug: true }
+        : { tourvo_branding: v === true || v === false ? v : null, agent_bug: false };
+      const { error } = await db.from("listings").update(patch).eq("id", body.branding.id);
       if (error) throw new HttpError(500, error.message.includes("tourvo_branding") ? "Run migration 0017 in Supabase first." : error.message);
       return Response.json({ ok: true });
     }
@@ -77,7 +80,7 @@ export async function POST(request: Request) {
       const revenue = l.paid_via === "single" ? EXTRA_VIDEO_PRICE : l.paid_via === "credit" ? planValue(p?.plan, p?.plan_interval).perVideo : 0;
       return {
         id: l.id, address: l.address || "Untitled", city: l.city_line, status: l.status, paid_via: l.paid_via, error: l.error,
-        branding: (l.tourvo_branding ?? null) as boolean | null, mine: l.user_id === user.id,
+        branding: (l.agent_bug ? "agent" : l.tourvo_branding ?? null) as boolean | null | "agent", mine: l.user_id === user.id,
         created_at: l.created_at, updated_at: l.updated_at, email: email.get(l.user_id) ?? "", name: p?.company || p?.full_name || "",
         account_type: p?.account_type ?? "agent", ...m, videos: videos.get(l.id) ?? 0, views: l.share_views ?? 0,
         ai_cost: Math.round(aiCost * 100) / 100, revenue: Math.round(revenue * 100) / 100,

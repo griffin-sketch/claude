@@ -473,7 +473,14 @@ def render_listing(l):
             out = os.path.join(tmp, f"{name}.mp4")
             log(f"  rendering {n}/{len(pack)}: {name}")
             engine.render(job_path, out, fmt=fmt)
-            if brand.wanted(l):
+            if l.get("agent_bug") and (j.get("agent") or {}).get("logo"):
+                try:
+                    out = brand.agent_bug(out, out[:-4] + "-agent.mp4", os.path.join(tmp, j["agent"]["logo"]),
+                                          hide_last=5.0 if j.get("outro", "branded") != "none" else 0)
+                    log("    + agent's logo in the corner")
+                except Exception as e:
+                    log(f"    agent logo skipped: {e}")
+            elif brand.wanted(l):
                 try:
                     out = brand.apply(out, out[:-4] + "-tourvo.mp4", hide_last=5.0 if j.get("outro", "branded") != "none" else 0)
                     log("    + Tourvo branding")
