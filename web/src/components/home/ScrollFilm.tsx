@@ -50,50 +50,46 @@ export function ScrollFilm() {
   const active = still ? 3 : CHAPTERS.reduce((a, c, i) => (p >= c.at ? i : a), 0);
   const brand = still ? 1 : span(p, 0.62, 0.72);
   const tall = still ? 0 : span(p, 0.82, 0.95);
-  // shrink the 16:9 frame to a centred 9:16 window: inset left/right
-  const side = tall * 34.2;   // % of width hidden on each side ((1 - (9/16)/(16/9)) / 2 ≈ 34%)
+  const c = CHAPTERS[active];
 
   return (
-    <section ref={root} aria-label="From still photo to walkthrough" className={`relative bg-white ${still ? "" : "h-[420vh]"}`}
-      style={{ ["--grow-phone" as string]: 1 + tall * 0.75 } as React.CSSProperties}>
-      <div className={`${still ? "" : "sticky top-0 h-[100svh]"} flex items-center px-5 py-20 sm:px-8`}>
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-8 lg:flex-row lg:items-center lg:gap-16">
-          <ol className="flex min-w-0 flex-col gap-1 lg:w-[38%]">
-            {CHAPTERS.map((c, i) => (
-              <li key={c.title} className={`border-l-2 py-2 pl-5 transition-colors duration-300 ${i === active ? "border-accent" : "border-line"} ${i === active ? "" : "max-lg:hidden"}`}>
-                <span className={`block font-display text-[clamp(24px,2.6vw,34px)] leading-tight transition-colors duration-300 ${i === active ? "text-ink" : "text-muted"}`}>
-                  {c.title}
-                </span>
-                <span className={`grid transition-all duration-500 ${i === active ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                  <span className="overflow-hidden pt-2 text-[16px] leading-relaxed text-ink-soft">{c.body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
+    <section ref={root} aria-label="From still photo to walkthrough" className={`relative bg-ink ${still ? "" : "h-[420vh]"}`}>
+      <div className={`${still ? "relative h-[100svh]" : "sticky top-0 h-[100svh]"} w-full overflow-hidden`}>
+        {/* full-screen frame; for the Reel step it closes in to a tall 9:16 window in the middle of the screen */}
+        <div className="absolute inset-0"
+          style={{ clipPath: `inset(${tall * 4}% calc(${tall} * (50% - 100svh * 0.92 * 9 / 32)) ${tall * 4}% calc(${tall} * (50% - 100svh * 0.92 * 9 / 32)) round ${tall * 28}px)` }}>
+          <video ref={video} src="/fx/move_scrub.mp4" poster="/home/frame1.jpg" muted playsInline preload="auto"
+            aria-label="A listing photo turning into a camera move toward the front door" className="h-full w-full object-cover" />
+          <div className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0.18 + brand * 0.12 }} />
+          {/* title card, as the finished video shows it */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-white"
+            style={{ opacity: brand, transform: `translateY(${(1 - brand) * 20}px)` }}>
+            <span className="text-[clamp(10px,1.1vw,15px)] font-semibold uppercase tracking-[0.35em]">Just listed</span>
+            <span className="mt-3 max-w-[min(92vw,1000px)] font-display leading-[1.02] text-balance"
+              style={{ fontSize: `calc(clamp(34px,5.6vw,88px) * ${1 - tall * 0.5})` }}>1234 Oak Hollow Drive</span>
+            <span className="mt-4 text-[clamp(10px,1.1vw,15px)] uppercase tracking-[0.25em]" style={{ opacity: 1 - tall }}>4 beds · 3.5 baths · 2,950 sq ft</span>
+          </div>
+        </div>
 
-          <div className="relative min-w-0 flex-1">
-            <div className="relative aspect-video w-full overflow-hidden rounded-[28px] bg-line shadow-[0_20px_60px_rgba(43,32,28,0.18)] max-lg:origin-top lg:!transform-none"
-              style={{ clipPath: `inset(0 ${side}% 0 ${side}% round 28px)`, transform: `scale(var(--grow-phone, 1))`} as React.CSSProperties}>
-              <video ref={video} src="/fx/move_scrub.mp4" poster="/home/frame1.jpg" muted playsInline preload="auto"
-                aria-label="A listing photo turning into a camera move toward the front door" className="h-full w-full object-cover" />
-              {/* title card, as the finished video shows it */}
-              {/* the photo dims a touch under the title so the type reads, like a finished video's grade */}
-              <div className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: brand * 0.22 }} />
-              <div className="pointer-events-none absolute inset-y-0 flex flex-col items-center justify-center px-3 text-center text-white"
-                style={{ left: `${side}%`, right: `${side}%`, opacity: brand, transform: `translateY(${(1 - brand) * 16}px)` }}>
-                <span className="text-[clamp(8px,1vw,13px)] font-semibold uppercase tracking-[0.35em]">Just listed</span>
-                <span className="mt-2 font-display leading-[1.02] text-balance" style={{ fontSize: `calc(clamp(22px,3.4vw,46px) * ${1 - tall * 0.35})` }}>1234 Oak Hollow Drive</span>
-                <span className="mt-3 text-[clamp(8px,1vw,13px)] uppercase tracking-[0.25em]" style={{ opacity: 1 - tall }}>4 beds · 3.5 baths · 2,950 sq ft</span>
+        {/* the step we're on, over the footage */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 px-5 pb-8 sm:px-10 sm:pb-12" style={{ opacity: 1 - tall * 0.0 }}>
+          <div className="mx-auto flex max-w-[1180px] flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div key={active} className="max-w-[520px] text-white [animation:rise-in_.5s_ease-out_both]"
+              style={{ maxWidth: tall > 0.2 ? "min(520px, calc(50vw - 100svh * 0.92 * 9 / 32 - max(40px, 50vw - 590px) - 40px))" : undefined }}>
+              <span className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/70">{`0${active + 1} / 04`}</span>
+              <h2 className="mt-2 font-display text-[clamp(30px,4vw,56px)] leading-[1.05]">{c.title}</h2>
+              <p className="mt-3 text-[16px] leading-relaxed text-white/85 sm:text-lg">{c.body}</p>
+            </div>
+            {!still && (
+              <div className="flex gap-1.5" aria-hidden>
+                {CHAPTERS.map((ch, i) => (
+                  <span key={ch.title} className="h-1 w-10 overflow-hidden rounded-full bg-white/25 sm:w-14">
+                    <span className="block h-full rounded-full bg-white"
+                      style={{ width: `${Math.round(span(p, ch.at, CHAPTERS[i + 1]?.at ?? 1) * 100)}%` }} />
+                  </span>
+                ))}
               </div>
-            </div>
-            <div className="mt-4 flex items-center justify-between text-[13px] font-semibold text-muted max-lg:mt-[calc((var(--grow-phone)-1)*56.25%+16px)]">
-              <span>{active === 0 ? "Listing photo" : active === 1 ? "Camera move" : active === 2 ? "Title card" : tall > 0.5 ? "9:16 Reel" : "16:9 walkthrough"}</span>
-              {!still && (
-                <span className="h-1 w-32 overflow-hidden rounded-full bg-line" aria-hidden>
-                  <span className="block h-full rounded-full bg-accent" style={{ width: `${p * 100}%` }} />
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
