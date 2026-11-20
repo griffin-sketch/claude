@@ -52,21 +52,23 @@ export function ScrollLooks({ looks }: { looks: Look[] }) {
   }
 
   return (
-    <div ref={root} style={{ height: `${looks.length * 60 + 40}vh` }} className="relative -mx-5 sm:-mx-8 lg:mx-[calc(50%-50vw)]">
-      <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink">
-        {looks.map((l, k) => (
-          <img key={l.id} src={`/templates/t${l.id}.jpg`} alt={k === i ? `${l.name} title card` : ""} aria-hidden={k !== i}
-            className="absolute inset-0 h-full w-full object-cover transition-all duration-700"
-            style={{ opacity: k === i ? 1 : 0, transform: k === i ? "scale(1)" : "scale(1.04)" }} />
-        ))}
-        <ol className="absolute bottom-10 left-10 flex flex-col gap-1 rounded-[24px] bg-black/35 p-5 backdrop-blur-md">
+    <div ref={root} style={{ height: `${looks.length * 55 + 45}vh` }} className="relative">
+      <div className="sticky top-24 flex items-center gap-12">
+        <ol className="flex w-[30%] flex-col gap-1">
           {looks.map((l, k) => (
-            <li key={l.id} className={`border-l-2 py-1.5 pl-4 transition-colors duration-300 ${k === i ? "border-white" : "border-white/20"}`}>
-              <span className={`block text-lg font-semibold transition-colors duration-300 ${k === i ? "text-white" : "text-white/55"}`}>{l.name}</span>
-              {k === i && <span className="block text-sm text-white/80">{l.note}</span>}
+            <li key={l.id} className={`border-l-2 py-2.5 pl-5 transition-colors duration-300 ${k === i ? "border-accent" : "border-line"}`}>
+              <span className={`block text-xl font-semibold transition-colors duration-300 ${k === i ? "text-ink" : "text-muted"}`}>{l.name}</span>
+              <span className={`block text-sm transition-colors duration-300 ${k === i ? "text-ink-soft" : "text-muted/70"}`}>{l.note}</span>
             </li>
           ))}
         </ol>
+        <div className="relative aspect-video flex-1 overflow-hidden rounded-[28px] bg-line shadow-[0_20px_60px_rgba(43,32,28,0.16)]">
+          {looks.map((l, k) => (
+            <img key={l.id} src={`/templates/t${l.id}.jpg`} alt={k === i ? `${l.name} title card` : ""} aria-hidden={k !== i}
+              className="absolute inset-0 h-full w-full object-cover transition-all duration-500"
+              style={{ opacity: k === i ? 1 : 0, transform: k === i ? "scale(1)" : "scale(1.03)" }} />
+          ))}
+        </div>
       </div>
     </div>
   );
