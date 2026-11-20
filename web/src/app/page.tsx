@@ -29,13 +29,13 @@ const STEPS = [
     img: "/home/living.jpg",
     alt: "Living room listing photo",
     title: "Upload your photos",
-    body: "Drop in 3 to 20 listing photos in the order you want them shown. Lead with the front of the home, then label each room.",
+    body: "Drop in 5 to 15 listing photos in the order you want them shown. Lead with the front of the home, then label each room.",
   },
   {
     img: "/templates/t1.jpg",
     alt: "A finished title card in the Signature Gold look",
     title: "Pick a look",
-    body: "Choose one of ten designed title-and-label styles. Your name, brokerage, phone, headshot and logo go on the closing card.",
+    body: "Choose a designed title-and-label style. Your name, brokerage, phone, headshot and logo go on the closing card.",
   },
   {
     img: "/home/kitchen.jpg",
@@ -153,8 +153,7 @@ export default function Home() {
       <section className={`bg-white py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-wrap items-center gap-12 lg:gap-16`}>
           <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-5">
-            <span className="eyebrow">From still to walkthrough</span>
-            <h2 className={h2}>The camera moves through the home, <span className="italic text-gold">not across a slideshow.</span></h2>
+            <h2 className={h2}>The camera moves through the home, not across a slideshow.</h2>
             <p className={`${lead} max-w-[520px]`}>
               Each photo becomes a five-second shot with real depth: a push into the living room, a glide toward the
               kitchen island, a rise over the front lawn. Nothing in the room is added or moved, and every clip is yours
@@ -182,8 +181,7 @@ export default function Home() {
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <span className="eyebrow">AI effects</span>
-              <h2 className={h2}>Pick an effect for <span className="italic text-gold">any photo.</span></h2>
+              <h2 className={h2}>Pick an effect for any photo.</h2>
             </div>
             <p className="max-w-[400px] leading-relaxed text-ink-soft">
               Every effect starts from your real listing photo and lands back on it, so the finished room is exactly what buyers will see.
@@ -209,8 +207,7 @@ export default function Home() {
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <span className="eyebrow">Drag to compare</span>
-              <h2 className={h2}>Same photo. A whole new <span className="italic text-gold">first impression.</span></h2>
+              <h2 className={h2}>Same photo. A whole new first impression.</h2>
             </div>
             <p className="max-w-[400px] leading-relaxed text-ink-soft">
               Stage a vacant room or turn a daytime shot into twilight, right inside your video. Need stills too? Every plan
@@ -257,11 +254,10 @@ export default function Home() {
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <span className="eyebrow">Ten looks</span>
-              <h2 className={h2}>Pick a look that fits <span className="italic text-gold">your brand.</span></h2>
+              <h2 className={h2}>Pick a look that fits your brand.</h2>
             </div>
             <p className="max-w-[380px] leading-relaxed text-ink-soft">
-              From quiet magazine serif to bold boutique type. Six of the ten, shown on the same title card.
+              From quiet magazine serif to bold boutique type. A few of them, shown on the same title card.
             </p>
           </div>
           <p className={`${swipe} -mb-6`}>Swipe to see more →</p>
@@ -290,8 +286,7 @@ export default function Home() {
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
-            <span className="eyebrow">What you get</span>
-            <h2 className={h2}>One listing. <span className="italic text-gold">A whole pack of Reels.</span></h2>
+            <h2 className={h2}>One listing. A whole pack of Reels.</h2>
             <ul className="flex flex-col gap-5">
               {[
                 ["Full walkthrough", "in 16:9 for MLS, YouTube and your website, plus vertical"],
@@ -316,7 +311,7 @@ export default function Home() {
         <div className={`${wrap} flex flex-wrap items-center gap-12 lg:gap-16`}>
           <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
             <span className="eyebrow">For real estate photographers</span>
-            <h2 className={h2}>Sell video on <span className="italic text-gold">every shoot.</span></h2>
+            <h2 className={h2}>Sell video on every shoot.</h2>
             <p className={`${lead} max-w-[520px]`}>
               Turn the photos you already deliver into a video add-on. No extra time on site, no editing.
             </p>
@@ -341,7 +336,6 @@ export default function Home() {
       <section id="pricing" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className="mx-auto flex max-w-[1000px] flex-col gap-10">
           <div className="flex flex-col items-center gap-4 text-center">
-            <span className="eyebrow">Pricing</span>
             <h2 className={h2}>Simple plans</h2>
             <p className="text-lg text-ink-soft">Listing videos from $24 a month. Less than one hour of a videographer&apos;s time.</p>
           </div>
@@ -384,7 +378,7 @@ export default function Home() {
       <section className={`py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col items-center gap-6 rounded-[40px] bg-gold-soft px-6 py-14 text-center sm:px-12 sm:py-20`}>
           <h2 className="max-w-[820px] font-display text-[clamp(38px,4.8vw,64px)] font-normal leading-[1.06] text-balance">
-            Your next listing deserves a <span className="italic text-gold">walkthrough.</span>
+            Your next listing deserves a walkthrough.
           </h2>
           <p className="text-lg text-ink-soft">Your first video is free. No card needed.</p>
           <div className="flex flex-wrap justify-center gap-3.5">

@@ -76,7 +76,7 @@ function Listings({ user }: { user: User }) {
               Let&apos;s make your <span className="italic">first video.</span>
             </h2>
             <ol className="space-y-3 text-sm text-ink-soft">
-              {["Add 3 to 20 listing photos, front of the home first", "Pick one of ten looks", "Review each clip, then download"].map((t, i) => (
+              {["Add 5 to 15 listing photos, front of the home first", "Pick a look", "Review each clip, then download"].map((t, i) => (
                 <li key={t} className="flex items-baseline gap-3">
                   <span className="font-display text-2xl text-gold">{i + 1}</span>
                   {t}
