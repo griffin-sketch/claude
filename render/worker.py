@@ -51,6 +51,22 @@ S.headers.update({"apikey": KEY, "Authorization": f"Bearer {KEY}"})
 
 
 _emails = {}
+
+def readable_image(path):
+    """A headshot or logo the renderer can open (as PNG). Raises if it can't be read, e.g. an .svg, so the caller
+    leaves it off the video instead of failing the whole build."""
+    from PIL import Image
+    try:
+        with Image.open(path) as im:
+            im.load()
+            if path.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                return path
+            out = os.path.splitext(path)[0] + "-conv.png"
+            im.convert("RGBA").save(out)
+            return out
+    except Exception as e:
+        raise RuntimeError(f"can't read {os.path.basename(path)} ({e}); left off the video")
+
 def user_email(user_id):
     """The customer's sign-in email, from Supabase Auth (cached)."""
     if user_id not in _emails:
@@ -423,7 +439,7 @@ def render_listing(l):
             if path:
                 try:
                     dest = storage_get("branding", path, os.path.join(media, k + (os.path.splitext(path)[1] or ".png")))
-                    agent[k] = os.path.relpath(dest, tmp)
+                    agent[k] = os.path.relpath(readable_image(dest), tmp)
                 except Exception as e:
                     log(f"  {k} download failed: {e}")
         outro = l["outro"]
@@ -435,7 +451,7 @@ def render_listing(l):
                 if path:
                     try:
                         dest = storage_get("branding", path, os.path.join(media, "client-" + k + (os.path.splitext(path)[1] or ".png")))
-                        agent[k] = os.path.relpath(dest, tmp)
+                        agent[k] = os.path.relpath(readable_image(dest), tmp)
                     except Exception as e:
                         log(f"  client {k} download failed: {e}")
             outro = "branded"

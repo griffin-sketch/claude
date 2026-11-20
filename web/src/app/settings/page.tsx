@@ -1,5 +1,6 @@
 "use client";
 
+import { svgToPng } from "@/lib/svgToPng";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AppShell } from "@/components/AppShell";
@@ -33,6 +34,7 @@ function Branding({ user }: { user: User }) {
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) => setP({ ...p, [k]: e.target.value });
 
   async function upload(kind: "headshot" | "logo", file: File) {
+    file = await svgToPng(file);
     const path = `${user.id}/${kind}-${crypto.randomUUID()}.${fileExt(file.name)}`;
     const { error } = await supabase().storage.from("branding").upload(path, file, { upsert: true });
     if (error) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { svgToPng } from "@/lib/svgToPng";
 import { use, useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
@@ -1370,6 +1371,7 @@ function ClientBranding({ listing, user, disabled, onSave }: {
 }) {
   const [note, setNote] = useState("");
   async function upload(kind: "logo" | "headshot", file: File) {
+    file = await svgToPng(file);
     const path = `${user.id}/client-${listing.id}-${kind}-${crypto.randomUUID()}.${fileExt(file.name)}`;
     const { error } = await supabase().storage.from("branding").upload(path, file, { upsert: true });
     if (error) return setNote(error.message);
