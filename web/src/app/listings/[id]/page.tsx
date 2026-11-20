@@ -8,7 +8,7 @@ import { PostToInstagram } from "@/components/PostToInstagram";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, PACES, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { CropEditor, CroppedImg } from "@/components/CropEditor";
 import { packPlan, REEL_MAX, REEL_MIN, walkthroughOrder } from "@/lib/pack";
@@ -900,6 +900,19 @@ function Editor({ id, user }: { id: string; user: User }) {
             ))}
           </div>
           <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
+          <div className="mt-6">
+            <span className="label">Pace</span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PACES.map((t) => (
+                <button key={t.id} type="button" disabled={!labelsEditable} onClick={() => saveListing({ pace: t.id })}
+                  className={`rounded-xl border-2 px-3 py-2.5 text-left transition ${
+                    (listing.pace ?? "normal") === t.id ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"}`}>
+                  <span className="block text-sm font-semibold">{t.name}</span>
+                  <span className="block text-xs text-ink-soft">{t.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <MoreOptions>
             <span className="label">How the video moves between rooms</span>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

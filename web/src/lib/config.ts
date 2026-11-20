@@ -37,6 +37,11 @@ export const TRANSITIONS = [
   { id: "cut", name: "Straight cut", blurb: "Clean, instant cuts. Fast paced." },
 ] as const;
 
+export const PACES = [
+  { id: "normal", name: "Walkthrough", blurb: "Each room gets a few seconds. Calm and complete." },
+  { id: "fast", name: "Fast cuts", blurb: "Quick shots cut to the beat of the music. Great for Reels." },
+] as const;
+
 // Keep in sync with render/effects.py EFFECTS
 export const EFFECTS = [
   { id: "none", name: "Camera move", blurb: "A smooth cinematic move through the space." },

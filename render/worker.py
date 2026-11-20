@@ -468,7 +468,7 @@ def render_listing(l):
             lib = os.path.join(HERE, "engine", "music", f"{mid}.mp3")
             music = lib if os.path.exists(lib) else None
         job = {
-            "template": l["template"], "transition": l.get("transition") or "crossfade", "kicker": l["kicker"] or "NOW AVAILABLE", "headline": l["headline"] or "",
+            "template": l["template"], "transition": l.get("transition") or "crossfade", "pace": l.get("pace") or "normal", "kicker": l["kicker"] or "NOW AVAILABLE", "headline": l["headline"] or "",
             "address": l["address"], "city_line": l["city_line"],
             "stats": {"beds": l.get("beds"), "baths": l.get("baths"), "sqft": l.get("sqft"),
                       "acres": l.get("acres"), "price": l.get("price")},

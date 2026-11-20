@@ -1282,11 +1282,70 @@ class Grade:
         return ImageChops.multiply(img, self.vign)
 
 # ---------------------------------------------------------------- render
+
+# ---- fast pace: short shots, cut on the beat ---------------------------------------------------
+FAST_SPEED = 1.35          # camera moves play a little quicker so short shots still feel like motion
+FAST_SHOT = 1.7            # target seconds per shot (snapped to the music's beat)
+FAST_TITLE = 2.9           # the opening shot stays long enough to read the title
+
+def beat_grid(music):
+    """(seconds per beat, time of the first strong beat) for a music file, or None. Spectral-flux onsets +
+    autocorrelation: plenty for snapping cuts to the beat of a pop/house/cinematic track."""
+    import numpy as np
+    try:
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", music, "-t", "75", "-ac", "1", "-ar", "11025", "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        x = np.frombuffer(raw, dtype=np.float32)
+        hop, win, sr = 256, 1024, 11025
+        if len(x) < sr * 8: return None
+        frames = np.lib.stride_tricks.sliding_window_view(x, win)[::hop] * np.hanning(win)
+        mag = np.log1p(np.abs(np.fft.rfft(frames, axis=1)))
+        flux = np.maximum(0, np.diff(mag, axis=0)).sum(axis=1)
+        flux = (flux - flux.mean()) / (flux.std() + 1e-9)
+        fps = sr / hop
+        lags = np.arange(int(fps * 60 / 180), int(fps * 60 / 70) + 1)        # 70..180 BPM
+        ac = np.array([np.dot(flux[:-l], flux[l:]) for l in lags])
+        lag = lags[int(np.argmax(ac))]
+        # refine to a fraction of a frame with a parabola through the peak
+        k = int(np.argmax(ac))
+        if 0 < k < len(ac) - 1:
+            a, b, c = ac[k - 1], ac[k], ac[k + 1]
+            lag = lag + 0.5 * (a - c) / (a - 2 * b + c + 1e-9)
+        period = lag / fps
+        n = int(len(flux) / lag) - 1
+        best, phase = -1e9, 0.0
+        for off in np.arange(0, lag, 1.0):
+            idx = (off + lag * np.arange(n)).astype(int)
+            v = flux[idx].sum()
+            if v > best: best, phase = v, off / fps
+        return float(period), float(phase)
+    except Exception:
+        return None
+
+def fast_cuts(n_shots, music):
+    """Cut times (seconds) for n shots: the first after FAST_TITLE, then every k beats (~FAST_SHOT each)."""
+    grid = beat_grid(music) if music and os.path.exists(music) else None
+    period, phase = grid if grid else (FAST_SHOT, 0.0)
+    k = max(1, round(FAST_SHOT / period))
+    if period * k < 1.25: k += 1
+    step = period * k
+    t = phase
+    while t < FAST_TITLE: t += period              # first cut lands on a beat
+    cuts = [t]
+    for _ in range(n_shots - 1):
+        cuts.append(cuts[-1] + step)
+    if n_shots > 1 and cuts[-1] - cuts[-2] < 2.2:  # let the last room breathe before the outro
+        cuts[-1] = cuts[-2] + step * 2 if step < 1.5 else cuts[-2] + step + period
+    return cuts
+
 def build_timeline(job, base):
     shots = job["shots"]
-    set_transition(job.get("transition", "crossfade"))
+    fast = job.get("pace") == "fast"
+    set_transition("cut" if fast else job.get("transition", "crossfade"))
     ramped = TRANSITIONS[TRANSITION]["ramp"] > 0
     last = len(shots) - 1
+    if fast:
+        return fast_timeline(job, base, shots)
     segs = []
     for i, s in enumerate(shots):
         r_in, r_out = ramped and i > 0, ramped and i < last
@@ -1314,6 +1373,31 @@ def build_timeline(job, base):
         f += sg["n"] - xf
     total_f = segs[-1]["f0"] + segs[-1]["n"]
     return segs, total_f
+
+
+def fast_timeline(job, base, shots):
+    """Fast pace: every shot is short and every cut lands on the beat. Uses each clip's opening seconds
+    (sped up a little), so it needs no new clips."""
+    music = job.get("music")
+    music = music if music and os.path.isabs(music) else (os.path.join(base, music) if music else None)
+    cuts = fast_cuts(len(shots), music)
+    segs, prev_f = [], 0
+    for i, s in enumerate(shots):
+        f_end = int(round(cuts[i] * FPS))
+        n = max(int(1.0 * FPS), f_end - prev_f)
+        d = n / FPS
+        path = os.path.join(base, s["path"])
+        if os.path.splitext(path)[1].lower() in VIDEO_EXT:
+            start = float(s.get("trim_start", 0))
+            src = max(probe_duration(path) - start, 1.0) - 2 / FPS
+            if s.get("keep"): src = min(src, float(s["keep"]) - start)
+            speed = max(0.6, min(FAST_SPEED * float(s.get("speed") or 1.0), src / d))
+            segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s, r_in=False, r_out=False, speed=speed, n=n, f0=prev_f))
+        else:
+            segs.append(dict(kind="photo", path=path, dur=d, shot=s, r_in=False, r_out=False, n=n, f0=prev_f))
+        if i > 0: s["sub"] = ""          # one short label per shot; no time to read a second line
+        prev_f += n
+    return segs, prev_f
 
 def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
     job = json.load(open(job_path))
