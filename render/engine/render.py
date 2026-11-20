@@ -1299,9 +1299,17 @@ def beat_grid(music):
         hop, win, sr = 256, 1024, 11025
         if len(x) < sr * 8: return None
         frames = np.lib.stride_tricks.sliding_window_view(x, win)[::hop] * np.hanning(win)
-        mag = np.log1p(np.abs(np.fft.rfft(frames, axis=1)))
+        spec = np.abs(np.fft.rfft(frames, axis=1))
+        mag = np.log1p(spec)
         flux = np.maximum(0, np.diff(mag, axis=0)).sum(axis=1)
         flux = (flux - flux.mean()) / (flux.std() + 1e-9)
+        # the kick drum marks the beats people feel (hi-hats and house bass sit between them): sharp rises in
+        # very-low-frequency energy, at a finer time step than the tempo search
+        kf = np.lib.stride_tricks.sliding_window_view(x, 512)[::128] * np.hanning(512)
+        low = np.abs(np.fft.rfft(kf, axis=1))[:, :8].sum(axis=1)
+        kick = np.maximum(0, np.diff(low))
+        kick = (kick - kick.mean()) / (kick.std() + 1e-9)
+        kfps = sr / 128
         fps = sr / hop
         lags = np.arange(int(fps * 60 / 180), int(fps * 60 / 70) + 1)        # 70..180 BPM
         ac = np.array([np.dot(flux[:-l], flux[l:]) for l in lags])
@@ -1312,12 +1320,13 @@ def beat_grid(music):
             a, b, c = ac[k - 1], ac[k], ac[k + 1]
             lag = lag + 0.5 * (a - c) / (a - 2 * b + c + 1e-9)
         period = lag / fps
-        n = int(len(flux) / lag) - 1
+        klag = period * kfps
+        n = int(len(kick) / klag) - 1
         best, phase = -1e9, 0.0
-        for off in np.arange(0, lag, 1.0):
-            idx = (off + lag * np.arange(n)).astype(int)
-            v = flux[idx].sum()
-            if v > best: best, phase = v, off / fps
+        for off in np.arange(0, klag, 0.5):
+            idx = (off + klag * np.arange(n)).astype(int)
+            v = np.maximum(kick[idx], np.maximum(kick[np.maximum(idx - 1, 0)], kick[np.minimum(idx + 1, len(kick) - 1)])).sum()
+            if v > best: best, phase = v, off / kfps
         return float(period), float(phase)
     except Exception:
         return None
@@ -1392,6 +1401,8 @@ def fast_timeline(job, base, shots):
             src = max(probe_duration(path) - start, 1.0) - 2 / FPS
             if s.get("keep"): src = min(src, float(s["keep"]) - start)
             speed = max(0.6, min(FAST_SPEED * float(s.get("speed") or 1.0), src / d))
+            # skip a little of the slow ease-in at the clip's start, where the camera is barely moving
+            start += max(0.0, min(0.6, (src - d * speed) * 0.35))
             segs.append(dict(kind="clip", path=path, start=start, dur=d, shot=s, r_in=False, r_out=False, speed=speed, n=n, f0=prev_f))
         else:
             segs.append(dict(kind="photo", path=path, dur=d, shot=s, r_in=False, r_out=False, n=n, f0=prev_f))
