@@ -47,6 +47,15 @@ function Branding({ user }: { user: User }) {
     setPreviews((prev) => ({ ...prev, [kind]: URL.createObjectURL(file) }));
   }
 
+  async function remove(kind: "headshot" | "logo") {
+    const col = kind === "headshot" ? "headshot_path" : "logo_path";
+    const { error } = await supabase().from("profiles").update({ [col]: null }).eq("id", user.id);
+    if (error) return setNote(error.message);
+    setP((prev) => (prev ? { ...prev, [col]: null } : prev));
+    setPreviews((prev) => ({ ...prev, [kind]: "" }));
+    setNote(`${kind === "logo" ? "Logo" : "Headshot"} removed. Your next videos won't show it.`);
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!p) return;
@@ -138,6 +147,11 @@ function Branding({ user }: { user: User }) {
                     onChange={(e) => e.target.files?.[0] && upload(kind, e.target.files[0])}
                   />
                 </label>
+                {previews[kind] && (
+                  <button type="button" className="text-sm text-ink-soft underline underline-offset-4" onClick={() => remove(kind)}>
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           ))}

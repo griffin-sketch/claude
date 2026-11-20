@@ -1390,6 +1390,12 @@ function ClientBranding({ listing, user, disabled, onSave }: {
           <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(k, e.target.files[0])} />
         </label>
       ))}
+      {(["logo", "headshot"] as const).filter((k) => (k === "logo" ? listing.client_logo_path : listing.client_headshot_path)).map((k) => (
+        <button key={`rm-${k}`} type="button" className="text-sm text-ink-soft underline underline-offset-4"
+          onClick={async () => { await onSave(k === "logo" ? { client_logo_path: null } : { client_headshot_path: null }); setNote(`${k === "logo" ? "Logo" : "Headshot"} removed.`); }}>
+          Remove {k}
+        </button>
+      ))}
       {note && <p className="self-center text-xs text-ink-soft">{note}</p>}
     </fieldset>
   );
