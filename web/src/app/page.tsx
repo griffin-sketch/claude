@@ -3,6 +3,9 @@ import { Logo } from "@/components/Logo";
 import { BeforeAfter, LoopVideo } from "@/components/Showcase";
 import { PlanPicker } from "@/components/PlanPicker";
 import { EXTRA_VIDEO_PRICE } from "@/lib/plans";
+import { ScrollFilm } from "@/components/home/ScrollFilm";
+import { ScrollLooks } from "@/components/home/ScrollLooks";
+import { PlanFinder } from "@/components/home/PlanFinder";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -149,39 +152,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Still to walkthrough */}
-      <section className={`bg-white py-16 sm:py-24 ${pad}`}>
-        <div className={`${wrap} flex flex-wrap items-center gap-12 lg:gap-16`}>
-          <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-5">
-            <h2 className={h2}>The camera moves through the home, not across a slideshow.</h2>
-            <p className={`${lead} max-w-[520px]`}>
-              Each photo becomes a five-second shot with real depth: a push into the living room, a glide toward the
-              kitchen island, a rise over the front lawn. Nothing in the room is added or moved, and every clip is yours
-              to review before the video is made.
-            </p>
-          </div>
-          <div className="grid min-w-0 flex-[1.3_1_520px] grid-cols-3 gap-3">
-            {[
-              ["/home/frame1.jpg", "0.0 s", "Front of the home, first frame"],
-              ["/home/frame2.jpg", "2.5 s", "The camera moving closer"],
-              ["/home/frame3.jpg", "5.0 s", "The camera arriving at the front door"],
-            ].map(([src, t, alt]) => (
-              <figure key={t} className="flex flex-col gap-2.5">
-                <img src={src} alt={alt} className="aspect-video w-full rounded-[16px] object-cover" />
-                <figcaption className="text-[13px] font-semibold text-muted">{t}</figcaption>
-              </figure>
-            ))}
-            <p className="col-span-3 text-[13px] text-muted">One listing photo, three moments from its camera move.</p>
-          </div>
-        </div>
-      </section>
+      {/* Still to walkthrough: the scroll story */}
+      <ScrollFilm />
 
       {/* Effects */}
       <section id="effects" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <h2 className={h2}>Pick an effect for any photo.</h2>
+              <h2 className={`${h2} reveal`}>Pick an effect for any photo.</h2>
             </div>
             <p className="max-w-[400px] leading-relaxed text-ink-soft">
               Every effect starts from your real listing photo and lands back on it, so the finished room is exactly what buyers will see.
@@ -207,7 +186,7 @@ export default function Home() {
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <h2 className={h2}>Same photo. A whole new first impression.</h2>
+              <h2 className={`${h2} reveal`}>Same photo. A whole new first impression.</h2>
             </div>
             <p className="max-w-[400px] leading-relaxed text-ink-soft">
               Stage a vacant room or turn a daytime shot into twilight, right inside your video. Need stills too? Every plan
@@ -231,7 +210,7 @@ export default function Home() {
       <section id="how" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className={`${wrap} flex flex-col gap-10 sm:gap-12`}>
           <div className="flex flex-col items-center gap-4 text-center">
-            <h2 className={h2}>Three easy steps</h2>
+            <h2 className={`${h2} reveal`}>Three easy steps</h2>
             <p className="max-w-[520px] text-lg text-ink-soft">If you can upload photos to the MLS, you can make one of these. About fifteen minutes, start to finish.</p>
           </div>
           <div className={`${rail} sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] sm:gap-5`}>
@@ -254,23 +233,13 @@ export default function Home() {
         <div className={`${wrap} flex flex-col gap-10`}>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex min-w-0 flex-col gap-4">
-              <h2 className={h2}>Pick a look that fits your brand.</h2>
+              <h2 className={`${h2} reveal`}>Pick a look that fits your brand.</h2>
             </div>
             <p className="max-w-[380px] leading-relaxed text-ink-soft">
               From quiet magazine serif to bold boutique type. A few of them, shown on the same title card.
             </p>
           </div>
-          <p className={`${swipe} -mb-6`}>Swipe to see more →</p>
-          <div className={`${rail} sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] sm:gap-5`}>
-            {LOOKS.map((l) => (
-              <figure key={l.id} className="flex w-[80%] shrink-0 snap-start flex-col gap-3 rounded-[28px] bg-bg p-3 sm:w-auto">
-                <img src={`/templates/t${l.id}.jpg`} alt={`${l.name} title card`} className="aspect-video w-full rounded-[20px] object-cover" />
-                <figcaption className="px-2 pb-2 text-[15px]">
-                  <span className="font-semibold">{l.name}</span> <span className="text-ink-soft">· {l.note}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          <ScrollLooks looks={LOOKS} />
         </div>
       </section>
 
@@ -286,7 +255,7 @@ export default function Home() {
             />
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7">
-            <h2 className={h2}>One listing. A whole pack of Reels.</h2>
+            <h2 className={`${h2} reveal`}>One listing. A whole pack of Reels.</h2>
             <ul className="flex flex-col gap-5">
               {[
                 ["Full walkthrough", "in 16:9 for MLS, YouTube and your website, plus vertical"],
@@ -311,7 +280,7 @@ export default function Home() {
         <div className={`${wrap} flex flex-wrap items-center gap-12 lg:gap-16`}>
           <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
             <span className="eyebrow">For real estate photographers</span>
-            <h2 className={h2}>Sell video on every shoot.</h2>
+            <h2 className={`${h2} reveal`}>Sell video on every shoot.</h2>
             <p className={`${lead} max-w-[520px]`}>
               Turn the photos you already deliver into a video add-on. No extra time on site, no editing.
             </p>
@@ -336,9 +305,10 @@ export default function Home() {
       <section id="pricing" className={`scroll-mt-24 py-16 sm:py-24 ${pad}`}>
         <div className="mx-auto flex max-w-[1000px] flex-col gap-10">
           <div className="flex flex-col items-center gap-4 text-center">
-            <h2 className={h2}>Simple plans</h2>
+            <h2 className={`${h2} reveal`}>Simple plans</h2>
             <p className="text-lg text-ink-soft">Listing videos from $24 a month. Less than one hour of a videographer&apos;s time.</p>
           </div>
+          <PlanFinder />
           <PlanPicker href="/login" cta="Start" />
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] bg-white px-7 py-5">
             <p className="text-[15px]">
@@ -359,7 +329,7 @@ export default function Home() {
       {/* FAQ */}
       <section className={`bg-white py-16 sm:py-20 ${pad}`}>
         <div className="mx-auto flex max-w-[1000px] flex-col gap-6">
-          <h2 className={`${h2} text-center`}>Questions</h2>
+          <h2 className={`${h2} reveal text-center`}>Questions</h2>
           <div className="grid gap-x-12 sm:grid-cols-2">
             {FAQ.map(([q, a]) => (
               <details key={q} className="group border-b border-line py-4">
