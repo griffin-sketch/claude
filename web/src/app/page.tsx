@@ -182,8 +182,8 @@ export default function Home() {
             <ol className="mt-2 flex flex-col gap-1">
               {[
                 ["0.0 s", "Your listing photo"],
-                ["2.5 s", "The camera glides into the room"],
-                ["5.0 s", "The shot settles on the kitchen island"],
+                ["2.5 s", "The camera walks through the front door"],
+                ["5.0 s", "It turns to reveal the grounds at dusk"],
               ].map(([t, label]) => (
                 <li key={t} data-step className="film-step flex items-baseline gap-4 border-l-2 border-line py-2 pl-4">
                   <span className="w-12 text-[13px] font-semibold tabular-nums">{t}</span>
@@ -195,7 +195,7 @@ export default function Home() {
           <div className="min-w-0 flex-[1.4_1_520px]">
             <div data-film-frame className="overflow-hidden rounded-[24px] bg-line shadow-[0_24px_70px_rgba(43,32,28,0.18)]">
               <video src="/fx/move_scrub.mp4" poster="/fx/move_poster.jpg" muted playsInline preload="auto"
-                aria-label="One listing photo of a kitchen turning into a camera move toward the island" className="aspect-video w-full object-cover" />
+                aria-label="One listing photo of a grand front entry turning into a camera move through the door and back out to the grounds" className="aspect-[6/5] w-full object-cover sm:aspect-[4/3]" />
             </div>
           </div>
         </div>
