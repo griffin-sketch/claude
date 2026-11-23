@@ -152,6 +152,7 @@ async function media(db: ReturnType<typeof admin>, listingId: string) {
   }));
   const clips = await Promise.all((shots ?? []).filter((s) => s.clip_path).map(async (s) => ({
     position: s.position, label: s.label, effect: s.effect, play: await sign("clips", s.clip_path!),
+    download: await sign("clips", s.clip_path!, `${slug}-clip-${s.position + 1}.mp4`),
     vertical: s.vclip_path ? await sign("clips", s.vclip_path) : null,
   })));
   return { address: l?.address ?? "", videos, clips };
