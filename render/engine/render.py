@@ -1203,7 +1203,7 @@ class ClipSource:
             sharp = ",unsharp=5:5:0.7:5:5:0.0" if self.cw > bw * 1.4 else ""
             vf = f"crop={bw}:{bh}:{bx}:{by},scale={self.cw}:{self.ch}:flags=lanczos{sharp},fps={FPS}"
         else:
-            vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase,"
+            vf = (f"scale={self.cw}:{self.ch}:force_original_aspect_ratio=increase:flags=lanczos,"
                   f"crop={self.cw}:{self.ch}:(in_w-{self.cw})*{fx:.4f}:(in_h-{self.ch})*{fy:.4f},fps={FPS}")
         self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1", "-ss", f"{start:.3f}", "-i", path, "-an",
                                    "-vf", vf, "-frames:v", str(need), "-pix_fmt", "rgb24", "-f", "rawvideo", "-"],
@@ -1229,7 +1229,7 @@ class ClipSource:
             cx, cy = (0.5 + d if self.move == "pan_r" else 0.5 - d), 0.5
         w, h = bw * s, bh * s
         x0 = min(max(0.0, cx * bw - w / 2), bw - w); y0 = min(max(0.0, cy * bh - h / 2), bh - h)
-        return img.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + w, y0 + h))
+        return img.resize((W, H), Image.LANCZOS, box=(x0, y0, x0 + w, y0 + h))   # lanczos keeps the detail bilinear smears
     def frame(self, k):
         if self.curve:
             # read forward to this output frame's source position; average what we pass (motion blur)
@@ -1477,7 +1477,7 @@ def render(job_path, out_path, stills_dir=None, preview=None, fmt=None):
             cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
             af = f"atrim=0:{total_s:.3f}"
         cmd += ["-filter_complex", f"[0:v]noise=alls=3:allf=t,format=yuv420p[v];[1:a]{af}[a]",
-                "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "5M", "-bufsize", "10M", "-threads", "2", "-x264-params", "rc-lookahead=15:sliced-threads=0",
+                "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-maxrate", "8M", "-bufsize", "16M", "-threads", "2", "-x264-params", "rc-lookahead=15:sliced-threads=0",
                 "-profile:v", "high", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
                 "-t", f"{total_s:.3f}", "-movflags", "+faststart", out_path]
         enc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
