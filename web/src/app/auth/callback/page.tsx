@@ -42,7 +42,7 @@ function Callback() {
         if (again.data.session) return finish();
         setError(
           urlError ||
-            "This sign-in link didn't work here. It may have opened in a different browser than the one you used, or it expired. Use the 6-digit code from the same email instead.",
+            "This link opened in a different browser than the one you signed up in (often the one inside your email app), so it couldn't sign you in here. Your account is fine: go back to sign in and use Continue with Google, or request a new link and open it in this browser.",
         );
       }, 2500);
     })();
