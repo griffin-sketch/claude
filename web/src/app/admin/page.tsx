@@ -51,6 +51,17 @@ function Admin({ user }: { user: User }) {
   const close = useCallback(() => setOpen(null), []);
 
   const load = () => api<Data>("/api/admin").then(setData).catch((e) => setError(e.message));
+  const deliverTo = async (id: string, address: string) => {
+    const email = window.prompt(`Deliver ${address || "this listing"} to which realtor's account? Enter the email they signed up with. One of their videos will be used.`);
+    if (!email) return;
+    try {
+      const r = await api<{ used: string; left: number }>("/api/admin", { deliver: { id, email } });
+      window.alert(`Delivered to ${email}. Used 1 ${r.used}; they have ${r.left} left.`);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
   const setBranding = (id: string, value: boolean | null | "agent") =>
     api("/api/admin", { branding: { id, value } }).then(load).catch((e) => setError(e.message));
   useEffect(() => {
@@ -145,6 +156,12 @@ function Admin({ user }: { user: User }) {
                       <option value="agent">Off, agent&apos;s logo in corner</option>
                     </select>
                   </label>
+                  {r.mine && r.status === "done" && (
+                    <button type="button" className="mt-1.5 block text-xs font-semibold text-ink underline underline-offset-2"
+                      onClick={() => deliverTo(r.id, r.address)}>
+                      Deliver to account
+                    </button>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className="block">{r.name || "—"}</span>

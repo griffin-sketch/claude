@@ -12,6 +12,8 @@ const CLIP = 0.35;   // Kling 2.5 Turbo Pro, 5 s
 const EDIT = 0.04;   // AI photo edit / expansion
 
 /** Everything the owner needs on one screen: every listing, its status, problems, revenue and AI cost. */
+export const maxDuration = 120;
+
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
@@ -20,6 +22,11 @@ export async function POST(request: Request) {
     if (body?.ping) return Response.json({ ok: true });
     const db = admin();
     if (typeof body?.listing === "string") return Response.json(await media(db, body.listing));
+
+    // Hand a listing you built to a realtor's account, using one of their videos: { deliver: { id, email } }
+    if (body?.deliver && typeof body.deliver.id === "string") {
+      return Response.json(await deliver(db, body.deliver.id, String(body.deliver.email ?? "")));
+    }
 
     // Tourvo branding switch: { branding: { id, value: true | false | null } }
     if (body?.branding && typeof body.branding.id === "string") {
@@ -148,4 +155,96 @@ async function media(db: ReturnType<typeof admin>, listingId: string) {
     vertical: s.vclip_path ? await sign("clips", s.vclip_path) : null,
   })));
   return { address: l?.address ?? "", videos, clips };
+}
+
+/**
+ * Move a finished listing (built on the owner's account) into a realtor's account and use one of their videos.
+ * Files are copied into their storage folder (each account can only read its own folder), then every path and the
+ * listing's owner switch over. Their plan videos are used first, then free referral videos.
+ */
+async function deliver(db: ReturnType<typeof admin>, listingId: string, email: string) {
+  const to = email.trim().toLowerCase();
+  if (!to) throw new HttpError(400, "Enter the realtor's email.");
+  let target: { id: string; email?: string } | undefined;
+  for (let page = 1; page <= 10 && !target; page++) {
+    const { data } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+    target = data?.users.find((u) => (u.email ?? "").toLowerCase() === to);
+    if (!data || data.users.length < 1000) break;
+  }
+  if (!target) throw new HttpError(404, `No Tourvo account uses ${email}. Ask them to sign up first.`);
+
+  const { data: l } = await db.from("listings").select("*").eq("id", listingId).single();
+  if (!l) throw new HttpError(404, "Listing not found.");
+  if (l.user_id === target.id) throw new HttpError(409, "That listing is already in their account.");
+  if (l.status !== "done") throw new HttpError(409, "Finish the videos before delivering the listing.");
+
+  const { data: prof } = await db.from("profiles").select("credits, bonus_credits").eq("id", target.id).single();
+  const credits = prof?.credits ?? 0, bonus = prof?.bonus_credits ?? 0;
+  if (credits + bonus < 1)
+    throw new HttpError(409, `${email} has no videos left on their plan. They can buy an extra video or pick a plan first.`);
+
+  const from = `${l.user_id}/`, mine = `${target.id}/`;
+  const moved = new Map<string, string>();   // "bucket:old" -> new path
+  async function move(bucket: string, path: string | null | undefined) {
+    if (!path || !path.startsWith(from)) return path ?? null;
+    const key = `${bucket}:${path}`;
+    if (moved.has(key)) return moved.get(key)!;
+    const dest = mine + path.slice(from.length);
+    const { error } = await db.storage.from(bucket).copy(path, dest);
+    if (error && !/exists/i.test(error.message)) throw new Error(`Couldn't copy ${bucket}/${path}: ${error.message}`);
+    moved.set(key, dest);
+    return dest;
+  }
+
+  const [{ data: shots }, { data: renders }] = await Promise.all([
+    db.from("shots").select("id, photo_path, original_photo_path, end_photo_path, clip_path, vclip_path").eq("listing_id", l.id),
+    db.from("renders").select("id, video_path").eq("listing_id", l.id),
+  ]);
+  // copy everything first; only switch rows over once all files are in place
+  const shotPatch = await Promise.all((shots ?? []).map(async (s) => ({
+    id: s.id,
+    photo_path: await move("photos", s.photo_path),
+    original_photo_path: await move("photos", s.original_photo_path),
+    end_photo_path: await move("photos", s.end_photo_path),
+    clip_path: await move("clips", s.clip_path),
+    vclip_path: await move("clips", s.vclip_path),
+  })));
+  const renderPatch = await Promise.all((renders ?? []).map(async (r) => ({ id: r.id, video_path: await move("videos", r.video_path) })));
+  const listingPatch = {
+    user_id: target.id,
+    music_path: await move("photos", l.music_path),
+    client_logo_path: await move("branding", l.client_logo_path),
+    client_headshot_path: await move("branding", l.client_headshot_path),
+  };
+
+  // use one of their videos (plan first), guarded so two deliveries can't both take the last one
+  const useCol = credits > 0 ? "credits" : "bonus_credits";
+  const have = credits > 0 ? credits : bonus;
+  const { data: spent } = await db.from("profiles").update({ [useCol]: have - 1 }).eq("id", target.id).eq(useCol, have).select("id");
+  if (!spent?.length) throw new HttpError(409, "Their video balance just changed. Try again.");
+
+  for (const s of shotPatch) {
+    const { id, ...p } = s;
+    await db.from("shots").update(p).eq("id", id);
+  }
+  for (const r of renderPatch) await db.from("renders").update({ video_path: r.video_path }).eq("id", r.id);
+  const { error } = await db.from("listings").update(listingPatch).eq("id", l.id);
+  if (error) throw error;
+
+  // let them know (best effort; needs RESEND_API_KEY in Vercel)
+  const key = process.env.RESEND_API_KEY?.trim();
+  if (key && target.email) {
+    const site = process.env.SITE_URL || "https://www.gettourvo.com";
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || "Tourvo <onboarding@resend.dev>",
+        to: [target.email],
+        subject: "Your listing videos are ready",
+        html: `<p>Your videos for <b>${(l.address || "your listing").replace(/[<>&]/g, "")}</b> are in your Tourvo account, ready to download and post.</p><p><a href="${site}/listings/${l.id}">Open my videos</a></p>`,
+      }),
+    }).catch(() => null);
+  }
+  return { ok: true, used: useCol === "credits" ? "plan video" : "free referral video", left: credits + bonus - 1 };
 }
