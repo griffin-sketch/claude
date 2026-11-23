@@ -687,6 +687,19 @@ function Editor({ id, user }: { id: string; user: User }) {
         </p>
       )}
 
+      {status === "review" && renders.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gold-soft p-3 text-sm">
+          <span>You&apos;re making changes. Your finished videos are still here until you make new ones.</span>
+          <button className="btn-ghost py-1.5" disabled={busy} onClick={async () => {
+            setBusy(true); setError("");
+            try { await api("/api/keep", { listingId: id }); load(); } catch (e) { setError((e as Error).message); }
+            setBusy(false);
+          }}>
+            Keep my current videos
+          </button>
+        </div>
+      )}
+
       {/* ---------------- 1. photos */}
       {step === "photos" && (
         <section className="card p-4 sm:p-6">
