@@ -32,7 +32,7 @@ async function accountSummary(userId: string, email?: string) {
     `Signed in${p.full_name ? ` as ${p.full_name}` : ""}${email ? ` (${email})` : ""}.`,
     active ? `Plan: ${planName} (status: ${p.plan_status}). Plan videos left this period: ${p.credits}. Staged photos left: ${p.staging_credits}.${p.credits_period_end ? ` Renews/refills on ${new Date(p.credits_period_end).toDateString()}.` : ""}` : "No active plan.",
     `Free referral videos: ${p.bonus_credits ?? 0}.`,
-    p.trial_used ? "Free first video: already used." : "Free first video: not used yet (up to 8 photos, Tourvo branded, no card).",
+    p.trial_used ? "Free month: already used." : "Free month: available (Starter free for 30 days with 1 video included; card required, charged on day 31 unless canceled).",
     p.plan_status === "past_due" ? "Their last payment failed; they should update their card in Billing." : "",
     listings?.length
       ? `Recent listings: ${listings.map((l) => `${l.address || "untitled"} (${l.status}${l.paid ? ", paid" : ""})`).join("; ")}.`

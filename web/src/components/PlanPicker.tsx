@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { EXTRA_VIDEO_PRICE, grant, INTERVAL_IDS, INTERVALS, money, perMonth, PLAN_IDS, PLANS, savings, type IntervalId, type PlanId } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, TRIAL_DAYS, TRIAL_PLAN, TRIAL_VIDEOS, grant, INTERVAL_IDS, INTERVALS, money, perMonth, PLAN_IDS, PLANS, savings, type IntervalId, type PlanId } from "@/lib/plans";
 
 /**
  * Starter / Growth with a Monthly · Quarterly · Yearly switch.
@@ -14,12 +14,15 @@ export function PlanPicker({
   busy,
   cta = "Choose",
   defaultInterval = "year",
+  trial = true,
 }: {
   onPick?: (plan: PlanId, interval: IntervalId) => void;
   href?: string;
   busy?: string | null;
   cta?: string;
   defaultInterval?: IntervalId;
+  /** show Starter's free month (new accounts) */
+  trial?: boolean;
 }) {
   const [interval, setInterval] = useState<IntervalId>(defaultInterval);
 
@@ -53,9 +56,10 @@ export function PlanPicker({
           const per = INTERVALS[interval];
           const featured = id === "growth";
           const key = `${id}-${interval}`;
+          const free = trial && id === TRIAL_PLAN;
           const button = (
             <span className={`${featured ? "btn-gold" : "btn-primary"} mt-auto w-full`}>
-              {busy === key ? "Opening checkout…" : `${cta} ${p.name}`}
+              {busy === key ? "Opening checkout…" : free ? "Start free month" : `${cta} ${p.name}`}
             </span>
           );
           return (
@@ -74,6 +78,11 @@ export function PlanPicker({
               <p className="-mt-1 text-xs text-muted">
                 {per.months === 1 ? "Billed monthly" : `${money(p.price[interval])} billed every ${per.months === 3 ? "3 months" : "year"}`}
               </p>
+              {free && (
+                <p className="-mt-1 rounded-lg bg-gold-soft px-3 py-2 text-xs text-ink">
+                  <b>First {TRIAL_DAYS} days free</b> with {TRIAL_VIDEOS} video included. Card required; cancel before day {TRIAL_DAYS} and you won&apos;t be charged.
+                </p>
+              )}
               <ul className="space-y-1.5 text-sm text-ink-soft">
                 <li>
                   <b className="text-ink">{p.videosPerMonth} listing videos</b> a month

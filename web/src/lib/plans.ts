@@ -60,6 +60,12 @@ export function money(n: number) {
 /** The legacy $80/month plan from before tiers, so its subscribers keep working. */
 export const LEGACY_MONTHLY = { videos: 3, staging: 0 };
 
+/** Free month on Starter: card taken at checkout, charged on day 31 unless they cancel. One per account. */
+export const TRIAL_DAYS = 30;
+export const TRIAL_PLAN: PlanId = "starter";
+export const TRIAL_VIDEOS = 1;
+export const TRIAL_STAGING = 5;
+
 /** One more video, for a subscriber who has used up this period's videos. Dollars. */
 export const EXTRA_VIDEO_PRICE = 15;
 

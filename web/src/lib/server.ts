@@ -1,7 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { EXTRA_VIDEO_PRICE, grant, INTERVALS, PLANS, type IntervalId, type PlanId } from "@/lib/plans";
+import { EXTRA_VIDEO_PRICE, grant, INTERVALS, PLANS, TRIAL_DAYS, TRIAL_PLAN, type IntervalId, type PlanId } from "@/lib/plans";
 
 /** Pricing. Amounts are in cents. */
 // Shown after the account's name on customers' card statements, e.g. "KGB MARKETING* TOURVO".
@@ -106,6 +106,12 @@ export async function planCheckout(opts: {
   const per = INTERVALS[interval];
   const meta: Record<string, string> = { kind: "subscribe", user_id: user.id, plan, interval };
   if (opts.listingId) meta.listing_id = opts.listingId;
+  // Starter's free month, once per account: the card is saved now and charged when the month is up.
+  let trial = false;
+  if (plan === TRIAL_PLAN) {
+    const { data: prof } = await admin().from("profiles").select("trial_used").eq("id", user.id).single();
+    trial = !prof?.trial_used;
+  }
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer: await customerFor(user),
@@ -125,7 +131,11 @@ export async function planCheckout(opts: {
     ],
     allow_promotion_codes: true,
     metadata: meta,
-    subscription_data: { metadata: { user_id: user.id, plan, interval } },
+    ...(trial ? { payment_method_collection: "always" as const } : {}),
+    subscription_data: {
+      metadata: { user_id: user.id, plan, interval, ...(trial ? { trial: "1" } : {}) },
+      ...(trial ? { trial_period_days: TRIAL_DAYS, trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } } } : {}),
+    },
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
   });

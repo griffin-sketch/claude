@@ -1,12 +1,11 @@
 import { activePlan, admin, extraVideoCheckout, fail, HttpError, isAdmin, planCheckout, requireUser, siteUrl } from "@/lib/server";
 import { isInterval, isPlan } from "@/lib/plans";
-import { MAX_PHOTOS, MIN_PHOTOS, OWNER_MAX_PHOTOS, TRIAL_PHOTOS } from "@/lib/config";
+import { MAX_PHOTOS, MIN_PHOTOS, OWNER_MAX_PHOTOS } from "@/lib/config";
 
 /**
  * Start making a listing's clips.
  * body: { listingId, method: "credit" | "subscribe", plan?, interval? }
  *  - credit:    spend one video: the plan's first, then free referral videos
- *  - trial:     the account's one free video (up to TRIAL_PHOTOS photos, Tourvo branded)
  *  - extra:     a subscriber who is out of videos buys one more for this listing (returns a Stripe Checkout URL)
  *  - subscribe: start a plan and use its first video on this listing (returns a Stripe Checkout URL)
  * Admin emails skip payment.
@@ -47,13 +46,7 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    if (method === "trial") {
-      if ((count ?? 0) > TRIAL_PHOTOS) throw new HttpError(400, `Your free video can use up to ${TRIAL_PHOTOS} photos. Remove ${(count ?? 0) - TRIAL_PHOTOS} to continue.`);
-      const { data, error } = await db.rpc("use_trial", { p_listing: listingId, p_user: user.id });
-      if (error) throw error;
-      if (!data) throw new HttpError(409, "You've already used your free video. Pick a plan to make more.");
-      return Response.json({ ok: true });
-    }
+    if (method === "trial") throw new HttpError(410, "The free video is now a free month on Starter. Pick Starter below to start it.");
 
     if (method === "extra") {
       if (!(await activePlan(user.id))) throw new HttpError(409, "Extra videos are for plan members. Pick a plan instead.");

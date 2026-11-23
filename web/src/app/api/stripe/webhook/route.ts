@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { admin, stripe } from "@/lib/server";
-import { grant, isInterval, isPlan, LEGACY_MONTHLY } from "@/lib/plans";
+import { grant, isInterval, isPlan, LEGACY_MONTHLY, TRIAL_STAGING, TRIAL_VIDEOS } from "@/lib/plans";
 
 /**
  * Stripe → app. Set up in Stripe → Developers → Webhooks with this URL:
@@ -81,8 +81,9 @@ async function onCheckout(session: Stripe.Checkout.Session) {
     const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
     const sub = await stripe().subscriptions.retrieve(subId);
     await applyPlan(userId, sub, typeof session.customer === "string" ? session.customer : session.customer?.id);
-    // A referred friend's first plan payment: both of them get a free video (once).
-    await db.rpc("reward_referral", { p_referred: userId });
+    // A referred friend's first plan payment: both of them get a free video (once). A free month isn't a
+    // payment yet, so that waits for the first paid renewal (below).
+    if (sub.status !== "trialing") await db.rpc("reward_referral", { p_referred: userId });
     if (listingId) await db.rpc("use_credit", { p_listing: listingId, p_user: userId });
   }
 }
@@ -100,6 +101,8 @@ async function applyPlan(userId: string, sub: Stripe.Subscription, customer?: st
   const db = admin();
   const end = periodEnd(sub);
   const p = planOf(sub);
+  const trialing = sub.status === "trialing";
+  if (trialing) Object.assign(p, { videos: TRIAL_VIDEOS, staging: TRIAL_STAGING });
   const { data: prof } = await db.from("profiles").select("plan, credits_period_end").eq("id", userId).single();
   // Stripe can deliver an event twice: only fill each period once.
   const alreadyGranted = prof?.plan === p.plan && !!end && prof.credits_period_end === end;
@@ -110,6 +113,7 @@ async function applyPlan(userId: string, sub: Stripe.Subscription, customer?: st
       plan: p.plan,
       plan_interval: p.interval,
       plan_status: sub.status,
+      ...(trialing ? { trial_used: true } : {}),
       ...(alreadyGranted ? {} : { credits: p.videos, staging_credits: p.staging, credits_period_end: end }),
     })
     .eq("id", userId);
@@ -124,7 +128,10 @@ async function onInvoicePaid(invoice: Stripe.Invoice) {
   const sub = subs.data[0];
   if (!sub) return;
   const { data: prof } = await admin().from("profiles").select("id").eq("stripe_customer_id", customer).single();
-  if (prof) await applyPlan(prof.id, sub);
+  if (prof) {
+    await applyPlan(prof.id, sub);
+    await admin().rpc("reward_referral", { p_referred: prof.id });   // no-op after the first time
+  }
 }
 
 async function onSubscriptionChange(sub: Stripe.Subscription, type: string) {

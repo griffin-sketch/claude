@@ -47,7 +47,7 @@ const STEPS = [
 
 const FAQ = [
   ["Can I get staged photos too?", "Yes. Stage any empty room in one of eight furniture styles and see a free preview. Every plan includes 10 to 40 full-size staged photos a month; without a plan they're $5 each."],
-  ["Can I try it first?", "Yes. Your first video is free: up to 8 photos, the full walkthrough and Reels, with a small Tourvo mark. No card needed."],
+  ["Can I try it first?", "Yes. Starter is free for your first 30 days, with 1 listing video included. A card is required, and if you cancel before day 30 you won't be charged."],
   ["What if I use up my videos?", `Add as many extra videos as you need for $${EXTRA_VIDEO_PRICE} each, right from your listing. Your plan refills on its next renewal.`],
   ["Will it change how the home looks?", "No. The camera moves, the room stays as photographed. If a clip ever looks off, redo it before your video is made."],
   ["What photos work best?", "Your professional listing photos, wide and well lit. Phone photos work too, though bright, level shots give the smoothest moves."],
@@ -380,7 +380,7 @@ export default function Home() {
           <h2 className="max-w-[820px] font-display text-[clamp(38px,4.8vw,64px)] font-normal leading-[1.06] text-balance">
             Your next listing deserves a walkthrough.
           </h2>
-          <p className="text-lg text-ink-soft">Your first video is free. No card needed.</p>
+          <p className="text-lg text-ink-soft">Try Starter free for 30 days. Cancel anytime.</p>
           <div className="flex flex-wrap justify-center gap-3.5">
             <Link href="/login" className={btnCta}>
               <span className="grid h-7 w-7 place-items-center rounded-full bg-white"><GoogleIcon /></span>

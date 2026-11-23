@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { PlanPicker } from "@/components/PlanPicker";
 import { EXTRA_VIDEO_PRICE, type IntervalId, type PlanId } from "@/lib/plans";
-import { TRIAL_PHOTOS } from "@/lib/config";
 
 type Billing = { plan: string; plan_status: string | null; credits: number; bonus_credits: number; credits_period_end: string | null; trial_used: boolean };
 
@@ -99,25 +98,11 @@ export function PayPanel({
         </div>
       ) : (
         <div className="mt-6">
-          {!billing.trial_used && (
-            <div className="mb-6 rounded-xl border-2 border-ink p-4 sm:p-5">
-              <p className="font-semibold">Your first video is free</p>
-              <p className="mt-1 text-sm text-ink-soft">
-                Up to {TRIAL_PHOTOS} photos, the full walkthrough and Reels, with a small Tourvo mark. No card needed.
-              </p>
-              {clipCount > TRIAL_PHOTOS ? (
-                <p className="mt-3 text-sm">
-                  This listing has {clipCount} photos. Remove {clipCount - TRIAL_PHOTOS} to make it free, or pick a plan below.
-                </p>
-              ) : (
-                <button className="btn-gold mt-4 min-h-12 px-6" disabled={blocked} onClick={() => start({ method: "trial" }, "trial")}>
-                  {busy === "trial" ? "Starting…" : "Make my free video"}
-                </button>
-              )}
-            </div>
-          )}
-          <p className="mb-4 text-sm font-semibold">{billing.trial_used ? "Pick a plan." : "Or pick a plan, for up to 15 photos and your own branding."} This listing uses your first video.</p>
+          <p className="mb-4 text-sm font-semibold">
+            {billing.trial_used ? "Pick a plan." : "Try Starter free for 30 days, or pick a plan."} This listing uses your first video.
+          </p>
           <PlanPicker
+            trial={!billing.trial_used}
             busy={busy}
             cta="Start"
             onPick={(plan: PlanId, interval: IntervalId) => !blocked && start({ method: "subscribe", plan, interval }, `${plan}-${interval}`)}
