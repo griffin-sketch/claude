@@ -79,3 +79,7 @@ body {
 @utility card {
   @apply rounded-[24px] border border-line/70 bg-surface shadow-[0_6px_24px_rgba(43,32,28,0.05)];
 }
+
+/* homepage film steps: the one the camera is on lights up */
+.film-step { color: var(--color-muted, #8a7f78); transition: color .3s, border-color .3s; }
+.film-step.is-on { color: var(--color-ink, #2b201c); border-color: var(--accent, #c4553a); }
