@@ -97,6 +97,24 @@ export function HomeMotion() {
         const steps = [...block.querySelectorAll<HTMLElement>("[data-step]")];
         const frame = block.querySelector<HTMLElement>("[data-film-frame]");
         const st = { t: 0 };
+        // Safari (iPhone and Mac) won't jump around in a streamed video it hasn't played, so load the whole clip into
+        // memory first; then every frame can be shown instantly as the visitor scrolls.
+        if (video) {
+          const src = video.currentSrc || video.getAttribute("src");
+          if (src) {
+            fetch(src)
+              .then((r) => r.blob())
+              .then((b) => {
+                const url = URL.createObjectURL(b);
+                video.src = url;
+                video.load();
+                video.addEventListener("loadeddata", () => { video.currentTime = st.t * (video.duration - 0.05); }, { once: true });
+              })
+              .catch(() => {});
+          }
+          // iPhones only decode frames after a play() call; start and stop at once so seeking works
+          video.play().then(() => video.pause()).catch(() => {});
+        }
         const setStep = (p: number) => {
           const i = Math.min(steps.length - 1, Math.floor(p * steps.length));
           steps.forEach((s, k) => s.classList.toggle("is-on", k === i));
