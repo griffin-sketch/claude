@@ -3,6 +3,7 @@ import { Logo } from "@/components/Logo";
 import { BeforeAfter, LoopVideo } from "@/components/Showcase";
 import { PlanPicker } from "@/components/PlanPicker";
 import { EXTRA_VIDEO_PRICE } from "@/lib/plans";
+import { HeroReel } from "@/components/home/HeroReel";
 import { HomeMotion } from "@/components/home/HomeMotion";
 import { POST_LOGOS } from "@/components/home/postLogos";
 
@@ -136,17 +137,7 @@ export default function Home() {
             </ul>
           </div>
           <div data-hero-media className="relative min-w-0 flex-[1_1_520px]">
-            <LoopVideo src="/fx/build_hero.mp4" poster="/fx/build.jpg" label="A house building itself, from framing to finished"
-              className="aspect-[5/4] w-full rounded-[32px] bg-line object-cover" />
-            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(43,32,28,0.15)] sm:bottom-5 sm:left-5">
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-gold text-white">
-                <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
-              </span>
-              <span className="flex flex-col">
-                <span className="text-[15px] font-semibold">Construction build-up</span>
-                <span className="text-[13px] text-ink-soft">One listing photo, one click</span>
-              </span>
-            </div>
+            <HeroReel className="aspect-[5/4] w-full rounded-[32px] bg-line object-cover" />
           </div>
         </div>
       </section>
