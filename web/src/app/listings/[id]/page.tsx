@@ -82,14 +82,18 @@ function Editor({ id, user }: { id: string; user: User }) {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [clips, setClips] = useState<Record<string, string>>({});
   const [videos, setVideos] = useState<Record<string, { play: string; download: string }>>({});
+  // every build is kept as a version (V1, V2, ...); show the latest unless another is picked
+  const versions = useMemo(() => [...new Set(renders.map((r) => r.version ?? 1))].sort((a, b) => a - b), [renders]);
+  const [pickedVersion, setPickedVersion] = useState<number | null>(null);
+  const version = pickedVersion && versions.includes(pickedVersion) ? pickedVersion : versions[versions.length - 1] ?? 1;
   const sortedRenders = useMemo(
     () =>
-      [...renders].sort(
+      renders.filter((r) => (r.version ?? 1) === version).sort(
         (a, b) =>
           REEL_ORDER.indexOf(a.kind ?? "tour") - REEL_ORDER.indexOf(b.kind ?? "tour") ||
           (a.format === "16:9" ? -1 : 1) - (b.format === "16:9" ? -1 : 1),
       ),
-    [renders],
+    [renders, version],
   );
   const [uploading, setUploading] = useState(0);
   const [error, setError] = useState("");
@@ -179,7 +183,7 @@ function Editor({ id, user }: { id: string; user: User }) {
   }, [shots, thumbs, clips, sb]);
 
   useEffect(() => {
-    renders.forEach(async (r) => {
+    sortedRenders.forEach(async (r) => {
       if (videos[r.video_path]) return;
       const name = `${(listing?.address || "listing").replace(/[^a-z0-9]+/gi, "-")}-${r.format === "9:16" ? "vertical" : "16x9"}.mp4`;
       const [play, download] = await Promise.all([
@@ -188,7 +192,7 @@ function Editor({ id, user }: { id: string; user: User }) {
       ]);
       if (play && download) setVideos((prev) => ({ ...prev, [r.video_path]: { play, download } }));
     });
-  }, [renders, videos, listing?.address]);
+  }, [sortedRenders, videos, listing?.address]);
 
   const editable = listing?.status === "draft" || listing?.status === "failed";
   const reorderable = editable || listing?.status === "review";
@@ -1177,8 +1181,28 @@ function Editor({ id, user }: { id: string; user: User }) {
         <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Your videos are ready</h2>
           <p className="mb-5 mt-1 text-sm text-ink-soft">
-            {renders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
+            {sortedRenders.length} videos from this listing: the full walkthrough plus short cuts made for Reels, TikTok and Shorts.
           </p>
+          {versions.length > 1 && (
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">Version</span>
+              <div role="tablist" aria-label="Video versions" className="inline-flex flex-wrap rounded-full border border-line p-1 text-sm font-semibold">
+                {versions.map((v) => {
+                  const when = renders.find((r) => (r.version ?? 1) === v)?.created_at;
+                  return (
+                    <button key={v} role="tab" aria-selected={v === version} type="button" onClick={() => setPickedVersion(v)}
+                      title={when ? new Date(when).toLocaleString() : undefined}
+                      className={`rounded-full px-3 py-1 transition ${v === version ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
+                      V{v}{v === versions[versions.length - 1] ? " · latest" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+              {version !== versions[versions.length - 1] && (
+                <span className="text-xs text-muted">Your client and MLS links always show the latest version.</span>
+              )}
+            </div>
+          )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {sortedRenders.map((r) => (
               <div key={r.id}>

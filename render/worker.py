@@ -383,9 +383,8 @@ def step_render():
     for l in db_get("listings", status="eq.rendering", order="updated_at"):
         log(f"listing {l['id'][:8]} rendering {l['formats']}")
         try:
-            render_listing(l)
+            n = render_listing(l)
             db_patch("listings", {"id": l["id"]}, {"status": "done", "error": None})
-            n = len(db_get("renders", listing_id=f"eq.{l['id']}"))
             notify.pack_ready(user_email(l["user_id"]), l, n)
             log(f"listing {l['id'][:8]} -> done")
         except Exception as e:
@@ -474,6 +473,9 @@ def render_listing(l):
                       "acres": l.get("acres"), "price": l.get("price")},
             "shots": job_shots, "agent": agent, "outro": outro, "music": music,
         }
+        # each build is a new version (V1, V2, ...); earlier versions stay so the realtor can compare
+        prev = db_get("renders", listing_id=f"eq.{l['id']}", select="version")
+        ver = max([int(r.get("version") or 1) for r in prev] or [0]) + 1
         made = []
         pack = reels.build_pack(job, l)
         for n, item in enumerate(pack, 1):
@@ -502,9 +504,9 @@ def render_listing(l):
                     log("    + Tourvo branding")
                 except Exception as e:   # never lose the video over the branding
                     log(f"    Tourvo branding skipped: {e}")
-            path = f"{l['user_id']}/{l['id']}/{name}.mp4"
+            path = f"{l['user_id']}/{l['id']}/v{ver}/{name}.mp4"
             storage_put("videos", path, out)
-            made.append({"listing_id": l["id"], "format": fmt, "kind": kind, "video_path": path})
+            made.append({"listing_id": l["id"], "format": fmt, "kind": kind, "video_path": path, "version": ver})
         if "mls" in (l.get("post_to") or []):
             # MLS rules (e.g. NTREIS): no agent or office name, photo, logo or phone, and no branding at all.
             # Same clips, so no new AI cost: just the walkthrough without the outro card or any logos.
@@ -515,11 +517,11 @@ def render_listing(l):
             out = os.path.join(tmp, "mls-16x9.mp4")
             log("  rendering MLS version (unbranded)")
             engine.render(job_path, out, fmt="16:9")
-            path = f"{l['user_id']}/{l['id']}/mls-16x9.mp4"
+            path = f"{l['user_id']}/{l['id']}/v{ver}/mls-16x9.mp4"
             storage_put("videos", path, out)
-            made.append({"listing_id": l["id"], "format": "16:9", "kind": "mls", "video_path": path})
-        db_delete("renders", {"listing_id": l["id"]})
+            made.append({"listing_id": l["id"], "format": "16:9", "kind": "mls", "video_path": path, "version": ver})
         db_insert("renders", made)
+        return len(made)
 
 
 def step_stagings():

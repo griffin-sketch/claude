@@ -11,7 +11,7 @@ async function find(token: string) {
   const db = admin();
   const { data: l } = await db.from("listings").select("id, address, city_line, status").eq("mls_token", token).single();
   if (!l || l.status !== "done") return null;
-  const { data: r } = await db.from("renders").select("video_path").eq("listing_id", l.id).eq("kind", "mls").maybeSingle();
+  const { data: r } = await db.from("renders").select("video_path").eq("listing_id", l.id).eq("kind", "mls").order("version", { ascending: false }).limit(1).maybeSingle();
   if (!r) return null;
   const { data } = await db.storage.from("videos").createSignedUrl(r.video_path, 60 * 60 * 24);
   return data?.signedUrl ? { ...l, src: data.signedUrl } : null;

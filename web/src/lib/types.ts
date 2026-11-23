@@ -116,6 +116,7 @@ export type Render = {
   kind?: string;
   video_path: string;
   created_at: string;
+  version?: number;
 };
 
 export const STATUS_LABEL: Record<ListingStatus, string> = {

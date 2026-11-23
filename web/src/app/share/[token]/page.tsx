@@ -42,10 +42,11 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
     .single();
   if (!l || l.status !== "done") notFound();
   const [{ data: renders }, { data: prof }] = await Promise.all([
-    db.from("renders").select("kind, format, video_path").eq("listing_id", l.id).neq("kind", "mls"),
+    db.from("renders").select("kind, format, video_path, version").eq("listing_id", l.id).neq("kind", "mls"),
     db.from("profiles").select("full_name, company, account_type").eq("id", l.user_id).single(),
   ]);
-  const list = [...(renders ?? [])].sort(
+  const latest = Math.max(1, ...(renders ?? []).map((r) => r.version ?? 1));
+  const list = (renders ?? []).filter((r) => (r.version ?? 1) === latest).sort(
     (a, b) => ORDER.indexOf(a.kind ?? "tour") - ORDER.indexOf(b.kind ?? "tour") || (a.format === "16:9" ? -1 : 1),
   );
   const urls = await Promise.all(

@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const [{ data: listings }, { data: shots }, { data: renders }, { data: profiles }, users] = await Promise.all([
       db.from("listings").select("*").order("created_at", { ascending: false }).limit(300),
       db.from("shots").select("listing_id, clip_status, clip_attempts, vclip_status, effect"),
-      db.from("renders").select("listing_id"),
+      db.from("renders").select("listing_id, version"),
       db.from("profiles").select("id, full_name, company, brokerage, phone, account_type, plan, plan_interval, plan_status, credits"),
       db.auth.admin.listUsers({ perPage: 1000 }),
     ]);
@@ -71,7 +71,9 @@ export async function POST(request: Request) {
       perListing.set(s.listing_id, m);
     }
     const videos = new Map<string, number>();
-    for (const r of renders ?? []) videos.set(r.listing_id, (videos.get(r.listing_id) ?? 0) + 1);
+    const top = new Map<string, number>();
+    for (const r of renders ?? []) top.set(r.listing_id, Math.max(top.get(r.listing_id) ?? 1, r.version ?? 1));
+    for (const r of renders ?? []) if ((r.version ?? 1) === top.get(r.listing_id)) videos.set(r.listing_id, (videos.get(r.listing_id) ?? 0) + 1);
 
     const rows = (listings ?? []).map((l) => {
       const m = perListing.get(l.id) ?? { photos: 0, ready: 0, failed: 0, attempts: 0, vertical: 0, effects: 0 };
@@ -131,7 +133,7 @@ export async function POST(request: Request) {
 async function media(db: ReturnType<typeof admin>, listingId: string) {
   const [{ data: l }, { data: renders }, { data: shots }] = await Promise.all([
     db.from("listings").select("address").eq("id", listingId).single(),
-    db.from("renders").select("kind, format, video_path, created_at").eq("listing_id", listingId),
+    db.from("renders").select("kind, format, video_path, created_at, version").eq("listing_id", listingId).order("version", { ascending: false }),
     db.from("shots").select("position, label, effect, clip_path, vclip_path").eq("listing_id", listingId).order("position"),
   ]);
   const slug = (l?.address || "listing").replace(/[^a-z0-9]+/gi, "-");
