@@ -51,6 +51,8 @@ export type Listing = {
   open_house: string | null;
   transition: "crossfade" | "speed_ramp" | "flash" | "cut";
   pace?: "normal" | "fast";
+  post_to?: string[];
+  mls_token?: string;
   formats: string[];
   /** Photos each short video uses, in order (shot ids). A video not listed picks its own. */
   reel_shots?: Record<string, string[]> | null;

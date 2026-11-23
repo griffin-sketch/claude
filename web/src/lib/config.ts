@@ -35,6 +35,15 @@ export const TRANSITIONS = [
   { id: "cut", name: "Straight cut", blurb: "Clean, instant cuts. Fast paced." },
 ] as const;
 
+/** Where the realtor plans to post. MLS also makes an unbranded MLS version with its own link. */
+export const POST_TO = [
+  { id: "mls", name: "MLS" },
+  { id: "social", name: "Instagram, Facebook or TikTok" },
+  { id: "youtube", name: "YouTube" },
+  { id: "website", name: "My website" },
+  { id: "email", name: "Email or text to clients" },
+] as const;
+
 export const PACES = [
   { id: "normal", name: "Walkthrough", blurb: "Each room gets a few seconds. Calm and complete." },
   { id: "fast", name: "Fast cuts", blurb: "Quick shots cut to the beat of the music. Great for Reels." },

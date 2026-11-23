@@ -42,7 +42,7 @@ export default async function SharePage({ params }: PageProps<"/share/[token]">)
     .single();
   if (!l || l.status !== "done") notFound();
   const [{ data: renders }, { data: prof }] = await Promise.all([
-    db.from("renders").select("kind, format, video_path").eq("listing_id", l.id),
+    db.from("renders").select("kind, format, video_path").eq("listing_id", l.id).neq("kind", "mls"),
     db.from("profiles").select("full_name, company, account_type").eq("id", l.user_id).single(),
   ]);
   const list = [...(renders ?? [])].sort(

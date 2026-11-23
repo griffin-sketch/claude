@@ -8,7 +8,7 @@ import { PostToInstagram } from "@/components/PostToInstagram";
 import { AppShell } from "@/components/AppShell";
 import { PayPanel } from "@/components/PayPanel";
 import { fileExt, signedUrl, supabase } from "@/lib/supabase";
-import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, PACES, TRANSITIONS } from "@/lib/config";
+import { EFFECTS, HOOKS, STAGE_ROOMS, STAGE_STYLES, MUSIC, MIN_PHOTOS, REDO_LIMIT, ROOM_SUGGESTIONS, TEMPLATES, PACES, POST_TO, TRANSITIONS } from "@/lib/config";
 import { STATUS_LABEL, type Effect, type Listing, type Render, type Shot } from "@/lib/types";
 import { CropEditor, CroppedImg } from "@/components/CropEditor";
 import { packPlan, REEL_MAX, REEL_MIN, walkthroughOrder } from "@/lib/pack";
@@ -32,6 +32,7 @@ const REEL_LABEL: Record<string, string> = {
   build_up: "Built from the ground up",
   staged: "Virtually staged",
   open_house: "Open house",
+  mls: "MLS version (unbranded)",
 };
 
 type StepId = "photos" | "arrange" | "motion" | "style" | "details" | "checkout" | "clips" | "videos";
@@ -901,6 +902,27 @@ function Editor({ id, user }: { id: string; user: User }) {
           </div>
           <MusicPicker listing={listing} user={user} disabled={!labelsEditable} onSave={saveListing} />
           <div className="mt-6">
+            <span className="label">Where will you post this video?</span>
+            <div className="flex flex-wrap gap-2">
+              {POST_TO.map((t) => {
+                const on = (listing.post_to ?? []).includes(t.id);
+                return (
+                  <button key={t.id} type="button" disabled={!labelsEditable} aria-pressed={on}
+                    onClick={() => saveListing({ post_to: on ? (listing.post_to ?? []).filter((x) => x !== t.id) : [...(listing.post_to ?? []), t.id] })}
+                    className={`rounded-full border-2 px-3.5 py-1.5 text-sm font-semibold transition ${on ? "border-gold bg-gold-soft" : "border-line hover:border-ink-soft"}`}>
+                    {t.name}
+                  </button>
+                );
+              })}
+            </div>
+            {(listing.post_to ?? []).includes("mls") && (
+              <p className="mt-2 text-xs text-ink-soft">
+                We&apos;ll also make an unbranded MLS version (no name, brokerage, logo or phone, as MLS rules require) with its own MLS link.
+                Use photos without people or yard signs.
+              </p>
+            )}
+          </div>
+          <div className="mt-6">
             <span className="label">Pace</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {PACES.map((t) => (
@@ -1178,6 +1200,7 @@ function Editor({ id, user }: { id: string; user: User }) {
               }))}
             />
             <ShareLink listing={listing} onSave={saveListing} />
+            {renders.some((r) => r.kind === "mls") && listing.mls_token && <MlsLink token={listing.mls_token} />}
             <button onClick={() => setStatus("review")} className="btn-ghost" disabled={busy}>
               Make changes
             </button>
@@ -1374,6 +1397,22 @@ function ShareLink({ listing, onSave }: { listing: Listing; onSave: (p: Partial<
         {copied ? "Link copied" : listing.share_token ? "Copy client link" : "Share with client"}
       </button>
       {url && <span className="max-w-full truncate text-xs text-muted">{url}</span>}
+    </div>
+  );
+}
+
+/** The unbranded MLS tour's link, on its own address as MLS rules require. */
+function MlsLink({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `https://mls.gettourvo.com/${token}`;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button className="btn-ghost" onClick={async () => {
+        try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { /* shown below */ }
+      }}>
+        {copied ? "MLS link copied" : "Copy MLS link"}
+      </button>
+      <span className="max-w-full truncate text-xs text-muted">{url}</span>
     </div>
   );
 }

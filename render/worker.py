@@ -505,6 +505,19 @@ def render_listing(l):
             path = f"{l['user_id']}/{l['id']}/{name}.mp4"
             storage_put("videos", path, out)
             made.append({"listing_id": l["id"], "format": fmt, "kind": kind, "video_path": path})
+        if "mls" in (l.get("post_to") or []):
+            # MLS rules (e.g. NTREIS): no agent or office name, photo, logo or phone, and no branding at all.
+            # Same clips, so no new AI cost: just the walkthrough without the outro card or any logos.
+            j = dict(job, outro="none", agent={"name": "", "title": "", "brokerage": "", "phone": ""},
+                     shots=[dict(sh, focus=None, crop=None) for sh in job["shots"]])
+            job_path = os.path.join(tmp, "job-mls.json")
+            json.dump(j, open(job_path, "w"))
+            out = os.path.join(tmp, "mls-16x9.mp4")
+            log("  rendering MLS version (unbranded)")
+            engine.render(job_path, out, fmt="16:9")
+            path = f"{l['user_id']}/{l['id']}/mls-16x9.mp4"
+            storage_put("videos", path, out)
+            made.append({"listing_id": l["id"], "format": "16:9", "kind": "mls", "video_path": path})
         db_delete("renders", {"listing_id": l["id"]})
         db_insert("renders", made)
 
