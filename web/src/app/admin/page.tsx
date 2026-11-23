@@ -16,7 +16,7 @@ type Row = {
 type Media = {
   address: string;
   videos: { kind: string; format: string; play: string | null; download: string | null }[];
-  clips: { position: number; label: string; effect: string; play: string | null; vertical: string | null }[];
+  clips: { position: number; label: string; effect: string; play: string | null; download?: string | null; vertical: string | null }[];
 };
 const REEL: Record<string, string> = {
   tour: "Full walkthrough", teaser: "15-second teaser", just_listed: "Just Listed", price_reveal: "Guess the price",
@@ -251,6 +251,7 @@ function Viewer({ listingId, onClose }: { listingId: string; onClose: () => void
                     #{c.position + 1} {c.label || (c.position === 0 ? "Opening" : "Unlabeled")}
                     {c.effect && c.effect !== "none" ? ` · ${c.effect}` : ""}
                   </span>
+                  {c.download && <a href={c.download} className="text-xs font-semibold underline underline-offset-2">Download clip</a>}
                 </div>
               ))}
             </div>
