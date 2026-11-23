@@ -4,6 +4,7 @@ import { BeforeAfter, LoopVideo } from "@/components/Showcase";
 import { PlanPicker } from "@/components/PlanPicker";
 import { EXTRA_VIDEO_PRICE } from "@/lib/plans";
 import { HomeMotion } from "@/components/home/HomeMotion";
+import { POST_LOGOS } from "@/components/home/postLogos";
 
 const LOOKS = [
   { id: 1, name: "Signature Gold", note: "Classic luxury" },
@@ -150,18 +151,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Where the videos go: drifts sideways, speeds up with the scroll */}
-      <div data-marquee aria-hidden className="overflow-hidden border-y border-line bg-white py-5">
-        <div className="flex w-max gap-12 whitespace-nowrap font-display text-[clamp(26px,3vw,40px)] text-ink-soft">
-          {[0, 1].map((k) => (
-            <span key={k} className="flex gap-12">
-              {["Instagram Reels", "MLS", "TikTok", "YouTube Shorts", "Facebook", "Your website", "Email campaigns", "Open house screens"].map((t) => (
-                <span key={t} className="flex items-center gap-12">{t}<span className="text-gold">✦</span></span>
-              ))}
-            </span>
-          ))}
+      {/* Where the videos go: platform logos gliding slowly past, faded at the edges */}
+      <section aria-label="Post your videos anywhere" className={`border-y border-line bg-white py-8 ${pad}`}>
+        <p className="mb-6 text-center text-[13px] font-semibold uppercase tracking-[0.18em] text-muted">Made for everywhere you post</p>
+        <div data-marquee className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+          <div className="flex w-max items-center">
+            {[0, 1].map((k) => (
+              <ul key={k} aria-hidden={k === 1} className="flex items-center gap-16 pr-16 sm:gap-24 sm:pr-24">
+                {POST_LOGOS.map((l) => (
+                  <li key={l.name} className="text-ink-soft/70 transition-colors hover:text-ink" title={l.name}>
+                    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" role="img" aria-label={l.name} fill="currentColor"><path d={l.path} /></svg>
+                  </li>
+                ))}
+                <li className="rounded-lg border-2 border-current px-2.5 py-1 text-[15px] font-bold tracking-wide text-ink-soft/70" title="MLS">MLS</li>
+              </ul>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Still to walkthrough: pinned while the camera move plays with the scroll */}
       <section data-scrub-film className={`flex min-h-[100svh] items-center bg-white py-16 ${pad}`}>

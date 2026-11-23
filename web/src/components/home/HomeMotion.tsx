@@ -115,19 +115,10 @@ export function HomeMotion() {
         }, 0);
       });
 
-      // a strip of places the videos go, drifting sideways and speeding up with the scroll
+      // platform logos: a slow, steady glide (no speed-ups)
       document.querySelectorAll<HTMLElement>("[data-marquee]").forEach((row) => {
         const track = row.firstElementChild as HTMLElement | null;
-        if (!track) return;
-        const loop = gsap.to(track, { xPercent: -50, ease: "none", duration: 28, repeat: -1 });
-        ScrollTrigger.create({
-          trigger: row,
-          onUpdate: (self) => {
-            const v = Math.min(5, Math.abs(self.getVelocity()) / 400);
-            gsap.to(loop, { timeScale: (self.direction || 1) * (1 + v), duration: 0.3, overwrite: true });
-            gsap.to(loop, { timeScale: self.direction || 1, duration: 1.2, delay: 0.3 });
-          },
-        });
+        if (track) gsap.to(track, { xPercent: -50, ease: "none", duration: 40, repeat: -1 });
       });
     });
 
