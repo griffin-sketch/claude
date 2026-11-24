@@ -1108,7 +1108,107 @@ class T12(Template):
         img, x = self._stack(rows, gap=20)
         return [Element(img, x, (H - img.height) // 2, t0, None, "rise", 26)]
 
-TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10, 11: T11, 12: T12}
+# ---- 13 · Sunshine Coast (Florida: retro sunset stripes, sand cards, Pacifico script, a little wave)
+class T13(Template):
+    name = "Sunshine Coast"
+    SAND = hexrgb("#FFF6E6"); DEEP = hexrgb("#0B4F5C"); TEAL = hexrgb("#11808A")
+    CORAL = hexrgb("#FF6B57"); MANGO = hexrgb("#FF9F43"); SUN = hexrgb("#FFC94A"); SEA = hexrgb("#2EC4B6")
+    SCRIPT = "pacifico"; SANS = "poppins-700"; BODY = "montserrat-500"
+
+    def _wave(self, sp, cx, y, w, amp=7, period=46, width=5, fill=None):
+        pts = [(cx - w / 2 + t + sp.pad, y + sp.pad + amp * math.sin(t / period * 2 * math.pi)) for t in range(0, int(w) + 1, 2)]
+        sp.d.line(pts, fill=fill or self.SEA, width=width, joint="curve")
+
+    def _stripes(self, sp, w, r):
+        # retro Florida sunset bands across the top of a card, clipped to its rounded corners
+        band = Image.new("RGBA", (int(w), 3 * 11), (0, 0, 0, 0)); bd = ImageDraw.Draw(band)
+        for k, c in enumerate((self.CORAL, self.MANGO, self.SUN)): bd.rectangle([0, k * 11, w, k * 11 + 10], fill=c)
+        mask = Image.new("L", (int(w), int(r * 2 + 40)), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, r * 2 + 39], r, fill=255)
+        band.putalpha(Image.composite(band.getchannel("A"), Image.new("L", band.size, 0), mask.crop((0, 0, int(w), band.height))))
+        sp.paste(band, 0, 0)
+
+    def _card(self, rows, w, gap=14, top=56, bottom=44):
+        """rows: ('text', txt, font, fill, track) | ('wave', w) | ('gap', px) | ('img', Image). Sand card, no shadow."""
+        h = top + bottom
+        for r in rows:
+            if r[0] == "text": h += r[2].getmetrics()[0] + r[2].getmetrics()[1] // 2 + gap
+            elif r[0] == "wave": h += 26 + gap
+            elif r[0] == "gap": h += r[1]
+            elif r[0] == "img": h += r[1].height + gap
+        rad = 34
+        sp = Sprite(w, h)
+        sp.rect(0, 0, w, h, self.SAND, r=rad)
+        self._stripes(sp, w, rad)
+        y = top
+        for r in rows:
+            if r[0] == "text":
+                _, txt, f, fill, tr = r
+                sp.text(w / 2, y, txt, f, fill, tr, anchor="c")
+                y += f.getmetrics()[0] + f.getmetrics()[1] // 2 + gap
+            elif r[0] == "wave":
+                self._wave(sp, w / 2, y + 12, r[1]); y += 26 + gap
+            elif r[0] == "gap": y += r[1]
+            elif r[0] == "img":
+                sp.paste(r[1], w / 2 - r[1].width / 2, y); y += r[1].height + gap
+        return sp.finish(0)
+
+    def title(self, t0, t1):
+        w = MW(1180) if not VERTICAL else W - 140
+        inner = w - 120
+        rows = [("text", self.kicker().upper(), font(self.SANS, 26), self.CORAL, 7)]
+        for ln in wrap(self.headline(), font(self.SCRIPT, 84), inner):
+            rows.append(("text", ln, fit_font(self.SCRIPT, 84, ln, inner), self.DEEP, 0))
+        rows.append(("wave", 200))
+        st = stats_parts(self.job.get("stats"))
+        if st: rows.append(("text", "  ·  ".join(st), font("poppins-600", 30), self.DEEP, 2))
+        if self.addr_line(): rows.append(("text", self.addr_line(), fit_font(self.BODY, 28, self.addr_line(), inner), self.TEAL, 1))
+        if self.price(): rows.append(("text", self.price(), font("poppins-800", 40), self.CORAL, 1))
+        img = self._card(rows, w)
+        x = (W - img.width) // 2
+        y = (H - img.height) // 2 + (0 if VERTICAL else 40)
+        return [Element(img, x, y, t0, t1, "rise", 30)]
+
+    def feature(self, i, n, shot, t0, t1):
+        main = shot.get("label") or ""; sub = (shot.get("sub") or "").upper()
+        if not main and not sub: return []
+        fm = fit_font(self.SANS, 44, main, MW(1100)); fs = font("poppins-600", 22)
+        wm = text_w(main, fm); ws = text_w(sub, fs, 4)
+        dot = 30; padx = 30
+        h = fm.getmetrics()[0] + (fs.getmetrics()[0] + 14 if sub else 0) + 40
+        w = padx + dot + 20 + max(wm, ws) + padx + 6
+        sp = Sprite(w, h)
+        sp.rect(0, 0, w, h, self.SAND, r=min(30, h // 2))
+        cy = h / 2
+        sp.ellipse(padx, cy - dot / 2, padx + dot, cy + dot / 2, fill=self.CORAL)
+        sp.rect(padx + 2, cy + 3, padx + dot - 2, cy + 6, self.SAND)          # little sunset lines through the sun
+        sp.rect(padx + 4, cy + 9, padx + dot - 4, cy + 11, self.SAND)
+        tx = padx + dot + 20
+        sp.text(tx, 20, main, fm, self.DEEP)
+        if sub: sp.text(tx + 1, 20 + fm.getmetrics()[0] + 12, sub, fs, self.CORAL, 4)
+        img = sp.finish(0)
+        return [Element(img, 100 - sp.pad, H - BOT(100) - h - sp.pad, t0, t1, "left" if i % 2 else "rise", 28)]
+
+    def outro(self, t0):
+        a = self.agent(); w = MW(1000) if not VERTICAL else W - 140; inner = w - 120; rows = []
+        if self.branded() and self.media("headshot"):
+            rows += [("img", circle_photo(self.media("headshot"), 190, self.SEA, 6)), ("gap", 2)]
+        rows.append(("text", self.outro_kicker().upper(), font(self.SANS, 24), self.CORAL, 7))
+        if self.branded():
+            if a.get("name"): rows.append(("text", a["name"], fit_font(self.SCRIPT, 80, a["name"], inner), self.DEEP, 0))
+            rows.append(("wave", 180))
+            if a.get("brokerage"): rows.append(("text", a["brokerage"].upper(), fit_font(self.BODY, 24, a["brokerage"].upper(), inner, 5), self.TEAL, 5))
+            if a.get("phone"): rows.append(("text", a["phone"], font("poppins-700", 46), self.DEEP, 2))
+            if self.media("logo"): rows += [("gap", 6), ("img", logo_image(self.media("logo"), 300, 110))]
+        else:
+            hl = self.headline()
+            rows.append(("text", hl, fit_font(self.SCRIPT, 76, hl, inner), self.DEEP, 0))
+            rows.append(("wave", 180))
+            if self.addr_line(): rows.append(("text", self.addr_line(), fit_font(self.BODY, 26, self.addr_line(), inner), self.TEAL, 1))
+        img = self._card(rows, w)
+        return [Element(img, (W - img.width) // 2, (H - img.height) // 2, t0, None, "rise", 30)]
+
+TEMPLATES = {1: T1, 2: T2, 3: T3, 4: T4, 5: T5, 6: T6, 7: T7, 8: T8, 9: T9, 10: T10, 11: T11, 12: T12, 13: T13}
 
 # ---------------------------------------------------------------- footage
 def probe_duration(path):
