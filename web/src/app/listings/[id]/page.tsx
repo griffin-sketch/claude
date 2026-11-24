@@ -1170,7 +1170,7 @@ function Editor({ id, user }: { id: string; user: User }) {
         <section className="card p-4 sm:p-6">
           <h2 className="font-display text-2xl">Building your videos</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Putting together your full video and short social clips. This takes about 10 minutes, and you can leave this page; we&apos;ll keep going.
+            Putting together your full video and short social clips. This usually takes 5 to 15 minutes (longer for listings with lots of photos), and you can leave this page; we&apos;ll keep going.
           </p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-line">
             <div className="h-full w-1/3 animate-pulse rounded-full bg-gold" />

@@ -43,7 +43,7 @@ def agent_bug(src, dst, logo, hide_last=0.0):
           f"[0:v][bug]overlay=0:0:enable='lt(t,{bug_end:.3f})':format=auto,format=yuv420p[v]"]
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", src, "-loop", "1", "-t", f"{dur:.3f}", "-i", png,
            "-filter_complex", ";".join(fc), "-map", "[v]"] + (["-map", "0:a", "-c:a", "copy"] if has_audio else []) + [
-           "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-maxrate", "8M", "-bufsize", "16M",
+           "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-maxrate", "8M", "-bufsize", "16M",
            "-profile:v", "high", "-pix_fmt", "yuv420p", "-threads", "2", "-movflags", "+faststart", "-t", f"{dur:.3f}", dst]
     subprocess.run(cmd, check=True)
     return dst
@@ -81,7 +81,7 @@ def apply(src, dst, hide_last=0.0):
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", src, "-loop", "1", "-t", f"{dur:.3f}", "-i", bug, "-i", card,
            "-filter_complex", ";".join(fc), *maps,
            # same playback-friendly settings as the main render: capped bitrate so phones never stutter
-           "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-maxrate", "8M", "-bufsize", "16M",
+           "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-maxrate", "8M", "-bufsize", "16M",
            "-profile:v", "high", "-pix_fmt", "yuv420p", "-threads", "2", "-movflags", "+faststart"]
     if has_audio:
         cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
