@@ -131,6 +131,21 @@ function ImportView({ user }: { user: User }) {
   let host = "";
   try { host = new URL(sent.u).hostname.replace(/^www\./, ""); } catch { /* fine */ }
 
+  // Homes.com locks its photos: neither your browser nor Tourvo is allowed to copy them, so say so up front
+  if (host === "homes.com" || host.endsWith(".homes.com")) {
+    return (
+      <div className="mx-auto max-w-xl text-center">
+        <h1 className="font-display text-4xl">Homes.com photos can&apos;t be imported</h1>
+        <p className="mt-3 text-ink-soft">
+          Homes.com doesn&apos;t allow its listing photos to be copied to other sites. Open the same listing on <b>HAR</b>,
+          <b> Realtor.com</b> or your <b>MLS</b> and click <b>Send to Tourvo</b> there, or paste your photographer&apos;s
+          Dropbox or Google Drive link.
+        </p>
+        <Link href="/dashboard" className="btn-gold mt-6 inline-block px-5 py-2.5">Back to my listings</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
