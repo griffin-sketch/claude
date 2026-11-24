@@ -4,6 +4,7 @@ import "./globals.css";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 import { RefCapture } from "@/components/RefCapture";
 import { ChatWidget } from "@/components/ChatWidget";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 // Coastal modern: Figtree for text, Fraunces (serif, with optical sizes) for headlines.
 const figtree = localFont({
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <ChatWidget />
       </body>
+      <GoogleAnalytics gaId="G-PMG0VF2J7Q" />
     </html>
   );
 }
