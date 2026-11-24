@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     // Hand a listing you built to a realtor's account, using one of their videos: { deliver: { id, email } }
     if (body?.deliver && typeof body.deliver.id === "string") {
-      return Response.json(await deliver(db, body.deliver.id, String(body.deliver.email ?? "")));
+      return Response.json(await deliver(db, body.deliver.id, String(body.deliver.email ?? ""), body.deliver.free === true));
     }
 
     // Tourvo branding switch: { branding: { id, value: true | false | null } }
@@ -163,7 +163,7 @@ async function media(db: ReturnType<typeof admin>, listingId: string) {
  * Files are copied into their storage folder (each account can only read its own folder), then every path and the
  * listing's owner switch over. Their plan videos are used first, then free referral videos.
  */
-async function deliver(db: ReturnType<typeof admin>, listingId: string, email: string) {
+async function deliver(db: ReturnType<typeof admin>, listingId: string, email: string, free = false) {
   const to = email.trim().toLowerCase();
   if (!to) throw new HttpError(400, "Enter the realtor's email.");
   let target: { id: string; email?: string } | undefined;
@@ -181,7 +181,7 @@ async function deliver(db: ReturnType<typeof admin>, listingId: string, email: s
 
   const { data: prof } = await db.from("profiles").select("credits, bonus_credits").eq("id", target.id).single();
   const credits = prof?.credits ?? 0, bonus = prof?.bonus_credits ?? 0;
-  if (credits + bonus < 1)
+  if (!free && credits + bonus < 1)
     throw new HttpError(409, `${email} has no videos left on their plan. They can buy an extra video or pick a plan first.`);
 
   const from = `${l.user_id}/`, mine = `${target.id}/`;
@@ -218,11 +218,13 @@ async function deliver(db: ReturnType<typeof admin>, listingId: string, email: s
     client_headshot_path: await move("branding", l.client_headshot_path),
   };
 
-  // use one of their videos (plan first), guarded so two deliveries can't both take the last one
+  // use one of their videos (plan first), guarded so two deliveries can't both take the last one; a free delivery uses none
   const useCol = credits > 0 ? "credits" : "bonus_credits";
   const have = credits > 0 ? credits : bonus;
-  const { data: spent } = await db.from("profiles").update({ [useCol]: have - 1 }).eq("id", target.id).eq(useCol, have).select("id");
-  if (!spent?.length) throw new HttpError(409, "Their video balance just changed. Try again.");
+  if (!free) {
+    const { data: spent } = await db.from("profiles").update({ [useCol]: have - 1 }).eq("id", target.id).eq(useCol, have).select("id");
+    if (!spent?.length) throw new HttpError(409, "Their video balance just changed. Try again.");
+  }
 
   for (const s of shotPatch) {
     const { id, ...p } = s;
@@ -247,5 +249,6 @@ async function deliver(db: ReturnType<typeof admin>, listingId: string, email: s
       }),
     }).catch(() => null);
   }
+  if (free) return { ok: true, used: "nothing (free)", left: credits + bonus };
   return { ok: true, used: useCol === "credits" ? "plan video" : "free referral video", left: credits + bonus - 1 };
 }
