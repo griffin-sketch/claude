@@ -50,6 +50,8 @@ function LoginForm() {
     e.preventDefault();
     setState("sending");
     const redirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    // the email's link may not carry ?next (it depends on the email template), so remember it here too
+    try { localStorage.setItem("tourvo_next", safeNext); } catch { /* fine */ }
     const { error } = await supabase().auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: redirect },
@@ -64,9 +66,19 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <p className="eyebrow">Welcome</p>
-      <h1 className="mt-3 font-display text-5xl leading-none">Sign in</h1>
-      <p className="mt-3 text-sm text-ink-soft">No password needed. New here? This creates your free account.</p>
+      {safeNext.startsWith("/share/") ? (
+        <>
+          <p className="eyebrow">Your videos are ready</p>
+          <h1 className="mt-3 font-display text-5xl leading-none">Sign in to see them</h1>
+          <p className="mt-3 text-sm text-ink-soft">Make your free Tourvo account to watch and download your listing videos. No password needed.</p>
+        </>
+      ) : (
+        <>
+          <p className="eyebrow">Welcome</p>
+          <h1 className="mt-3 font-display text-5xl leading-none">Sign in</h1>
+          <p className="mt-3 text-sm text-ink-soft">No password needed. New here? This creates your free account.</p>
+        </>
+      )}
       {state !== "sent" && GOOGLE_ON && (
         <>
           <button type="button" onClick={google} disabled={googleBusy} className="btn-ghost mt-8 min-h-12 w-full">

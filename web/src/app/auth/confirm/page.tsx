@@ -17,7 +17,9 @@ function Confirm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const next = params.get("next") || "/dashboard";
+    let stored: string | null = null;
+    try { stored = localStorage.getItem("tourvo_next"); localStorage.removeItem("tourvo_next"); } catch { /* fine */ }
+    const next = params.get("next") || stored || "/dashboard";
     const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
     const token_hash = params.get("token_hash");
     const type = (params.get("type") || "email") as EmailOtpType;

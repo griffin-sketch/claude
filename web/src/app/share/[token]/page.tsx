@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { admin, isAdmin } from "@/lib/server";
 import { Logo } from "@/components/Logo";
 import { SaveVideo } from "@/components/SaveVideo";
@@ -30,10 +32,21 @@ const LABEL: Record<string, string> = {
 const ORDER = Object.keys(LABEL);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Public delivery page for a client: watch and download the listing's videos, no account needed. */
+/** Who's signed in, from the session cookie the browser sign-in sets (null if nobody). */
+async function viewer() {
+  const store = await cookies();
+  const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: { getAll: () => store.getAll(), setAll: () => { /* read-only here */ } },
+  });
+  const { data } = await sb.auth.getUser().catch(() => ({ data: { user: null } }));
+  return data.user;
+}
+
+/** Delivery page for a client: watch and download the listing's videos. They sign in (or make a free account) first. */
 export default async function SharePage({ params }: PageProps<"/share/[token]">) {
   const { token } = await params;
   if (!UUID.test(token)) notFound();
+  if (!(await viewer())) redirect(`/login?next=${encodeURIComponent(`/share/${token}`)}`);
   const db = admin();
   const { data: l } = await db
     .from("listings")
