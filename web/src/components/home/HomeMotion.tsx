@@ -95,6 +95,7 @@ export function HomeMotion() {
       document.querySelectorAll<HTMLElement>("[data-scrub-film]").forEach((block) => {
         const video = block.querySelector("video");
         const steps = [...block.querySelectorAll<HTMLElement>("[data-step]")];
+        const capts = [...block.querySelectorAll<HTMLElement>("[data-step-m]")];   // the phone version, on the clip
         const frame = block.querySelector<HTMLElement>("[data-film-frame]");
         const st = { t: 0 };
         // Safari (iPhone and Mac) won't jump around in a streamed video it hasn't played, so load the whole clip into
@@ -118,6 +119,7 @@ export function HomeMotion() {
         const setStep = (p: number) => {
           const i = Math.min(steps.length - 1, Math.floor(p * steps.length));
           steps.forEach((s, k) => s.classList.toggle("is-on", k === i));
+          capts.forEach((s, k) => s.classList.toggle("is-on", k === i));
         };
         setStep(0);
         const tl = gsap.timeline({

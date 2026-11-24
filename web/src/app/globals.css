@@ -83,3 +83,7 @@ body {
 /* homepage film steps: the one the camera is on lights up */
 .film-step { color: var(--color-muted, #8a7f78); transition: color .3s, border-color .3s; }
 .film-step.is-on { color: var(--color-ink, #2b201c); border-color: var(--accent, #c4553a); }
+
+/* phone captions on the scroll film: one at a time */
+.film-cap { opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s ease; }
+.film-cap.is-on { opacity: 1; transform: none; }

@@ -88,6 +88,12 @@ function GoogleIcon() {
   );
 }
 
+const FILM_STEPS = [
+  ["0.0 s", "Your listing photo"],
+  ["2.5 s", "Walking through the front door"],
+  ["5.0 s", "Turning to the grounds at dusk"],
+];
+
 export default function Home() {
   return (
     <div className="bg-bg text-ink">
@@ -162,20 +168,16 @@ export default function Home() {
       </section>
 
       {/* Still to walkthrough: pinned while the camera move plays with the scroll */}
-      <section data-scrub-film className={`flex min-h-[100svh] items-center bg-white py-16 ${pad}`}>
-        <div className={`${wrap} flex flex-wrap items-center gap-10 lg:gap-16`}>
+      <section data-scrub-film className={`flex min-h-[100svh] items-center bg-white pb-10 pt-24 sm:py-16 ${pad}`}>
+        <div className={`${wrap} flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-16`}>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-5">
             <h2 data-split className={h2}>The camera moves through the home, not across a slideshow.</h2>
-            <p className={`${lead} max-w-[480px]`}>
+            <p className={`${lead} hidden max-w-[480px] sm:block`}>
               Each photo becomes a five-second shot with real depth. Nothing in the room is added or moved, and every clip is
               yours to review before the video is made. Keep scrolling to move the camera.
             </p>
-            <ol className="mt-2 flex flex-col gap-1">
-              {[
-                ["0.0 s", "Your listing photo"],
-                ["2.5 s", "The camera walks through the front door"],
-                ["5.0 s", "It turns to reveal the grounds at dusk"],
-              ].map(([t, label]) => (
+            <ol className="mt-2 hidden flex-col gap-1 sm:flex">
+              {FILM_STEPS.map(([t, label]) => (
                 <li key={t} data-step className="film-step flex items-baseline gap-4 border-l-2 border-line py-2 pl-4">
                   <span className="w-12 text-[13px] font-semibold tabular-nums">{t}</span>
                   <span className="text-[17px]">{label}</span>
@@ -184,10 +186,19 @@ export default function Home() {
             </ol>
           </div>
           <div className="min-w-0 flex-[1.4_1_520px]">
-            <div data-film-frame className="overflow-hidden rounded-[24px] bg-line shadow-[0_24px_70px_rgba(43,32,28,0.18)]">
+            <div data-film-frame className="relative overflow-hidden rounded-[24px] bg-line shadow-[0_24px_70px_rgba(43,32,28,0.18)]">
               <video src="/fx/move_scrub.mp4" poster="/fx/move_poster.jpg" muted playsInline preload="auto"
                 aria-label="One listing photo of a grand front entry turning into a camera move through the door and back out to the grounds" className="aspect-[6/5] w-full object-cover sm:aspect-[4/3]" />
+              {/* on phones the steps ride on the clip, so the whole thing fits on one screen */}
+              <div className="pointer-events-none absolute bottom-3 left-3 right-3 sm:hidden" aria-hidden="true">
+                {FILM_STEPS.map(([t, label]) => (
+                  <span key={t} data-step-m className="film-cap absolute bottom-0 left-0 flex items-baseline gap-2.5 rounded-full bg-white/95 px-3.5 py-2 text-[14px]">
+                    <span className="text-[12px] font-semibold tabular-nums text-[var(--accent)]">{t}</span>{label}
+                  </span>
+                ))}
+              </div>
             </div>
+            <p className="mt-4 text-[14px] text-ink-soft sm:hidden">Keep scrolling to move the camera.</p>
           </div>
         </div>
       </section>
