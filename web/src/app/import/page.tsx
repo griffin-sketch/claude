@@ -98,7 +98,16 @@ function ImportView({ user }: { user: User }) {
         listingId = data.id;
       }
       const ordered = photos.filter((u) => picked.includes(u)).slice(0, room);   // keep the listing's photo order
-      await api("/api/import", { listingId, urls: ordered, page: sent?.u, consent });
+      // Your browser already loaded these photos, so bring them in from here first. Some photo servers turn away
+      // requests from Tourvo's servers; anything that can't be fetched here goes through the server instead.
+      const left = await importInBrowser(user.id, listingId, ordered);
+      if (left.length) {
+        try {
+          await api("/api/import", { listingId, urls: left, page: sent?.u, consent });
+        } catch (e) {
+          if (left.length === ordered.length) throw e;   // nothing came in at all
+        }
+      }
       try { localStorage.removeItem(KEY); } catch { /* fine */ }
       router.push(`/listings/${listingId}`);
     } catch (e) {
@@ -201,6 +210,34 @@ function ImportView({ user }: { user: User }) {
       )}
     </div>
   );
+}
+
+/** Download each photo in the browser and add it to the listing, in order. Returns the addresses that couldn't be fetched. */
+async function importInBrowser(userId: string, listingId: string, urls: string[]): Promise<string[]> {
+  const sb = supabase();
+  const { data: existing } = await sb.from("shots").select("position").eq("listing_id", listingId);
+  let pos = existing?.length ? Math.max(...existing.map((s) => s.position)) + 1 : 0;
+  const failed: string[] = [];
+  const blobs = await Promise.all(urls.map(async (u) => {
+    try {
+      const res = await fetch(u, { mode: "cors", credentials: "omit", referrerPolicy: "no-referrer" });
+      const b = res.ok ? await res.blob() : null;
+      return b && /^image\/(jpeg|png|webp)$/.test(b.type) && b.size < 25 << 20 ? b : null;
+    } catch {
+      return null;
+    }
+  }));
+  for (let i = 0; i < urls.length; i++) {
+    const b = blobs[i];
+    if (!b) { failed.push(urls[i]); continue; }
+    const ext = b.type === "image/png" ? "png" : b.type === "image/webp" ? "webp" : "jpg";
+    const path = `${userId}/${listingId}/${crypto.randomUUID()}.${ext}`;
+    const up = await sb.storage.from("photos").upload(path, b, { contentType: b.type });
+    if (up.error) { failed.push(urls[i]); continue; }
+    const { error } = await sb.from("shots").insert({ listing_id: listingId, position: pos++, photo_path: path, label: "" });
+    if (error) { await sb.storage.from("photos").remove([path]); failed.push(urls[i]); }
+  }
+  return failed;
 }
 
 export default function ImportPage() {
