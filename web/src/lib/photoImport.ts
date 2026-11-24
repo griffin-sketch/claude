@@ -18,7 +18,7 @@ export type Photo = { name: string; data: Uint8Array; ext: string; type: string;
 const MAX_IMAGE = 40 << 20;     // 40 MB a photo
 const MAX_ZIP = 400 << 20;      // 400 MB a zip of photos
 const MAX_PAGE = 5 << 20;       // 5 MB of web page
-const MIN_W = 640, MIN_H = 400; // smaller than this is a logo, icon or thumbnail, not a listing photo
+const MIN_W = 600, MIN_H = 400; // smaller than this is a logo, icon or thumbnail, not a listing photo (some MLS photos are only 471x630)
 const UA = "Mozilla/5.0 (compatible; TourvoPhotoImport/1.0; +https://www.gettourvo.com)";
 
 /** Sites whose pages we never fetch from the server (their terms forbid it and they block it). */

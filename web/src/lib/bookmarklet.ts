@@ -71,13 +71,23 @@ export function expandNumbered(urls: string[], max = 300): string[] {
 }
 
 /**
- * Swap a listing site's small gallery thumbnails for the full-size photo, where we know how the site names them.
+ * Swap a listing site's small gallery thumbnails for the full-size photo, where we know how the site names them, and
+ * drop the same photo served from two places.
  * HAR: https://media-<mls>.harstatic.com/<listing>/<size>/<photo>.jpeg, where <size> "hr" is the full-size photo.
+ * HAR also shows some listings' photos from Realtor.com's image server (lh.rdcpix.com/<id>l-f<n>r.jpg, sometimes
+ * over plain http) and the same file at pics.harstatic.com/{lr,hr}/<id>l-f<n>r.jpg: keep one https copy of each.
  */
 export function fullSize(urls: string[]): string[] {
   const out: string[] = [];
+  const names = new Set<string>();
   for (const u of urls) {
-    const big = u.replace(/^(https?:\/\/[^/]*harstatic\.com\/\d+\/)[a-z]{1,6}(\/\d+\.(?:jpe?g|png|webp))(\?.*)?$/i, "$1hr$2");
+    let big = u.replace(/^(https?:\/\/[^/]*harstatic\.com\/\d+\/)[a-z]{1,6}(\/\d+\.(?:jpe?g|png|webp))(\?.*)?$/i, "$1hr$2");
+    big = big.replace(/^http:\/\/([a-z0-9-]+\.rdcpix\.com\/)/i, "https://$1").replace(/^(https?:\/\/pics\.harstatic\.com\/)[a-z]{1,4}\//i, "$1hr/");
+    const photo = big.match(/^https:\/\/(?:[a-z0-9-]+\.rdcpix\.com|pics\.harstatic\.com\/[a-z]{1,4})\/([0-9a-f]{32}l-[a-z]\d+r\.jpe?g)$/i)?.[1];
+    if (photo) {
+      if (names.has(photo)) continue;
+      names.add(photo);
+    }
     if (!out.includes(big)) out.push(big);
   }
   return out;

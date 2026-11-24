@@ -12,7 +12,8 @@ import { OWNER_MAX_PHOTOS } from "@/lib/config";
 import { fullSize, readSent, type SentPage } from "@/lib/bookmarklet";
 
 const KEY = "tourvo-sent-photos";
-const MIN_W = 640;
+// a listing photo, not a logo or icon: long side at least 600px, short side at least 400px (some MLS photos are only 471x630)
+const MIN_LONG = 600, MIN_SHORT = 400;
 
 // Keep what the button sent, so it survives a trip through the sign-in page.
 if (typeof window !== "undefined") {
@@ -37,7 +38,7 @@ type Draft = { id: string; address: string; created_at: string; count: number };
 function ImportView({ user }: { user: User }) {
   const router = useRouter();
   const [sent] = useState<SentPage | null>(() => (typeof window === "undefined" ? null : stored()));
-  const [sizes, setSizes] = useState<Record<string, number>>({});   // url -> width once loaded (0 = failed)
+  const [sizes, setSizes] = useState<Record<string, number>>({});   // url -> 1 once loaded and big enough, 0 = too small or failed
   const [choice, setChoice] = useState<string[] | null>(null);   // null = the first photos, picked for her
   const [drafts, setDrafts] = useState<Draft[]>([]);
   // the owner's own account can use more photos (the server checks this too)
@@ -64,7 +65,7 @@ function ImportView({ user }: { user: User }) {
 
   // real listing photos are big; icons, logos, agent headshots and map tiles are not
   const candidates = useMemo(() => fullSize(sent?.i ?? []), [sent]);
-  const photos = useMemo(() => candidates.filter((u) => (sizes[u] ?? -1) >= MIN_W), [candidates, sizes]);
+  const photos = useMemo(() => candidates.filter((u) => (sizes[u] ?? -1) >= 1), [candidates, sizes]);
   const [gaveUp, setGaveUp] = useState(false);
   // stop waiting on photos that never answer (a slow site, or a numbered photo that doesn't exist)
   useEffect(() => {
@@ -139,7 +140,7 @@ function ImportView({ user }: { user: User }) {
       <div className="hidden" aria-hidden>
         {candidates.filter((u) => sizes[u] === undefined).map((u) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={u} src={u} alt="" referrerPolicy="no-referrer" onLoad={(e) => seen(u, e.currentTarget.naturalWidth)} onError={() => seen(u, 0)} />
+          <img key={u} src={u} alt="" referrerPolicy="no-referrer" onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; seen(u, Math.max(w, h) >= MIN_LONG && Math.min(w, h) >= MIN_SHORT ? 1 : 0); }} onError={() => seen(u, 0)} />
         ))}
       </div>
 
