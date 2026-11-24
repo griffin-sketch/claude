@@ -21,7 +21,7 @@ export const TEMPLATES = [
   { id: 10, name: "Cinema", blurb: "Letterbox bars and wide-tracked caps." },
   { id: 11, name: "Holiday", blurb: "Red, green and gold, falling snow and a Happy Holidays outro." },
   { id: 12, name: "Estate", blurb: "Cormorant Garamond caps, tracked wide or italic, with a gold hairline.", private: true },
-  { id: 13, name: "Sunshine Coast", blurb: "Florida beach feel: sand cards, sunset stripes and a surf-script headline." },
+  { id: 13, name: "Sunshine Coast", blurb: "Airy Florida feel: flowing script, light tracked caps and a soft wave." },
 ] as const;
 
 /** Templates made for one realtor's brand. Only the owner's account and the emails listed here see them. */
